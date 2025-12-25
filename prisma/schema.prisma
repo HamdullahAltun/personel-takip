@@ -21,6 +21,22 @@ model User {
   leaves      LeaveRequest[]
   achievements        Achievement[]
   employeeOfTheMonths EmployeeOfTheMonth[]
+
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+}
+
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  senderId  String   @db.ObjectId
+  receiverId String  @db.ObjectId
+  
+  sender    User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver  User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 model AttendanceRecord {

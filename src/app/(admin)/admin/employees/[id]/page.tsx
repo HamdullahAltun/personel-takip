@@ -14,7 +14,8 @@ export default async function EmployeeDetailPage({
         where: { id },
         include: {
             attendance: { orderBy: { timestamp: 'desc' }, take: 50 },
-            leaves: { orderBy: { createdAt: 'desc' } }
+            leaves: { orderBy: { createdAt: 'desc' } },
+            achievements: { orderBy: { date: 'desc' } }
         }
     });
 

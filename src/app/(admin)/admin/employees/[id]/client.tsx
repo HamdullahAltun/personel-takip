@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { User, AttendanceRecord, LeaveRequest } from "@prisma/client";
+import { User, AttendanceRecord, LeaveRequest, Achievement } from "@prisma/client";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Trash2, ArrowLeft, Save, Clock, CalendarDays, Coins, User as UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { updateEmployee, deleteEmployee } from "@/app/actions/employee";
 import AttendanceCalendar from "@/components/AttendanceCalendar";
+import AchievementsList from "@/components/admin/AchievementsList";
 
 type UserWithRelations = User & {
     attendance: AttendanceRecord[];
     leaves: LeaveRequest[];
+    achievements: Achievement[];
 };
 
 export default function EmployeeDetailClient({ user }: { user: UserWithRelations }) {
@@ -114,105 +116,109 @@ export default function EmployeeDetailClient({ user }: { user: UserWithRelations
                     </div>
                 </div>
 
-                {/* Statistics & Logs */}
-                <div className="md:col-span-2 space-y-6">
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white p-4 rounded-xl border border-slate-200">
-                            <div className="flex items-center gap-2 text-slate-500 mb-2">
-                                <Clock className="h-4 w-4" />
-                                <span className="text-sm font-medium">Toplam Çalışma</span>
-                            </div>
-                            <p className="text-2xl font-bold text-slate-900">{calculatedHours.toFixed(1)} Saat</p>
-                        </div>
-                        <div className="bg-white p-4 rounded-xl border border-slate-200">
-                            <div className="flex items-center gap-2 text-slate-500 mb-2">
-                                <Coins className="h-4 w-4" />
-                                <span className="text-sm font-medium">Tahmini Hakediş</span>
-                            </div>
-                            <p className="text-2xl font-bold text-slate-900">₺{calculatedPay.toFixed(2)}</p>
-                        </div>
-                    </div>
-
-                    {/* Calendar View */}
-                    <div className="space-y-2">
-                        <h3 className="font-semibold text-slate-900">Çalışma Takvimi</h3>
-                        <AttendanceCalendar records={user.attendance} />
-                    </div>
-
-                    {/* Attendance Logs */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
-                            <CalendarDays className="h-5 w-5 text-slate-500" />
-                            <h3 className="font-semibold text-slate-900">Son Hareketler</h3>
-                        </div>
-                        <div className="max-h-[400px] overflow-y-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-slate-50 text-slate-500 sticky top-0">
-                                    <tr>
-                                        <th className="px-4 py-2">Tarih</th>
-                                        <th className="px-4 py-2">İşlem</th>
-                                        <th className="px-4 py-2">Yöntem</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {user.attendance.map(record => (
-                                        <tr key={record.id} className="hover:bg-slate-50">
-                                            <td className="px-4 py-2 text-slate-900">
-                                                {format(new Date(record.timestamp), "d MMMM yyyy HH:mm", { locale: tr })}
-                                            </td>
-                                            <td className="px-4 py-2">
-                                                <span className={`px-2 py-1 rounded text-xs font-bold ${record.type === 'CHECK_IN' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                                                    {record.type === 'CHECK_IN' ? 'GİRİŞ' : 'ÇIKIŞ'}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-2 text-slate-500 text-xs">
-                                                {record.method}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {user.attendance.length === 0 && (
-                                        <tr>
-                                            <td colSpan={3} className="px-4 py-8 text-center text-slate-400">Kayıt bulunamadı.</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* Leave History */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-4 border-b border-slate-200 bg-slate-50">
-                            <h3 className="font-semibold text-slate-900">İzin Geçmişi</h3>
-                        </div>
-                        <div className="p-4">
-                            {user.leaves.length > 0 ? (
-                                <ul className="space-y-3">
-                                    {user.leaves.map(leave => (
-                                        <li key={leave.id} className="flex justify-between items-center text-sm border-b border-slate-100 last:border-0 pb-2 last:pb-0">
-                                            <div>
-                                                <p className="font-medium">{leave.reason}</p>
-                                                <p className="text-slate-500 text-xs">
-                                                    {format(new Date(leave.startDate), "d MMM", { locale: tr })} - {format(new Date(leave.endDate), "d MMM yyyy", { locale: tr })}
-                                                </p>
-                                            </div>
-                                            <span className={`px-2 py-1 rounded text-xs font-bold ${leave.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                                                leave.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-                                                }`}>
-                                                {leave.status === 'APPROVED' ? 'ONAYLANDI' : leave.status === 'REJECTED' ? 'REDDEDİLDİ' : 'BEKLİYOR'}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="text-slate-400 text-sm text-center py-4">İzin kaydı yok.</p>
-                            )}
-                        </div>
-                    </div>
-
+                <div className="mt-6">
+                    <AchievementsList achievements={user.achievements} userId={user.id} />
                 </div>
+            </div>
+
+            {/* Statistics & Logs */}
+            <div className="md:col-span-2 space-y-6">
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white p-4 rounded-xl border border-slate-200">
+                        <div className="flex items-center gap-2 text-slate-500 mb-2">
+                            <Clock className="h-4 w-4" />
+                            <span className="text-sm font-medium">Toplam Çalışma</span>
+                        </div>
+                        <p className="text-2xl font-bold text-slate-900">{calculatedHours.toFixed(1)} Saat</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-slate-200">
+                        <div className="flex items-center gap-2 text-slate-500 mb-2">
+                            <Coins className="h-4 w-4" />
+                            <span className="text-sm font-medium">Tahmini Hakediş</span>
+                        </div>
+                        <p className="text-2xl font-bold text-slate-900">₺{calculatedPay.toFixed(2)}</p>
+                    </div>
+                </div>
+
+                {/* Calendar View */}
+                <div className="space-y-2">
+                    <h3 className="font-semibold text-slate-900">Çalışma Takvimi</h3>
+                    <AttendanceCalendar records={user.attendance} />
+                </div>
+
+                {/* Attendance Logs */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                        <CalendarDays className="h-5 w-5 text-slate-500" />
+                        <h3 className="font-semibold text-slate-900">Son Hareketler</h3>
+                    </div>
+                    <div className="max-h-[400px] overflow-y-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-slate-50 text-slate-500 sticky top-0">
+                                <tr>
+                                    <th className="px-4 py-2">Tarih</th>
+                                    <th className="px-4 py-2">İşlem</th>
+                                    <th className="px-4 py-2">Yöntem</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {user.attendance.map(record => (
+                                    <tr key={record.id} className="hover:bg-slate-50">
+                                        <td className="px-4 py-2 text-slate-900">
+                                            {format(new Date(record.timestamp), "d MMMM yyyy HH:mm", { locale: tr })}
+                                        </td>
+                                        <td className="px-4 py-2">
+                                            <span className={`px-2 py-1 rounded text-xs font-bold ${record.type === 'CHECK_IN' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                {record.type === 'CHECK_IN' ? 'GİRİŞ' : 'ÇIKIŞ'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-2 text-slate-500 text-xs">
+                                            {record.method}
+                                        </td>
+                                    </tr>
+                                ))}
+                                {user.attendance.length === 0 && (
+                                    <tr>
+                                        <td colSpan={3} className="px-4 py-8 text-center text-slate-400">Kayıt bulunamadı.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Leave History */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-4 border-b border-slate-200 bg-slate-50">
+                        <h3 className="font-semibold text-slate-900">İzin Geçmişi</h3>
+                    </div>
+                    <div className="p-4">
+                        {user.leaves.length > 0 ? (
+                            <ul className="space-y-3">
+                                {user.leaves.map(leave => (
+                                    <li key={leave.id} className="flex justify-between items-center text-sm border-b border-slate-100 last:border-0 pb-2 last:pb-0">
+                                        <div>
+                                            <p className="font-medium">{leave.reason}</p>
+                                            <p className="text-slate-500 text-xs">
+                                                {format(new Date(leave.startDate), "d MMM", { locale: tr })} - {format(new Date(leave.endDate), "d MMM yyyy", { locale: tr })}
+                                            </p>
+                                        </div>
+                                        <span className={`px-2 py-1 rounded text-xs font-bold ${leave.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                            leave.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                                            }`}>
+                                            {leave.status === 'APPROVED' ? 'ONAYLANDI' : leave.status === 'REJECTED' ? 'REDDEDİLDİ' : 'BEKLİYOR'}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-slate-400 text-sm text-center py-4">İzin kaydı yok.</p>
+                        )}
+                    </div>
+                </div>
+
             </div>
         </div>
     );

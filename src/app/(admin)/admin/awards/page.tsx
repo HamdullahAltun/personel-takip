@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Trophy, Star, Medal, Award, UserCheck } from 'lucide-react';
+import { Trophy, Star, Medal, Award, UserCheck, Trash2 } from 'lucide-react';
 
 type User = {
     id: string;
@@ -130,7 +130,22 @@ export default function AwardsPage() {
                         <div className="absolute top-0 right-0 p-8 opacity-20">
                             <Trophy className="h-32 w-32" />
                         </div>
-                        <h2 className="text-xl font-medium text-yellow-100 mb-2">Ayın Personeli</h2>
+                        <h2 className="text-xl font-medium text-yellow-100 mb-2 flex justify-between items-center">
+                            Ayın Personeli
+                            {currentEOM && (
+                                <button
+                                    onClick={async () => {
+                                        if (!confirm("Ayın personelini kaldırmak istiyor musunuz?")) return;
+                                        await fetch('/api/employee-of-month/delete', { method: 'DELETE' });
+                                        fetchCurrentEOM();
+                                    }}
+                                    className="bg-red-500/20 hover:bg-red-500/40 text-white p-1 rounded transition"
+                                    title="Seçimi Kaldır"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            )}
+                        </h2>
                         {currentEOM ? (
                             <div>
                                 <h3 className="text-4xl font-bold mb-4">{currentEOM.user.name}</h3>
