@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Personel Takip</string>
+    <string name="title_activity_main">Personel Takip</string>
+    <string name="package_name">com.personel.app</string>
+    <string name="custom_url_scheme">com.personel.app</string>
+</resources>
