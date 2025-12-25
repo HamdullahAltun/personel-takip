@@ -2,9 +2,14 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EmployeeDetailClient from "./client";
 
-export default async function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    // Await params object before accessing properties
-    const { id } = await params;
+type Props = {
+    params: Promise<{ id: string }>;
+    searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function EmployeeDetailPage(props: Props) {
+    const params = await props.params;
+    const { id } = params;
     console.log("Fetching employee details for:", id);
 
     const user = await prisma.user.findUnique({

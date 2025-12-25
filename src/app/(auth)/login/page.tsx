@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Phone, Lock } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, Auth } from "firebase/auth";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -23,20 +23,50 @@ export default function LoginPage() {
             return;
         }
 
-        // Initialize Recaptcha
-        if (!window.recaptchaVerifier) {
+        // Initialize Recaptcha with proper cleanup
+        const initRecaptcha = async () => {
             try {
-                window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-                    'size': 'invisible',
-                    'callback': () => {
-                        // reCAPTCHA solved
+                if (window.recaptchaVerifier) {
+                    try {
+                        await window.recaptchaVerifier.clear();
+                    } catch (e) {
+                        console.warn("Old recaptcha clear error", e);
                     }
-                });
+                    window.recaptchaVerifier = null;
+                }
+
+                // Ensure the element exists
+                const container = document.getElementById('recaptcha-container');
+                if (container) {
+                    window.recaptchaVerifier = new RecaptchaVerifier(auth as Auth, 'recaptcha-container', {
+                        'size': 'invisible',
+                        'callback': () => {
+                            // reCAPTCHA solved
+                        },
+                        'expired-callback': () => {
+                            // Response expired
+                            if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
+                            window.recaptchaVerifier = null;
+                        }
+                    });
+                }
             } catch (e: any) {
                 console.error("Recaptcha Init Error", e);
-                // Don't block UI immediately, might be network or config
             }
-        }
+        };
+
+        initRecaptcha();
+
+        return () => {
+            if (window.recaptchaVerifier) {
+                try {
+                    window.recaptchaVerifier.clear();
+                } catch (e) {
+                    console.warn("Cleanup clear error", e);
+                }
+                window.recaptchaVerifier = null;
+            }
+        };
     }, []);
 
     const handleSendOtp = async (e: React.FormEvent) => {
@@ -56,13 +86,30 @@ export default function LoginPage() {
             if (!formattedPhone.startsWith('+')) formattedPhone = '+90' + formattedPhone;
 
             const appVerifier = window.recaptchaVerifier;
+            if (!appVerifier) {
+                setError("Recaptcha doğrulama sistemi yüklenemedi. Lütfen sayfayı yenileyiniz.");
+                setLoading(false);
+                return;
+            }
+
             const result = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
             setConfirmationResult(result);
             setStep("OTP");
         } catch (err: any) {
             console.error(err);
-            setError(err.code === 'auth/invalid-api-key' ? "API Anahtarı hatası" : (err.message || "SMS gönderilemedi."));
-            if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
+            if (err.code === 'auth/error-code:-39') {
+                setError(`Doğrulama hatası (-39). Lütfen "${window.location.hostname}" adresini Firebase Authorized Domains listesine ekleyiniz.`);
+            } else if (err.code === 'auth/invalid-app-credential') {
+                setError(`Uygulama kimlik hatası. Domain yetkisi yok: ${window.location.hostname}`);
+            } else {
+                setError(err.code === 'auth/invalid-api-key' ? "API Anahtarı hatası" : (err.message || "SMS gönderilemedi."));
+            }
+            // Only clear if it exists
+            if (window.recaptchaVerifier) {
+                try {
+                    window.recaptchaVerifier.clear();
+                } catch { /* ignore */ }
+            }
         } finally {
             setLoading(false);
         }
