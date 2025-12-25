@@ -6,6 +6,8 @@ import Link from "next/link";
 import { format, differenceInMinutes } from "date-fns";
 import { tr } from "date-fns/locale";
 import { ScanLine, LogOut, Clock, Calendar } from "lucide-react";
+import AnnouncementWidget from "@/components/staff/AnnouncementWidget";
+import EOMWidget from "@/components/staff/EOMWidget";
 
 async function getUser() {
     const token = (await cookies()).get("personel_token")?.value;
@@ -27,6 +29,19 @@ async function getUser() {
 export default async function StaffDashboard() {
     const user = await getUser();
     if (!user) redirect("/login");
+
+    // Fetch EOM
+    const today = new Date();
+    const eom = await prisma.employeeOfTheMonth.findFirst({
+        where: { month: today.getMonth() + 1, year: today.getFullYear() },
+        include: { user: { select: { name: true } } }
+    });
+
+    // Fetch Latest Announcement
+    const announcement = await prisma.announcement.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: 'desc' }
+    });
 
     const lastRecord = user.attendance[0];
     const isCheckedIn = lastRecord?.type === 'CHECK_IN';
@@ -67,6 +82,12 @@ export default async function StaffDashboard() {
                         {isCheckedIn ? "Çıkış Yap" : "Giriş Yap"}
                     </Link>
                 </div>
+            </div>
+
+            {/* Widgets */}
+            <div className="grid grid-cols-1 gap-4">
+                <AnnouncementWidget announcement={announcement} />
+                <EOMWidget data={eom} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

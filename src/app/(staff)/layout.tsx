@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React from "react";
 import { usePathname } from "next/navigation";
-import { Home, QrCode, ScanLine, User, FileClock } from "lucide-react";
+import { Home, QrCode, ScanLine, User, FileClock, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function StaffLayout({
@@ -24,6 +24,7 @@ export default function StaffLayout({
         { href: "/scan", label: "Okut", icon: ScanLine },
         { href: "/leaves", label: "İzin", icon: FileClock },
         { href: "/badge", label: "Kimliğim", icon: QrCode },
+        { href: "/announcements", label: "Duyurular", icon: Megaphone },
         { href: "/profile", label: "Profilim", icon: User },
     ];
 

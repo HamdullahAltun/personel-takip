@@ -11,7 +11,9 @@ import {
     Menu,
     X,
     UserCog,
-    CalendarCheck
+    CalendarCheck,
+    Bell,
+    Trophy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +45,8 @@ export default function AdminLayout({
         { href: "/admin/employees", label: "Personeller", icon: Users },
         { href: "/admin/leaves", label: "İzin Talepleri", icon: CalendarCheck },
         { href: "/admin/qr", label: "QR İşlemleri", icon: QrCode },
+        { href: "/admin/announcements", label: "Duyurular", icon: Bell },
+        { href: "/admin/awards", label: "Ödüller", icon: Trophy },
     ];
 
     return (

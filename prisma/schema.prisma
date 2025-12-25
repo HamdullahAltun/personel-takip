@@ -19,6 +19,8 @@ model User {
 
   attendance  AttendanceRecord[]
   leaves      LeaveRequest[]
+  achievements        Achievement[]
+  employeeOfTheMonths EmployeeOfTheMonth[]
 }
 
 model AttendanceRecord {
@@ -48,4 +50,34 @@ model Otp {
   code      String
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model Announcement {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  content   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Achievement {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  title       String
+  description String?
+  icon        String   @default("star")
+  date        DateTime @default(now())
+}
+
+model EmployeeOfTheMonth {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  month     Int
+  year      Int
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@unique([month, year])
 }
