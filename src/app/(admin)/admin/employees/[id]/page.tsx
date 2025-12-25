@@ -5,6 +5,7 @@ import EmployeeDetailClient from "./client";
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
     // Await params object before accessing properties
     const { id } = await params;
+    console.log("Fetching employee details for:", id);
 
     const user = await prisma.user.findUnique({
         where: { id },
