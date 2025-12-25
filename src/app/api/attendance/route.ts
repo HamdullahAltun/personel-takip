@@ -89,19 +89,48 @@ export async function POST(req: Request) {
         });
         const userName = user?.name || "";
 
+        // Fetch Schedule for Late Check
+        const today = new Date();
+        const currentDayOfWeek = today.getDay() === 0 ? 7 : today.getDay(); // JS: 0=Sun, 6=Sat -> ISO: 1=Mon, 7=Sun
+
+        const schedule = await prisma.workSchedule.findUnique({
+            where: {
+                userId_dayOfWeek: {
+                    userId: targetUserId,
+                    dayOfWeek: currentDayOfWeek
+                }
+            }
+        });
+
+        let isLate = false;
+        if (newType === 'CHECK_IN' && schedule && !schedule.isOffDay) {
+            const [schedHour, schedMin] = schedule.startTime.split(':').map(Number);
+            const limitTime = new Date(today);
+            limitTime.setHours(schedHour, schedMin + 15, 0, 0); // 15 mins tolerance
+
+            if (today > limitTime) {
+                isLate = true;
+            }
+        }
+
         await prisma.attendanceRecord.create({
             data: {
                 userId: targetUserId,
                 type: newType,
                 method: 'QR',
-                timestamp: new Date(),
+                timestamp: today,
+                isLate
             }
         });
+
+        const isLateMessage = isLate ? " (Geç Kaldınız!)" : "";
 
         return NextResponse.json({
             success: true,
             type: newType,
-            message: newType === 'CHECK_IN' ? `Hoş geldiniz, ${userName}` : `Güle güle, ${userName}`
+            message: newType === 'CHECK_IN'
+                ? `Hoş geldiniz, ${userName}${isLateMessage}`
+                : `Güle güle, ${userName}`
         });
 
     } catch (error) {

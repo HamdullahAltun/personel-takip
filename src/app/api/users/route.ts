@@ -8,7 +8,7 @@ export async function GET() {
         const token = (await cookies()).get('personel_token')?.value;
         const payload = token ? await verifyJWT(token) : null;
 
-        if (!payload || payload.role !== 'ADMIN') {
+        if (!payload) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 

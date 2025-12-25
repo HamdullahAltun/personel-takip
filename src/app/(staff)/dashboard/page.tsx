@@ -6,8 +6,7 @@ import Link from "next/link";
 import { format, differenceInMinutes } from "date-fns";
 import { tr } from "date-fns/locale";
 import { ScanLine, LogOut, Clock, Calendar } from "lucide-react";
-import AnnouncementWidget from "@/components/staff/AnnouncementWidget";
-import EOMWidget from "@/components/staff/EOMWidget";
+import DashboardWidgetsClient from "@/components/staff/DashboardWidgetsClient";
 
 async function getUser() {
     const token = (await cookies()).get("personel_token")?.value;
@@ -29,19 +28,6 @@ async function getUser() {
 export default async function StaffDashboard() {
     const user = await getUser();
     if (!user) redirect("/login");
-
-    // Fetch EOM
-    const today = new Date();
-    const eom = await prisma.employeeOfTheMonth.findFirst({
-        where: { month: today.getMonth() + 1, year: today.getFullYear() },
-        include: { user: { select: { name: true } } }
-    });
-
-    // Fetch Latest Announcement
-    const announcement = await prisma.announcement.findFirst({
-        where: { isActive: true },
-        orderBy: { createdAt: 'desc' }
-    });
 
     const lastRecord = user.attendance[0];
     const isCheckedIn = lastRecord?.type === 'CHECK_IN';
@@ -84,28 +70,19 @@ export default async function StaffDashboard() {
                 </div>
             </div>
 
-            {/* Widgets */}
-            <div className="grid grid-cols-1 gap-4">
-                <AnnouncementWidget announcement={announcement} />
-                <EOMWidget data={eom} />
-            </div>
+            {/* Widgets (Real-time) */}
+            <DashboardWidgetsClient />
 
-            <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-                    <div className="bg-green-100 w-10 h-10 rounded-full flex items-center justify-center text-green-600 mb-3">
-                        <Clock className="h-5 w-5" />
+            <div className="grid grid-cols-1 gap-4">
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                    <div>
+                        <p className="text-slate-500 text-xs font-medium">Bu Haftaki Çalışma</p>
+                        <p className="text-xl font-bold text-slate-900 mt-1">32.5 Saat</p>
+                        <p className="text-green-600 text-[10px] font-bold mt-1">Hedef: {user.weeklyGoal} Saat</p>
                     </div>
-                    <p className="text-slate-500 text-xs font-medium">Bu Hafta</p>
-                    <p className="text-xl font-bold text-slate-900 mt-1">32.5s</p>
-                    <p className="text-green-600 text-[10px] font-bold mt-1">Hedef: {user.weeklyGoal}s</p>
-                </div>
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-                    <div className="bg-purple-100 w-10 h-10 rounded-full flex items-center justify-center text-purple-600 mb-3">
-                        <Calendar className="h-5 w-5" />
+                    <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center text-green-600">
+                        <Clock className="h-6 w-6" />
                     </div>
-                    <p className="text-slate-500 text-xs font-medium">İzin Hakkı</p>
-                    <p className="text-xl font-bold text-slate-900 mt-1">14 Gün</p>
-                    <p className="text-purple-600 text-[10px] font-bold mt-1">Kalan</p>
                 </div>
             </div>
 
@@ -119,6 +96,6 @@ export default async function StaffDashboard() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

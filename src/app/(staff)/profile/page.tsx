@@ -2,10 +2,13 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifyJWT } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { LogOut, User, Phone, Shield, Calendar } from "lucide-react";
+import { LogOut, User, Phone, Shield, Calendar, Trophy, Star, FileClock } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import Link from "next/link";
 import AttendanceCalendar from "@/components/AttendanceCalendar";
+import ScheduleWidget from "@/components/staff/ScheduleWidget";
+
 async function getUser() {
     const token = (await cookies()).get("personel_token")?.value;
     if (!token) return null;
@@ -14,7 +17,11 @@ async function getUser() {
 
     const user = await prisma.user.findUnique({
         where: { id: payload.id as string },
-        include: { attendance: { orderBy: { timestamp: 'desc' } } }
+        include: {
+            attendance: { orderBy: { timestamp: 'desc' } },
+            achievements: { orderBy: { date: 'desc' } },
+            workSchedules: true
+        }
     });
     return user;
 }
@@ -48,6 +55,31 @@ export default async function ProfilePage() {
                     </div>
 
                     <div className="mt-8 space-y-4">
+                        {/* Achievements Replacement */}
+                        <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-100 space-y-3">
+                            <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                                <Trophy className="h-4 w-4 text-yellow-600" />
+                                Başarımlarım
+                            </h3>
+                            {user.achievements.length > 0 ? (
+                                <div className="space-y-2">
+                                    {user.achievements.map((ach: any) => (
+                                        <div key={ach.id} className="bg-white p-2.5 rounded-lg flex items-center gap-3 shadow-sm border border-yellow-100/50">
+                                            <div className="bg-yellow-100 p-1.5 rounded-full text-yellow-600">
+                                                <Star className="h-3 w-3 fill-current" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-900 text-xs">{ach.title}</h4>
+                                                {ach.description && <p className="text-slate-500 text-[10px]">{ach.description}</p>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-slate-500 italic">Henüz bir başarım kazanılmadı.</p>
+                            )}
+                        </div>
+
                         <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl">
                             <Phone className="h-5 w-5 text-slate-400" />
                             <div>
@@ -76,6 +108,11 @@ export default async function ProfilePage() {
                     </div>
                 </div>
             </div>
+
+
+
+            {/* Schedule Widget */}
+            <ScheduleWidget schedules={user.workSchedules} />
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-4 space-y-4">
                 <h3 className="font-bold text-slate-900 border-b border-slate-100 pb-2">Çalışma Takvimim</h3>

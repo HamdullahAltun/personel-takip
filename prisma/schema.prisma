@@ -13,7 +13,8 @@ model User {
   phone       String   @unique
   role        String   @default("STAFF") // ADMIN, STAFF
   hourlyRate  Float    @default(0)
-  weeklyGoal  Int      @default(40) 
+  weeklyGoal  Int      @default(0)
+  annualLeaveDays Int  @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -24,6 +25,7 @@ model User {
 
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
+  workSchedules    WorkSchedule[]
 }
 
 model Message {
@@ -39,6 +41,18 @@ model Message {
   createdAt DateTime @default(now())
 }
 
+model WorkSchedule {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  dayOfWeek Int      // 1=Monday, ..., 7=Sunday (or 0-6). Let's use ISO: 1-7
+  startTime String   @default("09:00")
+  endTime   String   @default("18:00")
+  isOffDay  Boolean  @default(false)
+
+  @@unique([userId, dayOfWeek])
+}
+
 model AttendanceRecord {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
@@ -46,6 +60,7 @@ model AttendanceRecord {
   type      String   // CHECK_IN, CHECK_OUT
   method    String   @default("QR") // QR, MANUAL
   timestamp DateTime @default(now())
+  isLate    Boolean  @default(false)
 }
 
 model LeaveRequest {

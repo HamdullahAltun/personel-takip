@@ -12,6 +12,16 @@ export async function GET(
     const { id: otherUserId } = await params;
     const myId = session.id as string;
 
+    // Mark as read (only messages sent BY other User TO me)
+    await prisma.message.updateMany({
+        where: {
+            senderId: otherUserId,
+            receiverId: myId,
+            read: false
+        },
+        data: { read: true }
+    });
+
     const messages = await prisma.message.findMany({
         where: {
             OR: [
