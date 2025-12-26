@@ -15,7 +15,8 @@ import {
     Bell,
     Trophy,
     MessageSquareText,
-    ClipboardList
+    ClipboardList,
+    Receipt
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +49,7 @@ export default function AdminLayout({
         { href: "/admin/announcements", label: "Duyurular", icon: Bell },
         { href: "/admin/awards", label: "Ödüller", icon: Trophy },
         { href: "/admin/tasks", label: "Görevler", icon: ClipboardList },
+        { href: "/admin/expenses", label: "Harcamalar", icon: Receipt },
         { href: "/admin/messages", label: "Mesajlar", icon: MessageSquareText },
     ];
 

@@ -1,0 +1,65 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getAuth } from '@/lib/auth';
+
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const session = await getAuth();
+    if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { id } = await params;
+    const body = await req.json();
+    const { status, rejectionReason } = body;
+
+    try {
+        const expense = await prisma.expense.update({
+            where: { id },
+            data: {
+                status,
+                rejectionReason: status === 'REJECTED' ? rejectionReason : null
+            },
+            include: { user: true }
+        });
+
+        // Notify User
+        if (expense.user.fcmToken) {
+            const { sendPushNotification } = await import('@/lib/notifications');
+            const title = status === 'APPROVED' ? "Harcama Onaylandı" : "Harcama Reddedildi";
+            const body = status === 'APPROVED'
+                ? `${expense.amount}₺ tutarındaki harcamanız onaylandı.`
+                : `${expense.amount}₺ tutarındaki harcamanız reddedildi. Sebep: ${rejectionReason}`;
+
+            await sendPushNotification(expense.user.fcmToken, title, body);
+        }
+
+        return NextResponse.json(expense);
+    } catch (e) {
+        return NextResponse.json({ error: "Update failed" }, { status: 500 });
+    }
+}
+
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const session = await getAuth();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { id } = await params;
+
+    try {
+        const expense = await prisma.expense.findUnique({ where: { id } });
+        if (!expense) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+        // Only owner (if pending) or Admin can delete
+        if (session.role !== 'ADMIN' && expense.userId !== session.id) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
+        // If staff, can only delete PENDING
+        if (session.role !== 'ADMIN' && expense.status !== 'PENDING') {
+            return NextResponse.json({ error: "Cannot delete processed expense" }, { status: 400 });
+        }
+
+        await prisma.expense.delete({ where: { id } });
+        return NextResponse.json({ success: true });
+    } catch (e) {
+        return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+    }
+}

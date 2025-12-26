@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { usePathname } from "next/navigation";
 import { Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText, LogOut, ChevronDown, Menu as MenuIcon, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AIAssistant from "@/components/AIAssistant";
 
 export default function StaffLayout({
     children,
@@ -51,6 +52,7 @@ export default function StaffLayout({
         { href: "/dashboard", label: "Ana Sayfa", icon: Home },
         { href: "/scan", label: "İşlem Yap", icon: ScanLine },
         { href: "/tasks", label: "Görevler", icon: ClipboardList },
+        { href: "/expenses", label: "Harcamalar", icon: Receipt },
         { href: "/users", label: "Personel", icon: User },
         { href: "/messages", label: "Mesajlar", icon: MessageSquareText },
     ];
@@ -155,6 +157,8 @@ export default function StaffLayout({
                     })}
                 </div>
             </nav>
+
+            <AIAssistant />
         </div>
     );
 }

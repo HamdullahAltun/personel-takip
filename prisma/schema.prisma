@@ -32,6 +32,9 @@ model User {
   // Tasks
   tasksGiven    Task[]       @relation("CreatedTasks")
   tasksReceived Task[]       @relation("AssignedTasks")
+  
+  // Expenses
+  expenses      Expense[]
 }
 
 model Task {
@@ -51,6 +54,31 @@ model Task {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 }
+
+model Expense {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  description String
+  amount      Float
+  date        DateTime
+  category    String?       // "Food", "Travel", "Equipment" etc.
+  receiptImage String?      // Base64 string for now
+  status      ExpenseStatus @default(PENDING)
+  
+  userId      String        @db.ObjectId
+  user        User          @relation(fields: [userId], references: [id])
+  
+  rejectionReason String?
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 
 enum TaskStatus {
   PENDING
