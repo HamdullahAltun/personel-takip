@@ -187,6 +187,7 @@ export default function EmployeeDetailClient({ user }: { user: UserWithRelations
                                 <select name="role" defaultValue={user.role} className="w-full mt-1 border rounded-lg p-2 bg-white">
                                     <option value="STAFF">Personel</option>
                                     <option value="ADMIN">Yönetici</option>
+                                    <option value="EXECUTIVE">Üst Yönetici (Executive)</option>
                                 </select>
                             </div>
 
