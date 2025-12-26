@@ -19,7 +19,8 @@ export async function middleware(request: NextRequest) {
         if (verifiedToken.role === 'ADMIN') {
             return NextResponse.redirect(new URL('/admin/dashboard', request.url));
         } else if (verifiedToken.role === 'EXECUTIVE') {
-            return NextResponse.redirect(new URL('/executive/dashboard', request.url));
+            // Redirect Executive to the main dashboard (integrated view)
+            return NextResponse.redirect(new URL('/dashboard', request.url));
         } else {
             return NextResponse.redirect(new URL('/dashboard', request.url));
         }

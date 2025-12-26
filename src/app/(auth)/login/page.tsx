@@ -96,7 +96,6 @@ export default function LoginPage() {
             if (!res.ok) throw new Error(data.error || "Giriş başarısız");
 
             if (data.user.role === "ADMIN") router.push("/admin/dashboard");
-            else if (data.user.role === "EXECUTIVE") router.push("/executive/dashboard");
             else router.push("/dashboard");
         } catch (err: any) {
             console.error(err);

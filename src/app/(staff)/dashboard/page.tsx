@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import AIExecutiveSummary from "@/components/AIExecutiveSummary";
 import { verifyJWT } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -45,6 +46,8 @@ export default async function StaffDashboard() {
     return (
         <div className="space-y-6">
             <WelcomeHeader userName={user.name} />
+
+            <AIExecutiveSummary role={user.role} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Status Card */}
