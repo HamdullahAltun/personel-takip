@@ -8,6 +8,7 @@ type UserData = {
     id: string;
     name: string;
     role: string;
+    profilePicture?: string;
 };
 
 export default function UserDirectory() {
@@ -48,14 +49,18 @@ export default function UserDirectory() {
                             href={`/users/${user.id}`}
                             className="flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors"
                         >
-                            <div className="bg-slate-100 p-3 rounded-full text-slate-600">
-                                <User className="h-6 w-6" />
+                            <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200 text-slate-600">
+                                {user.profilePicture ? (
+                                    <img src={user.profilePicture} alt={user.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <User className="h-6 w-6" />
+                                )}
                             </div>
                             <div className="flex-1">
                                 <h3 className="font-bold text-slate-900">{user.name}</h3>
-                                <p className="text-xs text-slate-500 flex items-center gap-1">
+                                <p className="text-xs text-slate-500 flex items-center gap-1 font-medium">
                                     <Briefcase className="h-3 w-3" />
-                                    {user.role === 'ADMIN' ? 'Yönetici' : 'Personel'}
+                                    {user.role === 'ADMIN' ? 'Yönetici' : user.role === 'EXECUTIVE' ? 'Üst Yönetici' : 'Personel'}
                                 </p>
                             </div>
                             <span className="text-slate-300">→</span>

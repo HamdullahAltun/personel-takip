@@ -16,7 +16,8 @@ import {
     Trophy,
     MessageSquareText,
     ClipboardList,
-    Receipt
+    Receipt,
+    BrainCircuit
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +52,8 @@ export default function AdminLayout({
         { href: "/admin/tasks", label: "Görevler", icon: ClipboardList },
         { href: "/admin/expenses", label: "Harcamalar", icon: Receipt },
         { href: "/admin/messages", label: "Mesajlar", icon: MessageSquareText },
+        // Admin also gets access to Executive Dashboard
+        { href: "/executive/dashboard", label: "Şirket Raporu", icon: BrainCircuit },
     ];
 
     return (
