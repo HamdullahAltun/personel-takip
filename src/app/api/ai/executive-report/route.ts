@@ -5,18 +5,48 @@ import { model } from '@/lib/ai';
 
 export const dynamic = 'force-dynamic';
 
+// GET: Retrieve the latest cached report from DB
 export async function GET() {
     try {
         const session = await getAuth();
-        // Allow access to Executives AND Admins
         if (!session || (session.role !== 'EXECUTIVE' && session.role !== 'ADMIN')) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // 1. Gather ALL Data (carefully limited)
+        const latestReport = await prisma.aIReport.findFirst({
+            orderBy: { createdAt: 'desc' }
+        });
+
+        if (!latestReport) {
+            return NextResponse.json({ report: null });
+        }
+
+        return NextResponse.json({ report: latestReport.content, createdAt: latestReport.createdAt });
+
+    } catch (error) {
+        console.error("Error fetching report:", error);
+        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
+    }
+}
+
+// POST: Trigger AI generation and save to DB
+export async function POST() {
+    try {
+        const session = await getAuth();
+        if (!session || (session.role !== 'EXECUTIVE' && session.role !== 'ADMIN')) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // 1. Gather ALL Data
         const staff = await prisma.user.findMany({
             where: { role: 'STAFF' },
-            select: { id: true, name: true, tasksReceived: true, expenses: true, attendance: { take: 10, orderBy: { timestamp: 'desc' } } }
+            select: {
+                id: true,
+                name: true,
+                tasksReceived: true,
+                expenses: true,
+                attendance: { take: 10, orderBy: { timestamp: 'desc' } }
+            }
         });
 
         const messages = await prisma.message.findMany({
@@ -38,10 +68,10 @@ export async function GET() {
             IMPORTANT: Return ONLY a valid JSON object. Do not include any other text, markdown formatting, or explanations outside the JSON.
             
             Staff Data Summary:
-            ${staff.map(s => `- ${s.name}: ${s.tasksReceived.filter((t: any) => t.status === 'COMPLETED').length} tasks done. Last Check-in: ${s.attendance[0]?.timestamp || 'None'}`).join('\n')}
+            ${staff.map((s: any) => `- ${s.name}: ${s.tasksReceived?.filter((t: any) => t.status === 'COMPLETED').length || 0} tasks done. Last Check-in: ${s.attendance?.[0]?.timestamp || 'None'}`).join('\n')}
 
             Recent Communications (Analyze tone/sentiment):
-            ${messages.map(m => `"${m.content}"`).join('\n')}
+            ${messages.map((m: any) => `"${m.content}"`).join('\n')}
 
             Financials:
             Total Approved Expenses: ${expensesTotal._sum.amount || 0}
@@ -77,12 +107,29 @@ export async function GET() {
             text = text.substring(firstBrace, lastBrace + 1);
         }
 
-        const report = JSON.parse(text);
+        let reportData;
+        try {
+            reportData = JSON.parse(text);
+        } catch (e) {
+            console.error("JSON Parse Error:", text);
+            throw new Error("Failed to parse AI response");
+        }
 
-        return NextResponse.json({ report });
+        // 5. Save to DB
+        await prisma.aIReport.create({
+            data: {
+                content: reportData
+            }
+        });
+
+        return NextResponse.json({ report: reportData });
 
     } catch (error: any) {
-        console.error("AI Report Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("AI Report Generation Error:", error);
+        // Handle Rate Limit specifically
+        if (error.message?.includes('429') || error.status === 429) {
+            return NextResponse.json({ error: "AI Kotası aşıldı. Lütfen daha sonra tekrar deneyin." }, { status: 429 });
+        }
+        return NextResponse.json({ error: error.message || "Internal Error" }, { status: 500 });
     }
 }
