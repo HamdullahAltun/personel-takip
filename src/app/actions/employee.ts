@@ -57,6 +57,8 @@ export async function deleteEmployee(id: string) {
     }
 }
 
+// ... existing imports
+
 export async function updateEmployee(id: string, prevState: any, formData: FormData) {
     try {
         const name = formData.get("name") as string;
@@ -66,6 +68,7 @@ export async function updateEmployee(id: string, prevState: any, formData: FormD
         const weeklyGoal = parseInt(formData.get("weeklyGoal") as string) || 40;
         const annualLeaveDays = parseInt(formData.get("annualLeaveDays") as string) || 0;
         const role = formData.get("role") as "STAFF" | "ADMIN" || "STAFF";
+        const profilePicture = formData.get("profilePicture") as string;
 
         await prisma.user.update({
             where: { id },
@@ -76,7 +79,8 @@ export async function updateEmployee(id: string, prevState: any, formData: FormD
                 hourlyRate,
                 weeklyGoal,
                 annualLeaveDays,
-                role
+                role,
+                ...(profilePicture && { profilePicture }) // Only update if provided
             }
         });
 
@@ -85,7 +89,27 @@ export async function updateEmployee(id: string, prevState: any, formData: FormD
         return { success: true };
     } catch (error: any) {
         console.error("Update Employee Error Details:", error);
-        // Return detailed error for debugging if needed, but safe message for user
         return { error: `Güncelleme başarısız: ${error.message}` };
+    }
+}
+
+export async function updateProfilePicture(formData: FormData) {
+    try {
+        const { getAuth } = await import("@/lib/auth");
+        const session = await getAuth();
+        if (!session) return { error: "Unauthorized" };
+
+        const profilePicture = formData.get("profilePicture") as string;
+        if (!profilePicture) return { error: "Image required" };
+
+        await prisma.user.update({
+            where: { id: session.id },
+            data: { profilePicture }
+        });
+
+        revalidatePath("/profile");
+        return { success: true };
+    } catch (e) {
+        return { error: "Failed to update" };
     }
 }

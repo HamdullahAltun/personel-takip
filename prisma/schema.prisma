@@ -16,6 +16,7 @@ model User {
   hourlyRate  Float    @default(0)
   weeklyGoal  Int      @default(0)
   annualLeaveDays Int  @default(0)
+  profilePicture String?
   fcmToken    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

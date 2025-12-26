@@ -8,6 +8,7 @@ import { tr } from "date-fns/locale";
 import Link from "next/link";
 import AttendanceCalendar from "@/components/AttendanceCalendar";
 import ScheduleWidget from "@/components/staff/ScheduleWidget";
+import ProfileAvatar from "@/components/ProfileAvatar";
 
 async function getUser() {
     const token = (await cookies()).get("personel_token")?.value;
@@ -43,11 +44,7 @@ export default async function ProfilePage() {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="h-24 bg-gradient-to-r from-blue-500 to-blue-600"></div>
                 <div className="px-6 pb-6 mt-[-40px]">
-                    <div className="w-20 h-20 rounded-full bg-white p-1 shadow-lg">
-                        <div className="w-full h-full rounded-full bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-600">
-                            {user.name.charAt(0).toUpperCase()}
-                        </div>
-                    </div>
+                    <ProfileAvatar currentImage={user.profilePicture} userName={user.name} />
 
                     <div className="mt-4">
                         <h2 className="text-xl font-bold text-slate-900">{user.name}</h2>

@@ -123,46 +123,52 @@ export default function ScanPage() {
             </div>
 
 
-            <div className="flex-1 flex flex-col items-center justify-center relative p-6">
+            {/* Main Content Area - Updated to remove padding for full-screen scanner */}
+            <div className="flex-1 flex flex-col items-center justify-center relative bg-black">
 
                 {/* SCANNER VIEW */}
                 {activeTab === 'SCAN' && (
-                    <>
-                        <div className="absolute top-0 left-0 right-0 p-4 z-10 text-center pointer-events-none">
-                            <h2 className="text-sm text-slate-400">Ofis QR kodunu okutun</h2>
+                    <div className="absolute inset-0 w-full h-full">
+                        <div className="absolute top-0 left-0 right-0 p-4 z-10 text-center pointer-events-none bg-gradient-to-b from-black/80 to-transparent">
+                            <h2 className="text-sm text-slate-200 font-medium">Ofis QR kodunu okutun</h2>
                         </div>
 
-                        <div className="w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black relative">
+                        <div className="w-full h-full relative">
                             {status === "SUCCESS" ? (
-                                <div className="text-center p-8 bg-green-600 rounded-full animate-in zoom-in">
-                                    <CheckCircle2 className="h-16 w-16 mx-auto mb-2" />
-                                    <p className="font-bold text-xl">{message}</p>
+                                <div className="absolute inset-0 flex items-center justify-center bg-green-600 animate-in zoom-in z-30 p-8 text-center text-white">
+                                    <div>
+                                        <CheckCircle2 className="h-20 w-20 mx-auto mb-4" />
+                                        <p className="font-bold text-2xl">{message}</p>
+                                    </div>
                                 </div>
                             ) : (
-                                <QRScanner onScan={handleScan} />
+                                <div className="w-full h-full [&>section]:!h-full [&>section]:!w-full [&_video]:!object-cover">
+                                    <QRScanner onScan={handleScan} />
+                                </div>
                             )}
 
                             {status === "PROCESSING" && (
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
+                                <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-30 text-white gap-3">
                                     <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+                                    <p className="font-medium">{message}</p>
                                 </div>
                             )}
 
                             {status === "ERROR" && (
-                                <div className="absolute bottom-10 left-4 right-4 bg-red-600 p-4 rounded-xl text-center animate-in slide-in-from-bottom z-20">
+                                <div className="absolute bottom-20 left-4 right-4 bg-red-600/90 backdrop-blur p-4 rounded-xl text-center animate-in slide-in-from-bottom z-30 text-white shadow-lg border border-red-500/50">
                                     <XCircle className="h-6 w-6 mx-auto mb-1" />
-                                    <p>{message}</p>
+                                    <p className="font-medium text-sm">{message}</p>
                                 </div>
                             )}
                         </div>
-                    </>
+                    </div>
                 )}
 
                 {/* BADGE VIEW */}
                 {activeTab === 'BADGE' && (
-                    <div className="w-full flex flex-col items-center justify-center space-y-8 animate-in fade-in zoom-in duration-300">
+                    <div className="w-full h-full flex flex-col items-center justify-center space-y-8 animate-in fade-in zoom-in duration-300 p-6 bg-slate-900">
                         <div className="text-center space-y-1">
-                            <h2 className="text-xl font-bold">Personel Kimliği</h2>
+                            <h2 className="text-xl font-bold text-white">Personel Kimliği</h2>
                             <p className="text-slate-400 text-xs">Bu kodu yöneticiye gösterin</p>
                         </div>
 

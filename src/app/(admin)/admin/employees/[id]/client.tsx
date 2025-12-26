@@ -101,9 +101,50 @@ export default function EmployeeDetailClient({ user }: { user: UserWithRelations
                 {/* Profile Edit Card */}
                 <div className="md:col-span-1 space-y-6">
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-3 bg-blue-100 text-blue-600 rounded-full">
-                                <UserIcon className="h-6 w-6" />
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="relative group cursor-pointer">
+                                <div className="w-20 h-20 rounded-full bg-slate-100 border-2 border-slate-200 overflow-hidden flex items-center justify-center">
+                                    {user.profilePicture ? (
+                                        <img src={user.profilePicture} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <UserIcon className="h-8 w-8 text-slate-400" />
+                                    )}
+                                </div>
+                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                                    <span className="text-white text-xs font-bold">Değiştir</span>
+                                </div>
+                                <input
+                                    type="file"
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => {
+                                                // Create a hidden input to submit with the form, or update state
+                                                const base64 = reader.result as string;
+                                                const form = e.target.closest('form');
+                                                // Manually update the DOM for preview or force restart
+                                                // Ideally we use state, but this component is complex.
+                                                // Let's use simple state for preview.
+                                                const img = e.target.parentElement?.querySelector('img');
+                                                if (img) img.src = base64;
+
+                                                // Add hidden input dynamically if not exists
+                                                let hidden = form?.querySelector('input[name="profilePicture"]') as HTMLInputElement;
+                                                if (!hidden) {
+                                                    hidden = document.createElement('input');
+                                                    hidden.type = 'hidden';
+                                                    hidden.name = 'profilePicture';
+                                                    form?.appendChild(hidden);
+                                                }
+                                                hidden.value = base64;
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }}
+                                />
                             </div>
                             <div>
                                 <h2 className="font-bold text-lg text-slate-900">Profil Bilgileri</h2>
@@ -112,6 +153,8 @@ export default function EmployeeDetailClient({ user }: { user: UserWithRelations
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Hidden input placeholder if needed, though dynamic addition works above */}
+                            <input type="hidden" name="profilePicture" defaultValue={user.profilePicture || ''} />
                             <div>
                                 <label className="text-sm font-medium text-slate-700">Ad Soyad</label>
                                 <input name="name" defaultValue={user.name} className="w-full mt-1 border rounded-lg p-2" required />
