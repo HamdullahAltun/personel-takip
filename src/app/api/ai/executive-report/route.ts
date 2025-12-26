@@ -13,7 +13,7 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const latestReport = await prisma.aIReport.findFirst({
+        const latestReport = await prisma.systemReport.findFirst({
             orderBy: { createdAt: 'desc' }
         });
 
@@ -116,7 +116,7 @@ export async function POST() {
         }
 
         // 5. Save to DB
-        await prisma.aIReport.create({
+        await prisma.systemReport.create({
             data: {
                 content: reportData
             }

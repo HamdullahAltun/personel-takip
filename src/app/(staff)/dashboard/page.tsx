@@ -9,6 +9,7 @@ import { tr } from "date-fns/locale";
 import { ScanLine, LogOut, Clock, Calendar } from "lucide-react";
 import DashboardWidgetsClient from "@/components/staff/DashboardWidgetsClient";
 import WelcomeHeader from "@/components/WelcomeHeader";
+import Announcements from "@/components/Announcements";
 
 async function getUser() {
     const token = (await cookies()).get("personel_token")?.value;
@@ -47,7 +48,9 @@ export default async function StaffDashboard() {
         <div className="space-y-6">
             <WelcomeHeader userName={user.name} />
 
-            <AIExecutiveSummary role={user.role} />
+            <Announcements />
+
+            <AIExecutiveSummary />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Status Card */}

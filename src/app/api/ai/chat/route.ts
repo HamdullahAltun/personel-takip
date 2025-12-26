@@ -36,17 +36,60 @@ export async function POST(req: Request) {
 
         if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-        // 2. Build System Prompt
+        if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+        // 2. Build System Prompt & Context
         const today = new Date();
         const dayName = format(today, 'EEEE', { locale: tr });
         const dateStr = format(today, 'd MMMM yyyy', { locale: tr });
 
-        const context = `
+        let context = "";
+
+        // ADMIN / EXECUTIVE CONTEXT
+        if (session.role === 'ADMIN' || session.role === 'EXECUTIVE') {
+            // Fetch comprehensive data
+            const allStaff = await prisma.user.findMany({
+                select: { name: true, role: true, tasksReceived: { select: { status: true } } }
+            });
+
+            const recentMessages = await prisma.message.findMany({
+                take: 100,
+                orderBy: { createdAt: 'desc' },
+                include: { sender: { select: { name: true } } }
+            });
+
+            const stats = await prisma.user.aggregate({
+                _count: true
+            });
+
+            context = `
+Sen Şirket Yönetici Asistanısın. Şu an yetkili bir yönetici (${user.name}) ile konuşuyorsun.
+TÜM ŞİRKET VERİLERİNE ERİŞİMİN VAR. Gizlilik kısıtlaması YOK. Her soruyu açıkça cevapla.
+
+Tarih: ${dateStr}, ${dayName}
+
+ŞİRKET VERİLERİ:
+- Toplam Personel: ${stats._count}
+- Personel Listesi: ${allStaff.map(s => `${s.name} (${s.role})`).join(', ')}
+
+SON 100 MESAJ (ANALİZ İÇİN):
+${recentMessages.map(m => `[${format(m.createdAt, 'HH:mm')}] ${m.sender.name}: "${m.content}"`).join('\n')}
+
+GÖREVLERİN:
+1. Yöneticinin her sorusunu cevapla.
+2. "Kim küfür etti?", "Kim kime ne dedi?" gibi soruları mesaj geçmişine bakarak cevapla. Eğer küfür/hakaret varsa açıkça isim ver.
+3. Şirket genel durumu hakkında analiz yapabilirsin.
+4. Resmi ama net bir dil kullan.
+`;
+
+        } else {
+            // STAFF CONTEXT
+            context = `
 Sen "Personel Asistanı" adında yardımsever bir yapay zekasın.
 Şu anki kullanıcı: ${user.name}
 Bugünün Tarihi: ${dateStr}, ${dayName}
 
-KULLANICI BİLGİLERİ:
+KULLANICI BİLGİLERİ (Sadece Kendi Verileri):
 - Görevler (${user.tasksReceived.length}): 
 ${user.tasksReceived.map(t => `- [${t.priority}] ${t.title}: ${t.description || 'Açıklama yok'} (Durum: ${t.status}, Son Tarih: ${t.dueDate ? format(t.dueDate, 'dd.MM.yyyy') : 'Yok'})`).join('\n')}
 
@@ -58,12 +101,12 @@ ${user.workSchedules.map(w => `- Gün ${w.dayOfWeek}: ${w.isOffDay ? 'Tatil' : `
 - İzinler: ${user.leaves.length > 0 ? user.leaves.map(l => `${format(l.startDate, 'dd.MM')} - ${format(l.endDate, 'dd.MM')} arası izinli`).join(', ') : 'Yaklaşan izin yok.'}
 
 TALİMATLAR:
-1. Kullanıcının sorularına elindeki bu verileri kullanarak cevap ver.
-2. Eğer kullanıcı "Neler yapmalıyım?" derse görevlerini özetle.
-3. Mesai saatlerini sorarsa programdan bakıp söyle.
-4. Samimi, profesyonel ve kısa cevaplar ver.
-5. Bilmediğin bir şey sorulursa (örn: şirketin cirosu) "Buna erişimim yok" de.
+1. Sadece kullanıcının kendi verileriyle ilgili soruları cevapla.
+2. Başkalarının maaşı, performansı veya özel mesajları sorulursa "Buna yetkim yok" de.
+3. Samimi ve yardımcı ol.
 `;
+        }
+
 
         // 3. Generate Response
         const chat = model.startChat({

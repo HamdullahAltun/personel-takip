@@ -180,7 +180,8 @@ model EmployeeOfTheMonth {
   @@unique([month, year])
 }
 
-model AIReport {
+
+model SystemReport {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   content   Json
   createdAt DateTime @default(now())
