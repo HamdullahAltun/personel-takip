@@ -68,39 +68,38 @@ export default function AIExecutiveSummary({ role }: { role: string }) {
                                 "{analysis.summary}"
                             </h2>
                         </div>
+                        <div className="flex-shrink-0 bg-slate-800/50 p-4 rounded-xl border border-amber-500/20 text-center min-w-[120px]">
+                            <span className="block text-4xl font-bold text-amber-400">{analysis.score}</span>
+                            <span className="text-xs text-slate-400 uppercase tracking-wider">Sağlık Puanı</span>
+                        </div>
                     </div>
-                    <div className="flex-shrink-0 bg-slate-800/50 p-4 rounded-xl border border-amber-500/20 text-center min-w-[120px]">
-                        <span className="block text-4xl font-bold text-amber-400">{analysis.score}</span>
-                        <span className="text-xs text-slate-400 uppercase tracking-wider">Sağlık Puanı</span>
+
+                    <div className="mt-6 flex justify-end">
+                        <a href="/executive/dashboard" className="px-5 py-2.5 bg-amber-500 text-slate-900 rounded-xl text-sm font-bold hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/20 flex items-center gap-2">
+                            <BrainCircuit className="h-4 w-4" />
+                            Detaylı Raporu İncele
+                        </a>
                     </div>
                 </div>
+            </div>
 
-                <div className="mt-6 flex justify-end">
-                    <a href="/executive/dashboard" className="px-5 py-2.5 bg-amber-500 text-slate-900 rounded-xl text-sm font-bold hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/20 flex items-center gap-2">
-                        <BrainCircuit className="h-4 w-4" />
-                        Detaylı Raporu İncele
-                    </a>
+            {/* Quick Insights Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white p-5 rounded-xl text-sm border-l-4 border-emerald-500 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2 font-bold text-emerald-700">
+                        <TrendingUp className="h-4 w-4" />
+                        Stratejik Tavsiye
+                    </div>
+                    <p>{analysis.recommendations[0]}</p>
+                </div>
+                <div className="bg-white p-5 rounded-xl text-sm border-l-4 border-red-500 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2 font-bold text-red-700">
+                        <AlertTriangle className="h-4 w-4" />
+                        Dikkat Gerektiren Risk
+                    </div>
+                    <p>{analysis.risks[0]}</p>
                 </div>
             </div>
         </div>
-
-            {/* Quick Insights Grid */ }
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white p-5 rounded-xl text-sm border-l-4 border-emerald-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-2 font-bold text-emerald-700">
-                <TrendingUp className="h-4 w-4" />
-                Stratejik Tavsiye
-            </div>
-            <p>{analysis.recommendations[0]}</p>
-        </div>
-        <div className="bg-white p-5 rounded-xl text-sm border-l-4 border-red-500 shadow-sm">
-            <div className="flex items-center gap-2 mb-2 font-bold text-red-700">
-                <AlertTriangle className="h-4 w-4" />
-                Dikkat Gerektiren Risk
-            </div>
-            <p>{analysis.risks[0]}</p>
-        </div>
-    </div>
-        </div >
     );
 }
