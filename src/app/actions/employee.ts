@@ -103,7 +103,7 @@ export async function updateProfilePicture(formData: FormData) {
         if (!profilePicture) return { error: "Image required" };
 
         await prisma.user.update({
-            where: { id: session.id },
+            where: { id: session.id as string },
             data: { profilePicture }
         });
 
