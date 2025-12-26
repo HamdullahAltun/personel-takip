@@ -14,7 +14,8 @@ import {
     CalendarCheck,
     Bell,
     Trophy,
-    MessageSquareText
+    MessageSquareText,
+    ClipboardList
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,7 @@ export default function AdminLayout({
         { href: "/admin/qr", label: "QR İşlemleri", icon: QrCode },
         { href: "/admin/announcements", label: "Duyurular", icon: Bell },
         { href: "/admin/awards", label: "Ödüller", icon: Trophy },
+        { href: "/admin/tasks", label: "Görevler", icon: ClipboardList },
         { href: "/admin/messages", label: "Mesajlar", icon: MessageSquareText },
     ];
 

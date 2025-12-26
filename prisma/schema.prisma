@@ -28,6 +28,42 @@ model User {
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
   workSchedules    WorkSchedule[]
+
+  // Tasks
+  tasksGiven    Task[]       @relation("CreatedTasks")
+  tasksReceived Task[]       @relation("AssignedTasks")
+}
+
+model Task {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  description  String?
+  status       TaskStatus   @default(PENDING)
+  priority     TaskPriority @default(MEDIUM)
+  dueDate      DateTime?
+  
+  assignedToId String       @db.ObjectId
+  assignedTo   User         @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  
+  assignedById String       @db.ObjectId
+  assignedBy   User         @relation("CreatedTasks", fields: [assignedById], references: [id])
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
 
 model Message {
