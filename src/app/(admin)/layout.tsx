@@ -28,9 +28,7 @@ export default function AdminLayout({
     const router = useRouter();
 
     const handleLogout = async () => {
-        // In a real app, call logout API to clear cookie
-        // For now, just delete cookie manually or similar
-        document.cookie = "personel_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+        await fetch('/api/auth/logout', { method: 'POST' });
         router.push("/login");
     };
 

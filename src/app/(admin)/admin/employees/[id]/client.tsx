@@ -121,6 +121,10 @@ export default function EmployeeDetailClient({ user }: { user: UserWithRelations
                                 <input name="phone" defaultValue={user.phone} className="w-full mt-1 border rounded-lg p-2" required />
                             </div>
                             <div>
+                                <label className="text-sm font-medium text-slate-700">E-Posta</label>
+                                <input name="email" type="email" defaultValue={user.email || ''} className="w-full mt-1 border rounded-lg p-2" placeholder="opsiyonel@ornek.com" />
+                            </div>
+                            <div>
                                 <label className="text-sm font-medium text-slate-700">Saatlik Ücret (₺)</label>
                                 <input name="hourlyRate" type="number" step="0.5" defaultValue={user.hourlyRate} className="w-full mt-1 border rounded-lg p-2" />
                             </div>
