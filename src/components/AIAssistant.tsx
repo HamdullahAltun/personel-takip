@@ -37,11 +37,14 @@ export default function AIAssistant() {
 
         try {
             // Transform history for Gemini: 'user' -> 'user', 'model' -> 'model'
-            // Exclude the last added message from history as it's the prompt
-            const history = messages.map(m => ({
-                role: m.role,
-                parts: [{ text: m.parts }]
-            }));
+            // Exclude the last added message (prompt) AND the initial welcome message if it's there
+            // Gemini history must be User -> Model -> User ...
+            const history = messages
+                .filter((_, index) => index !== 0) // Remove initial fake welcome message
+                .map(m => ({
+                    role: m.role,
+                    parts: [{ text: m.parts }]
+                }));
 
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
