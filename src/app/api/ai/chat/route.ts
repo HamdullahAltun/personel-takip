@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
         // 1. Gather Context
         const user = await prisma.user.findUnique({
-            where: { id: session.id },
+            where: { id: session.id as string },
             include: {
                 tasksReceived: {
                     where: { status: { not: 'COMPLETED' } }
