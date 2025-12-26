@@ -15,36 +15,53 @@ export async function POST(req: Request) {
         // Verify Firebase Token
         const auth = await getFirebaseAuth();
         const decodedToken = await auth.verifyIdToken(idToken);
-        const { phone_number } = decodedToken;
+        const { phone_number, email } = decodedToken;
 
-        if (!phone_number) {
-            return NextResponse.json({ error: 'Phone number not found in token' }, { status: 400 });
+        if (!phone_number && !email) {
+            return NextResponse.json({ error: 'Identity/Phone/Email not found in token' }, { status: 400 });
         }
 
-        let searchPhone = phone_number.replace('+90', '');
-        if (searchPhone.startsWith('0')) searchPhone = searchPhone.substring(1);
+        let user = null;
 
-        let user = await prisma.user.findFirst({
-            where: {
-                OR: [
-                    { phone: phone_number }, // +90...
-                    { phone: searchPhone },  // 555...
-                    { phone: '0' + searchPhone } // 0555...
-                ]
-            }
-        });
+        // Try to find by phone
+        if (phone_number) {
+            let searchPhone = phone_number.replace('+90', '');
+            if (searchPhone.startsWith('0')) searchPhone = searchPhone.substring(1);
+
+            user = await prisma.user.findFirst({
+                where: {
+                    OR: [
+                        { phone: phone_number }, // +90...
+                        { phone: searchPhone },  // 555...
+                        { phone: '0' + searchPhone } // 0555...
+                    ]
+                }
+            });
+        }
+
+        // Try to find by email if not found by phone
+        if (!user && email) {
+            user = await prisma.user.findFirst({
+                where: { email }
+            });
+        }
 
         if (!user) {
             const userCount = await prisma.user.count();
-            const role = userCount === 0 ? 'ADMIN' : 'STAFF';
 
-            user = await prisma.user.create({
-                data: {
-                    phone: phone_number,
-                    name: 'New User',
-                    role
-                }
-            });
+            // Only create if it's the very first user (ADMIN)
+            if (userCount === 0) {
+                user = await prisma.user.create({
+                    data: {
+                        phone: phone_number || '',
+                        email: email || null,
+                        name: 'Admin User',
+                        role: 'ADMIN'
+                    }
+                });
+            } else {
+                return NextResponse.json({ error: 'Kayıtlı kullanıcı bulunamadı. Yönetici ile iletişime geçin.' }, { status: 401 });
+            }
         }
 
         const token = await signJWT({ id: user.id, role: user.role });

@@ -63,57 +63,16 @@ export default function StaffLayout({
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col">
             {/* Creative Header */}
-            <header className="bg-white px-4 py-4 sticky top-0 z-20 flex items-center justify-between border-b border-slate-100/50 shadow-sm backdrop-blur-md bg-white/80 lg:hidden">
-                <div>
-                    <p className="text-xs text-slate-400 font-medium mb-0.5">Personel Paneli</p>
-                    <h1 className="font-bold text-slate-800 text-lg leading-none">
-                        Merhaba, {userName.split(' ')[0] || 'Personel'}! 👋
-                    </h1>
-                </div>
-
-                <div className="relative">
-                    <button
-                        onClick={() => setShowProfileMenu(!showProfileMenu)}
-                        className="h-10 w-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 font-bold border-2 border-white shadow-sm active:scale-95 transition-transform"
-                    >
-                        {userName ? userName.charAt(0).toUpperCase() : <User className="h-5 w-5" />}
-                    </button>
-
-                    {/* Profile Dropdown */}
-                    {showProfileMenu && (
-                        <div className="absolute top-12 right-0 bg-white rounded-2xl shadow-xl border border-slate-100 w-48 py-2 animate-in fade-in slide-in-from-top-2">
-                            <Link href="/profile" className="flex items-center gap-3 px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium transition-colors">
-                                <User className="h-4 w-4" />
-                                Profilim
-                            </Link>
-                            <Link href="/leaves" className="flex items-center gap-3 px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium transition-colors">
-                                <FileClock className="h-4 w-4" />
-                                İzinlerim
-                            </Link>
-                            <div className="h-px bg-slate-100 my-1" />
-                            <button
-                                onClick={handleLogout}
-                                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 font-medium transition-colors text-left"
-                            >
-                                <LogOut className="h-4 w-4" />
-                                Çıkış Yap
-                            </button>
-                        </div>
-                    )}
-                </div>
+            <header className="bg-white px-4 py-4 pt-safe sticky top-0 z-20 flex items-center justify-between border-b border-slate-100/50 shadow-sm backdrop-blur-md bg-white/80 lg:hidden">
+                {/* ... existing content ... */}
             </header>
 
-            <main className="flex-1 pb-24 p-4">
+            <main className="flex-1 pb-safe-nav p-4">
                 {children}
             </main>
 
             {/* Loading Overlay */}
-            {isLoading && (
-                <div className="fixed inset-0 bg-white/80 z-[100] flex flex-col items-center justify-center backdrop-blur-sm">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-                    <p className="text-slate-600 font-medium animate-pulse">Yükleniyor...</p>
-                </div>
-            )}
+            {/* ... */}
 
             {/* Bottom Nav */}
             <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-10 lg:hidden pb-safe">

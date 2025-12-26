@@ -11,6 +11,7 @@ model User {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   phone       String   @unique
+  email       String?
   role        String   @default("STAFF") // ADMIN, STAFF
   hourlyRate  Float    @default(0)
   weeklyGoal  Int      @default(0)

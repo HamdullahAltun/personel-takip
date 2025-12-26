@@ -3,11 +3,10 @@ import { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.personel.app',
   appName: 'Personel Takip',
-  webDir: 'public', // We point to public as a placeholder, but we rely on server.url
+  webDir: 'public',
   server: {
-    url: 'http://192.168.1.102:3000', // YOUR LOCAL IP
-    cleartext: true, // Allow http
-    androidScheme: 'http'
+    url: 'https://personel-takip-liard.vercel.app/',
+    androidScheme: 'https'
   }
 };
 
