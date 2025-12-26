@@ -31,8 +31,11 @@ export async function GET() {
         });
 
         // 2. Prepare Context for AI
+        // 2. Prepare Context for AI
         const context = `
-            Analyze this company data acting as a Senior Business Consultant.
+            Act as a Senior Business Consultant. Analyze this company data and provide a report in TURKISH language.
+            
+            IMPORTANT: Return ONLY a valid JSON object. Do not include any other text, markdown formatting, or explanations outside the JSON.
             
             Staff Data Summary:
             ${staff.map(s => `- ${s.name}: ${s.tasksReceived.filter((t: any) => t.status === 'COMPLETED').length} tasks done. Last Check-in: ${s.attendance[0]?.timestamp || 'None'}`).join('\n')}
@@ -44,12 +47,19 @@ export async function GET() {
             Total Approved Expenses: ${expensesTotal._sum.amount || 0}
             Pending Leave Requests: ${pendingLeaves}
 
-            Task: Provide a JSON report with:
-            1. summary (1-2 sentences overall health)
-            2. score (0-100 integer)
-            3. details object with keys: attendance, tasks, expenses, communication (each a paragraph analysis)
-            4. recommendations (array of 3 strings)
-            5. risks (array of 3 strings, identify any toxic behavior or slackers)
+            Required JSON Structure:
+            {
+                "summary": "1-2 sentences overall health summary in Turkish",
+                "score": 85,
+                "details": {
+                    "attendance": "Analysis of attendance in Turkish",
+                    "tasks": "Analysis of task performance in Turkish",
+                    "expenses": "Analysis of expenses in Turkish",
+                    "communication": "Analysis of communication tone/culture in Turkish"
+                },
+                "recommendations": ["Recommendation 1", "Recommendation 2", "Recommendation 3"],
+                "risks": ["Risk 1", "Risk 2", "Risk 3"]
+            }
         `;
 
         // 3. Generate Content
@@ -59,8 +69,15 @@ export async function GET() {
         const response = result.response;
         let text = response.text();
 
-        // 4. Parse JSON (Handle potential markdown code blocks)
-        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        // 4. Parse JSON (Robust cleaning)
+        // Find the first { and the last }
+        const firstBrace = text.indexOf('{');
+        const lastBrace = text.lastIndexOf('}');
+
+        if (firstBrace !== -1 && lastBrace !== -1) {
+            text = text.substring(firstBrace, lastBrace + 1);
+        }
+
         const report = JSON.parse(text);
 
         return NextResponse.json({ report });
