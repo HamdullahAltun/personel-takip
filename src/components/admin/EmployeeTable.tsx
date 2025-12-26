@@ -81,14 +81,28 @@ export default function EmployeeTable({ initialEmployees }: { initialEmployees: 
                                          Just show a global transparent spinner or similar. 
                                          Actually, user asked for "Yükleniyor ibaresi".
                                      */}
-                                    <div>
-                                        <p className="font-medium text-slate-900">{emp.name}</p>
-                                        <p className="text-slate-500 text-xs sm:hidden">{emp.role === 'ADMIN' ? 'Yönetici' : 'Personel'}</p>
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200">
+                                            {emp.profilePicture ? (
+                                                <img src={emp.profilePicture} alt={emp.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span className="font-bold text-slate-500 text-xs">{emp.name.charAt(0)}</span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-slate-900">{emp.name}</p>
+                                            <p className="text-slate-500 text-xs sm:hidden">
+                                                {emp.role === 'ADMIN' ? 'Yönetici' : emp.role === 'EXECUTIVE' ? 'Üst Yönetici' : 'Personel'}
+                                            </p>
+                                        </div>
                                     </div>
                                 </td>
                                 <td className="px-4 py-4 hidden sm:table-cell">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${emp.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                                        {emp.role === 'ADMIN' ? 'Yönetici' : 'Personel'}
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold 
+                                        ${emp.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' :
+                                            emp.role === 'EXECUTIVE' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-blue-100 text-blue-700'}`}>
+                                        {emp.role === 'ADMIN' ? 'Yönetici' : emp.role === 'EXECUTIVE' ? 'Üst Yönetici' : 'Personel'}
                                     </span>
                                 </td>
                                 <td className="px-4 py-4 hidden md:table-cell text-right text-slate-600">
@@ -205,6 +219,7 @@ function EmployeeModal({ employee, onClose, onSuccess }: { employee: User | null
                         <select name="role" defaultValue={employee?.role || "STAFF"} className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                             <option value="STAFF">Personel</option>
                             <option value="ADMIN">Yönetici</option>
+                            <option value="EXECUTIVE">Üst Yönetici</option>
                         </select>
                     </div>
 
