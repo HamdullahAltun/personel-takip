@@ -47,6 +47,14 @@ export default function StaffLayout({
         setTimeout(checkPermission, 3000);
     }, []);
 
+    const navItems = [
+        { href: "/dashboard", label: "Ana Sayfa", icon: Home },
+        { href: "/scan", label: "İşlem Yap", icon: ScanLine },
+        { href: "/users", label: "Personel", icon: User },
+        { href: "/announcements", label: "Duyurular", icon: Megaphone },
+        { href: "/messages", label: "Mesajlar", icon: MessageSquareText },
+    ];
+
     const handleLogout = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
         window.location.href = '/login';
