@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Send, User } from 'lucide-react';
+import { Send, User, Check, CheckCheck } from 'lucide-react';
 
 type Message = {
     id: string;
     content: string;
     senderId: string;
     createdAt: string;
+    read: boolean;
 };
 
 export default function ChatClient({ id }: { id: string }) {
@@ -100,9 +101,16 @@ export default function ChatClient({ id }: { id: string }) {
                                 : 'bg-white text-slate-800 rounded-bl-none'
                                 }`}>
                                 {msg.content}
-                                <p className={`text-[10px] mt-1 text-right ${isMe ? 'text-blue-200' : 'text-slate-400'}`}>
-                                    {new Date(msg.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                                </p>
+                                <div className={`flex items-center justify-end gap-1 mt-1`}>
+                                    <span className={`text-[10px] ${isMe ? 'text-blue-200' : 'text-slate-400'}`}>
+                                        {new Date(msg.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    {isMe && (
+                                        msg.read ?
+                                            <CheckCheck className="h-3 w-3 text-blue-200" /> :
+                                            <Check className="h-3 w-3 text-blue-200/70" />
+                                    )}
+                                </div>
                             </div>
                         </div>
                     );
