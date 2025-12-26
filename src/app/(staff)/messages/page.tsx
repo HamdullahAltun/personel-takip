@@ -9,6 +9,7 @@ type Conversation = {
         id: string;
         name: string;
         role: string;
+        profilePicture?: string | null;
     };
     lastMessage: {
         content: string;
@@ -23,6 +24,7 @@ type UserData = {
     id: string;
     name: string;
     role: string;
+    profilePicture?: string | null;
 };
 
 export default function MessageListPage() {
@@ -102,8 +104,12 @@ export default function MessageListPage() {
                             className="flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors relative"
                         >
                             <div className="relative">
-                                <div className="bg-slate-100 p-3 rounded-full text-slate-600">
-                                    <User className="h-6 w-6" />
+                                <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200 text-slate-600">
+                                    {conv.user.profilePicture ? (
+                                        <img src={conv.user.profilePicture} alt={conv.user.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User className="h-6 w-6" />
+                                    )}
                                 </div>
                                 {conv.unreadCount > 0 && (
                                     <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold shadow-sm border-2 border-white">
@@ -163,12 +169,18 @@ export default function MessageListPage() {
                                     href={`/messages/${user.id}`}
                                     className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-xl transition-colors"
                                 >
-                                    <div className="bg-slate-100 p-2.5 rounded-full text-slate-600">
-                                        <User className="h-5 w-5" />
+                                    <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200 text-slate-600">
+                                        {user.profilePicture ? (
+                                            <img src={user.profilePicture} alt={user.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User className="h-5 w-5" />
+                                        )}
                                     </div>
                                     <div className="flex-1">
                                         <h3 className="font-bold text-slate-900 text-sm">{user.name}</h3>
-                                        <p className="text-xs text-slate-500 capitalize">{user.role}</p>
+                                        <p className="text-xs text-slate-500 capitalize">
+                                            {user.role === 'ADMIN' ? 'Yönetici' : user.role === 'EXECUTIVE' ? 'Üst Yönetici' : 'Personel'}
+                                        </p>
                                     </div>
                                 </Link>
                             ))}

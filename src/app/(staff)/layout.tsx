@@ -63,15 +63,16 @@ export default function StaffLayout({
 
     const navItems = [
         { href: "/dashboard", label: "Ana Sayfa", icon: Home },
+        { href: "/scan", label: "İşlem Yap", icon: ScanLine },
+        { href: "/tasks", label: "Görevler", icon: ClipboardList },
+        { href: "/expenses", label: "Harcamalar", icon: Receipt },
+        { href: "/users", label: "Personel", icon: User },
+        { href: "/messages", label: "Mesajlar", icon: MessageSquareText },
+    ];
 
     if (userRole === 'EXECUTIVE') {
-        // Add Executive Dashboard link
-        // Insert it maybe after Dashboard or at end? "Alt taraftan" implies easy access.
-        // Let's add it at the start or prominently. Or as a special item?
-        // Let's add it to the list.
-        navItems.splice(1, 0, { href: "/executive/dashboard", label: "Rapor", icon: React.lazy(() => import('lucide-react').then(mod => ({ default: mod.BrainCircuit }))) as any });
-        // Lazy import for icon might be tricky in pure React client without Suspense here if not handled well.
-        // Let's just import BrainCircuit at top.
+        // Add Executive Dashboard link at pos 1
+        navItems.splice(1, 0, { href: "/executive/dashboard", label: "Rapor", icon: BrainCircuit });
     }
 
     const handleLogout = async () => {

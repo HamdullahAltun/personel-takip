@@ -48,7 +48,7 @@ export default async function ProfilePage() {
 
                     <div className="mt-4">
                         <h2 className="text-xl font-bold text-slate-900">{user.name}</h2>
-                        <p className="text-slate-500">{user.role === 'ADMIN' ? 'Yönetici' : 'Personel'}</p>
+                        <p className="text-slate-500">{user.role === 'ADMIN' ? 'Yönetici' : user.role === 'EXECUTIVE' ? 'Üst Yönetici' : 'Personel'}</p>
                     </div>
 
                     <div className="mt-8 space-y-4">
