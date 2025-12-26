@@ -184,6 +184,10 @@ function EmployeeModal({ employee, onClose, onSuccess }: { employee: User | null
                             <input name="phone" defaultValue={employee?.phone} required className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0555..." />
                         </div>
                     </div>
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium text-slate-700">E-Posta</label>
+                        <input name="email" type="email" defaultValue={employee?.email || ''} className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="isim@ornek.com" />
+                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
