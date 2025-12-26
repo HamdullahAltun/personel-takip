@@ -156,7 +156,7 @@ export default function LoginPage() {
             setEmailSent(true);
         } catch (err: any) {
             console.error(err);
-            setError("E-posta gönderilemedi. Domain yetkisi kontrol edilmeli.");
+            setError(`E-posta gönderilemedi: ${err.message}. Lütfen Firebase Console'da "Authorized Domains" ayarlarını kontrol edin.`);
         } finally {
             setLoading(false);
         }
