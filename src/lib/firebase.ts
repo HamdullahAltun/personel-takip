@@ -10,13 +10,26 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+import { getMessaging, Messaging } from "firebase/messaging";
+
+// ...
+
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
+let messaging: Messaging | undefined;
 
 try {
     if (firebaseConfig.apiKey) {
         app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
         auth = getAuth(app);
+
+        if (typeof window !== "undefined") {
+            try {
+                messaging = getMessaging(app);
+            } catch (err) {
+                console.warn("Messaging not supported (likely no Window or SW issue).");
+            }
+        }
     } else {
         console.warn("Firebase Client credentials missing. Skipping initialization.");
     }
@@ -24,5 +37,4 @@ try {
     console.error("Firebase Init Error:", error);
 }
 
-// Export as potentially undefined
-export { app, auth };
+export { app, auth, messaging };

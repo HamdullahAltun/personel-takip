@@ -62,10 +62,55 @@ export default function StaffLayout({
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col">
-            {/* Creative Header */}
-            <header className="bg-white px-4 py-4 pt-safe sticky top-0 z-20 flex items-center justify-between border-b border-slate-100/50 shadow-sm backdrop-blur-md bg-white/80 lg:hidden">
-                {/* ... existing content ... */}
+            <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/50 fixed top-0 left-0 right-0 z-50 pt-safe pb-4 px-4 shadow-sm lg:hidden transition-all duration-300 flex items-center justify-between">
+                <div>
+                    <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-0.5">Personel Paneli</p>
+                    <h1 className="font-bold text-slate-900 text-lg leading-none">
+                        {userName ? `Merhaba, ${userName.split(' ')[0]}!` : 'Hoş Geldiniz'} 👋
+                    </h1>
+                </div>
+
+                <div className="relative">
+                    <button
+                        onClick={() => setShowProfileMenu(!showProfileMenu)}
+                        className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold ring-2 ring-white shadow-sm active:scale-95 transition-all"
+                    >
+                        {userName ? userName.charAt(0).toUpperCase() : <User className="h-5 w-5" />}
+                    </button>
+
+                    {/* Profile Dropdown */}
+                    {showProfileMenu && (
+                        <>
+                            <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)} />
+                            <div className="absolute top-12 right-0 bg-white rounded-2xl shadow-xl border border-slate-100 w-56 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                                <div className="px-4 py-2 border-b border-slate-50 mb-2">
+                                    <p className="text-sm font-bold text-slate-900">{userName}</p>
+                                    <p className="text-xs text-slate-500">Personel</p>
+                                </div>
+                                <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium transition-colors">
+                                    <User className="h-4 w-4" />
+                                    Profilim
+                                </Link>
+                                <Link href="/leaves" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium transition-colors">
+                                    <FileClock className="h-4 w-4" />
+                                    İzinlerim
+                                </Link>
+                                <div className="h-px bg-slate-100 my-1" />
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-medium transition-colors text-left"
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                    Çıkış Yap
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </header>
+
+            {/* Spacer for Fixed Header */}
+            <div className="h-[calc(70px+env(safe-area-inset-top))] lg:hidden" />
 
             <main className="flex-1 pb-safe-nav p-4">
                 {children}
