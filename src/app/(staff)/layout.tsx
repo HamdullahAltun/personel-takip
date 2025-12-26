@@ -17,43 +17,35 @@ export default function StaffLayout({
     const [userName, setUserName] = React.useState("");
     const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-    // Reset loading when pathname changes
+    // Notification Logic
     React.useEffect(() => {
-        setIsLoading(false);
-        setShowProfileMenu(false);
-    }, [pathname]);
-
-    React.useEffect(() => {
-        // Fetch user name
-        fetch('/api/profile/me').then(res => res.json()).then(data => {
-            if (data.name) setUserName(data.name);
-        }).catch(() => { });
-
-        const fetchUnread = async () => {
-            try {
-                const res = await fetch('/api/messages/conversations');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (Array.isArray(data)) {
-                        const count = data.filter((c: any) => c.unreadCount > 0).length;
-                        setUnreadCount(count);
+        const checkPermission = async () => {
+            if (typeof window !== 'undefined' && 'Notification' in window) {
+                if (Notification.permission === 'default') {
+                    try {
+                        // Dynamic import to avoid SSR issues if firebase uses window
+                        const { messaging } = await import('@/lib/firebase');
+                        if (messaging) {
+                            const { getToken } = await import('firebase/messaging');
+                            const token = await getToken(messaging, {
+                                vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+                            });
+                            if (token) {
+                                await fetch('/api/notifications/register', {
+                                    method: 'POST',
+                                    body: JSON.stringify({ token })
+                                });
+                            }
+                        }
+                    } catch (err) {
+                        console.log('Notification permission ignored or error', err);
                     }
                 }
-            } catch (error) { }
+            }
         };
-
-        fetchUnread();
-        const interval = setInterval(fetchUnread, 10000);
-        return () => clearInterval(interval);
+        // Delay slightly
+        setTimeout(checkPermission, 3000);
     }, []);
-
-    const navItems = [
-        { href: "/dashboard", label: "Ana Sayfa", icon: Home },
-        { href: "/scan", label: "İşlem Yap", icon: ScanLine },
-        { href: "/users", label: "Personel", icon: User },
-        { href: "/announcements", label: "Duyurular", icon: Megaphone },
-        { href: "/messages", label: "Mesajlar", icon: MessageSquareText },
-    ];
 
     const handleLogout = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });

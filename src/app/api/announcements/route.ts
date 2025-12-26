@@ -31,6 +31,21 @@ export async function POST(req: Request) {
             data: { title, content, isActive: true }
         });
 
+        // Send Notification to ALL users
+        const users = await prisma.user.findMany({
+            where: { fcmToken: { not: null } },
+            select: { fcmToken: true }
+        });
+
+        if (users.length > 0) {
+            const { sendPushNotification } = await import('@/lib/notifications');
+            // Send in parallel (careful with rate limits if huge userbase)
+            // Ideally we use a topic like 'all_users' but client didn't subscribe to topic.
+            users.forEach(u => {
+                if (u.fcmToken) sendPushNotification(u.fcmToken, `Duyuru: ${title}`, content);
+            });
+        }
+
         return NextResponse.json(announcement);
     } catch (error) {
         return NextResponse.json({ error: "Creation failed" }, { status: 500 });

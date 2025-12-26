@@ -49,18 +49,32 @@ export default function ChatClient({ id }: { id: string }) {
     }, [id]);
 
     useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        if (bottomRef.current) {
+            bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+            // Mark as read when new messages arrive and I am viewing
+            if (messages.length > 0) {
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg.senderId === id) { // If last msg is from them
+                    fetch(`/api/messages/${id}/read`, { method: 'POST' });
+                }
+            }
+        }
+    }, [messages, id]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!content.trim()) return;
 
-        await fetch('/api/messages', {
+        const res = await fetch('/api/messages', {
             method: 'POST',
             body: JSON.stringify({ receiverId: id, content }),
             headers: { 'Content-Type': 'application/json' }
         });
+
+        if (res.ok) {
+            // Trigger push notification via server side is better, but doing it here?
+            // No, the server should handle push notification on POST /messages preferably.
+        }
         setContent("");
         fetchMessages();
     };

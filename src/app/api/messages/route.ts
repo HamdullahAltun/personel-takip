@@ -52,5 +52,22 @@ export async function POST(req: Request) {
         }
     });
 
+    // Send Notification
+    try {
+        const receiver = await prisma.user.findUnique({ where: { id: receiverId } });
+        if (receiver?.fcmToken) {
+            const senderName = (await prisma.user.findUnique({
+                where: { id: session.id as string },
+                select: { name: true }
+            }))?.name || 'Birisi';
+
+            // We need to import dynamically or ensure lib is safe
+            const { sendPushNotification } = await import('@/lib/notifications');
+            await sendPushNotification(receiver.fcmToken, `Yeni Mesaj: ${senderName}`, content);
+        }
+    } catch (e) {
+        console.error("Notif Error:", e);
+    }
+
     return NextResponse.json(message);
 }
