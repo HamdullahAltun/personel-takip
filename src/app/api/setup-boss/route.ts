@@ -18,8 +18,28 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Must be logged in to promote yourself (for safety)' }, { status: 401 });
     }
 
+    let userId = session?.id as string;
+
+    // Optional: Allow promoting by phone number via query param
+    const phone = searchParams.get('phone');
+    if (phone) {
+        const u = await prisma.user.findUnique({ where: { phone } });
+        if (u) userId = u.id;
+    }
+
+    // Fallback: If we still don't have a valid ID (session might be stale/deleted user), just promote the very first user in the DB.
+    // This ensures the script works even if the session is broken.
+    if (!userId) {
+        const firstUser = await prisma.user.findFirst();
+        if (firstUser) {
+            userId = firstUser.id;
+        } else {
+            return NextResponse.json({ error: 'No users found in database to promote.' }, { status: 404 });
+        }
+    }
+
     const updatedUser = await prisma.user.update({
-        where: { id: session.id as string },
+        where: { id: userId },
         data: { role: 'EXECUTIVE' }
     });
 
