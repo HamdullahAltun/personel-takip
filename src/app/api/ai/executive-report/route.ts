@@ -5,34 +5,34 @@ import { model } from '@/lib/ai';
 
 export const dynamic = 'force-dynamic';
 
-try {
-    const session = await getAuth();
-    // Allow access to Executives AND Admins
-    if (!session || (session.role !== 'EXECUTIVE' && session.role !== 'ADMIN')) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function GET() {
+    try {
+        const session = await getAuth();
+        // Allow access to Executives AND Admins
+        if (!session || (session.role !== 'EXECUTIVE' && session.role !== 'ADMIN')) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
-    // 1. Gather ALL Data (carefully limited)
-    const staff = await prisma.user.findMany({
-        where: { role: 'STAFF' },
-        select: { id: true, name: true, tasksReceived: true, expenses: true, attendance: { take: 10, orderBy: { timestamp: 'desc' } } }
-    });
+        // 1. Gather ALL Data (carefully limited)
+        const staff = await prisma.user.findMany({
+            where: { role: 'STAFF' },
+            select: { id: true, name: true, tasksReceived: true, expenses: true, attendance: { take: 10, orderBy: { timestamp: 'desc' } } }
+        });
 
-    const messages = await prisma.message.findMany({
-        take: 50,
-        orderBy: { createdAt: 'desc' },
-        select: { content: true, sender: { select: { name: true } } }
-    });
+        const messages = await prisma.message.findMany({
+            take: 50,
+            orderBy: { createdAt: 'desc' },
+            select: { content: true, sender: { select: { name: true } } }
+        });
 
-    const pendingLeaves = await prisma.leaveRequest.count({ where: { status: 'PENDING' } });
-    const expensesTotal = await prisma.expense.aggregate({
-        _sum: { amount: true },
-        where: { status: 'APPROVED' }
-    });
+        const pendingLeaves = await prisma.leaveRequest.count({ where: { status: 'PENDING' } });
+        const expensesTotal = await prisma.expense.aggregate({
+            _sum: { amount: true },
+            where: { status: 'APPROVED' }
+        });
 
-    // 2. Prepare Context for AI
-    // 2. Prepare Context for AI
-    const context = `
+        // 2. Prepare Context for AI
+        const context = `
             Act as a Senior Business Consultant. Analyze this company data and provide a report in TURKISH language.
             
             IMPORTANT: Return ONLY a valid JSON object. Do not include any other text, markdown formatting, or explanations outside the JSON.
@@ -62,28 +62,27 @@ try {
             }
         `;
 
-    // 3. Generate Content
-    if (!model) throw new Error("AI Model not initialized");
+        // 3. Generate Content
+        if (!model) throw new Error("AI Model not initialized");
 
-    const result = await model.generateContent(context);
-    const response = result.response;
-    let text = response.text();
+        const result = await model.generateContent(context);
+        const response = result.response;
+        let text = response.text();
 
-    // 4. Parse JSON (Robust cleaning)
-    // Find the first { and the last }
-    const firstBrace = text.indexOf('{');
-    const lastBrace = text.lastIndexOf('}');
+        // 4. Parse JSON (Robust cleaning)
+        const firstBrace = text.indexOf('{');
+        const lastBrace = text.lastIndexOf('}');
 
-    if (firstBrace !== -1 && lastBrace !== -1) {
-        text = text.substring(firstBrace, lastBrace + 1);
+        if (firstBrace !== -1 && lastBrace !== -1) {
+            text = text.substring(firstBrace, lastBrace + 1);
+        }
+
+        const report = JSON.parse(text);
+
+        return NextResponse.json({ report });
+
+    } catch (error: any) {
+        console.error("AI Report Error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    const report = JSON.parse(text);
-
-    return NextResponse.json({ report });
-
-} catch (error: any) {
-    console.error("AI Report Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-}
 }
