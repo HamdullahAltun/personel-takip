@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React, { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText, LogOut, ChevronDown, Menu as MenuIcon } from "lucide-react";
+import { Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText, LogOut, ChevronDown, Menu as MenuIcon, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function StaffLayout({
@@ -50,8 +50,8 @@ export default function StaffLayout({
     const navItems = [
         { href: "/dashboard", label: "Ana Sayfa", icon: Home },
         { href: "/scan", label: "İşlem Yap", icon: ScanLine },
+        { href: "/tasks", label: "Görevler", icon: ClipboardList },
         { href: "/users", label: "Personel", icon: User },
-        { href: "/announcements", label: "Duyurular", icon: Megaphone },
         { href: "/messages", label: "Mesajlar", icon: MessageSquareText },
     ];
 
