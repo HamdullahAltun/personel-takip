@@ -17,7 +17,9 @@ import {
     MessageSquareText,
     ClipboardList,
     Receipt,
-    BrainCircuit
+    BrainCircuit,
+    TentTree, // Added TentTree
+    Megaphone // Added Megaphone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,15 +45,14 @@ export default function AdminLayout({
     }, [pathname]);
 
     const navItems = [
-        { href: "/admin/dashboard", label: "Panel", icon: LayoutDashboard },
+        { href: "/admin", label: "Genel Bakış", icon: LayoutDashboard },
         { href: "/admin/employees", label: "Personeller", icon: Users },
-        { href: "/admin/leaves", label: "İzin Talepleri", icon: CalendarCheck },
-        { href: "/admin/qr", label: "QR İşlemleri", icon: QrCode },
-        { href: "/admin/announcements", label: "Duyurular", icon: Bell },
-        { href: "/admin/awards", label: "Ödüller", icon: Trophy },
+        { href: "/admin/attendance", label: "Katılım", icon: CalendarCheck },
+        { href: "/admin/leaves", label: "İzinler", icon: TentTree },
         { href: "/admin/tasks", label: "Görevler", icon: ClipboardList },
         { href: "/admin/expenses", label: "Harcamalar", icon: Receipt },
         { href: "/admin/messages", label: "Mesajlar", icon: MessageSquareText },
+        { href: "/admin/announcements", label: "Duyurular", icon: Megaphone },
         // Admin also gets access to Executive Dashboard
         { href: "/executive/dashboard", label: "Şirket Raporu", icon: BrainCircuit },
     ];

@@ -2,52 +2,54 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     try {
+        const session = await getAuth();
+        if (!session) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Fetch active announcements
         const announcements = await prisma.announcement.findMany({
+            where: { isActive: true },
             orderBy: { createdAt: 'desc' },
-            where: { isActive: true }
+            take: 5
         });
+
         return NextResponse.json(announcements);
+
     } catch (error) {
-        return NextResponse.json({ error: "Failed to fetch announcements" }, { status: 500 });
+        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
     }
 }
 
 export async function POST(req: Request) {
     try {
         const session = await getAuth();
+        // Only ADMIN can create announcements
         if (!session || session.role !== 'ADMIN') {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { title, content } = await req.json();
 
         if (!title || !content) {
-            return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+            return NextResponse.json({ error: "Title and content required" }, { status: 400 });
         }
 
         const announcement = await prisma.announcement.create({
-            data: { title, content, isActive: true }
+            data: {
+                title,
+                content,
+                isActive: true
+            }
         });
-
-        // Send Notification to ALL users
-        const users = await prisma.user.findMany({
-            where: { fcmToken: { not: null } },
-            select: { fcmToken: true }
-        });
-
-        if (users.length > 0) {
-            const { sendPushNotification } = await import('@/lib/notifications');
-            // Send in parallel (careful with rate limits if huge userbase)
-            // Ideally we use a topic like 'all_users' but client didn't subscribe to topic.
-            users.forEach(u => {
-                if (u.fcmToken) sendPushNotification(u.fcmToken, `Duyuru: ${title}`, content);
-            });
-        }
 
         return NextResponse.json(announcement);
+
     } catch (error) {
-        return NextResponse.json({ error: "Creation failed" }, { status: 500 });
+        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
     }
 }
