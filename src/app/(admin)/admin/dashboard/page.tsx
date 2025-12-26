@@ -105,9 +105,12 @@ export default async function AdminDashboard() {
                         recentActivity.map((record) => (
                             <div key={record.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${record.type === 'CHECK_IN' ? 'bg-green-500' : 'bg-red-500'
-                                        }`}>
-                                        {record.user.name.charAt(0)}
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white overflow-hidden ${record.user.profilePicture ? '' : (record.type === 'CHECK_IN' ? 'bg-green-500' : 'bg-red-500')}`}>
+                                        {record.user.profilePicture ? (
+                                            <img src={record.user.profilePicture} alt={record.user.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            record.user.name.charAt(0)
+                                        )}
                                     </div>
                                     <div>
                                         <p className="font-medium text-slate-900">{record.user.name}</p>
