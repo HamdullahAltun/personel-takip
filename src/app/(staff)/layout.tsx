@@ -57,6 +57,18 @@ export default function StaffLayout({
         { href: "/messages", label: "Mesajlar", icon: MessageSquareText },
     ];
 
+    const [profilePicture, setProfilePicture] = useState<string | null>(null);
+
+    useEffect(() => {
+        // Fetch user info for header
+        fetch('/api/auth/me').then(res => res.json()).then(data => {
+            if (data.user) {
+                setUserName(data.user.name);
+                setProfilePicture(data.user.profilePicture);
+            }
+        }).catch(() => { });
+    }, []);
+
     const handleLogout = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
         window.location.href = '/login';
@@ -75,9 +87,13 @@ export default function StaffLayout({
                 <div className="relative">
                     <button
                         onClick={() => setShowProfileMenu(!showProfileMenu)}
-                        className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold ring-2 ring-white shadow-sm active:scale-95 transition-all"
+                        className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold ring-2 ring-white shadow-sm active:scale-95 transition-all overflow-hidden"
                     >
-                        {userName ? userName.charAt(0).toUpperCase() : <User className="h-5 w-5" />}
+                        {profilePicture ? (
+                            <img src={profilePicture} alt={userName} className="w-full h-full object-cover" />
+                        ) : (
+                            userName ? userName.charAt(0).toUpperCase() : <User className="h-5 w-5" />
+                        )}
                     </button>
 
                     {/* Profile Dropdown */}
