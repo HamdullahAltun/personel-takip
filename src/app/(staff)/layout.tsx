@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React, { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText, LogOut, ChevronDown, Menu as MenuIcon, ClipboardList } from "lucide-react";
+import { Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText, LogOut, ChevronDown, Menu as MenuIcon, ClipboardList, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AIAssistant from "@/components/AIAssistant";
 
