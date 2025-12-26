@@ -149,6 +149,9 @@ export default function EmployeeDetailClient({ user }: { user: UserWithRelations
                             <div>
                                 <h2 className="font-bold text-lg text-slate-900">Profil Bilgileri</h2>
                                 <p className="text-sm text-slate-500">Kişisel detayları düzenle</p>
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                    Max 2MB. (JPG, PNG)
+                                </p>
                             </div>
                         </div>
 

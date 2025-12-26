@@ -48,6 +48,9 @@ export default function ProfileAvatar({ currentImage, userName }: { currentImage
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                 <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={loading} />
             </label>
+            <p className="text-[10px] text-slate-400 text-center mt-2 w-full absolute -bottom-6 left-0 leading-tight">
+                Max 2MB<br />JPG/PNG
+            </p>
         </div>
     );
 }
