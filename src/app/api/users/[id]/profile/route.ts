@@ -17,16 +17,36 @@ export async function GET(
 
         const { id } = await params;
 
+        const isAuthorizedToViewDetails = session.role === 'EXECUTIVE' || session.role === 'ADMIN';
+
         const user = await prisma.user.findUnique({
             where: { id },
             include: {
                 achievements: { orderBy: { date: 'desc' } },
-                employeeOfTheMonths: { orderBy: { createdAt: 'desc' } }
+                employeeOfTheMonths: { orderBy: { createdAt: 'desc' } },
+                // Conditional includes aren't directly supported like this easily in one query object definition unless tailored
+                // So we'll fetch basic first, OR just fetch everything but filter in response?
+                // Better to build the include object dynamically.
             }
         });
 
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
+        }
+
+        let extensiveData: any = {};
+        if (isAuthorizedToViewDetails) {
+            const details = await prisma.user.findUnique({
+                where: { id },
+                select: {
+                    tasksReceived: { orderBy: { createdAt: 'desc' }, take: 20 },
+                    expenses: { orderBy: { date: 'desc' }, take: 20 },
+                    leaves: { orderBy: { startDate: 'desc' }, take: 10 },
+                    workSchedules: true,
+                    attendance: { orderBy: { timestamp: 'desc' }, take: 30 }
+                }
+            });
+            if (details) extensiveData = details;
         }
 
         // Check if user is currently working (last attendance is CHECK_IN and today)
@@ -50,11 +70,13 @@ export async function GET(
             id: user.id,
             name: user.name,
             role: user.role,
-            phone: user.phone, // Maybe need, maybe hide?
+            phone: user.phone,
+            profilePicture: user.profilePicture, // Include profile picture
             achievements: user.achievements,
             employeeOfTheMonths: user.employeeOfTheMonths,
             isWorking,
-            createdAt: user.createdAt
+            createdAt: user.createdAt,
+            ...(isAuthorizedToViewDetails ? extensiveData : {}) // Spread extensive data if authorized
         };
 
         return NextResponse.json(safeUser);
