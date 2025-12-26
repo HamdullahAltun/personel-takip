@@ -14,9 +14,12 @@ export async function middleware(request: NextRequest) {
     }
 
     // 2. Redirect to dashboard if authenticated and trying to access login
+    // 2. Redirect to dashboard if authenticated and trying to access login
     if (verifiedToken && pathname.startsWith('/login')) {
         if (verifiedToken.role === 'ADMIN') {
             return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+        } else if (verifiedToken.role === 'EXECUTIVE') {
+            return NextResponse.redirect(new URL('/executive/dashboard', request.url));
         } else {
             return NextResponse.redirect(new URL('/dashboard', request.url));
         }
@@ -26,6 +29,13 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/admin')) {
         if (verifiedToken?.role !== 'ADMIN') {
             return NextResponse.redirect(new URL('/dashboard', request.url)); // Redirect non-admins to staff dashboard
+        }
+    }
+
+    // 4. Protect Executive routes
+    if (pathname.startsWith('/executive')) {
+        if (verifiedToken?.role !== 'EXECUTIVE') {
+            return NextResponse.redirect(new URL('/dashboard', request.url));
         }
     }
 
