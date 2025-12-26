@@ -83,8 +83,9 @@ export async function updateEmployee(id: string, prevState: any, formData: FormD
         revalidatePath("/admin/employees");
         revalidatePath(`/admin/employees/${id}`);
         return { success: true };
-    } catch (error) {
-        console.error("Update Employee Error:", error);
-        return { error: "Failed to update employee" };
+    } catch (error: any) {
+        console.error("Update Employee Error Details:", error);
+        // Return detailed error for debugging if needed, but safe message for user
+        return { error: `Güncelleme başarısız: ${error.message}` };
     }
 }
