@@ -101,7 +101,7 @@ export default function ScanPage() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-900 text-white rounded-2xl overflow-hidden relative shadow-2xl">
+        <div className="flex flex-col flex-1 w-full min-h-[60vh] bg-slate-900 text-white rounded-2xl overflow-hidden relative shadow-2xl">
 
             {/* Tab Switcher */}
             <div className="flex border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-md sticky top-0 z-20">

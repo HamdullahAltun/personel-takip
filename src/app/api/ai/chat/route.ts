@@ -117,12 +117,35 @@ TALİMATLAR:
         });
 
         const result = await chat.sendMessage(context + "\n\nKULLANICI SORUSU: " + message);
-        const responseText = result.response.text();
+
+        let responseText = "";
+        try {
+            responseText = result.response.text();
+        } catch (e) {
+            console.error("Text extraction failed. Checking candidates...");
+        }
+
+        if (!responseText && result.response.candidates && result.response.candidates.length > 0) {
+            const candidate = result.response.candidates[0];
+            if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+                responseText = candidate.content.parts[0].text || "";
+            }
+        }
+
+        if (!responseText) {
+            const blockReason = result.response.promptFeedback?.blockReason;
+            const finishReason = result.response.candidates?.[0]?.finishReason;
+            return NextResponse.json({
+                response: `Cevap oluşturulamadı. (Sebep: ${blockReason || finishReason || "Bilinmiyor"}). Lütfen sorunuzu farklı şekilde sorun.`
+            });
+        }
 
         return NextResponse.json({ response: responseText });
 
     } catch (e: any) {
         console.error("AI Error:", e);
-        return NextResponse.json({ response: "Üzgünüm, şu an bağlantı kuramıyorum." });
+        return NextResponse.json({
+            response: `AI Servis Hatası: ${e.message || "Bilinmeyen hata"}. Lütfen daha sonra tekrar deneyin.`
+        });
     }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
+import { sendBroadcastNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,9 @@ export async function POST(req: Request) {
                 isActive: true
             }
         });
+
+        // Send Push Notification
+        await sendBroadcastNotification(`📢 ${title}`, content.substring(0, 100));
 
         return NextResponse.json(announcement);
 

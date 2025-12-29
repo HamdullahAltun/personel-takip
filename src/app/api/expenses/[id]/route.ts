@@ -48,7 +48,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         if (!expense) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
         // Only owner (if pending) or Admin can delete
-        if (session.role !== 'ADMIN' && expense.userId !== session.id) {
+        if (session.role !== 'ADMIN' && expense.userId !== (session.id as string)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

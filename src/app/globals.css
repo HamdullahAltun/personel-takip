@@ -13,8 +13,9 @@
 }
 
 body {
-  @apply bg-slate-50 text-slate-900;
+  @apply bg-slate-50 text-slate-900 overflow-x-hidden;
   overscroll-behavior-y: none; /* Prevent rubber banding on mobile */
+  width: 100%;
 }
 
 /* Safe Area Utilities */

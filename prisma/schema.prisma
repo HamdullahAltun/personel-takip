@@ -36,6 +36,90 @@ model User {
   
   // Expenses
   expenses      Expense[]
+
+  documents   Document[]
+
+  // Assets (Zimmet)
+  assets      Asset[]
+
+  // Performance Reviews
+  reviewsGiven    PerformanceReview[] @relation("Reviewer")
+  reviewsReceived PerformanceReview[] @relation("Reviewee")
+
+  // Payroll & Financials
+  payrolls        Payroll[]
+  advanceRequests AdvanceRequest[]
+  trainingCompletions TrainingCompletion[]
+  bookings            Booking[]
+}
+
+model Asset {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  serialNumber String?
+  type         String    // LAPTOP, PHONE, CAR, KEY, OTHER
+  status       String    // AVAILABLE, ASSIGNED, MAINTENANCE, BROKEN
+  assignedToId String?   @db.ObjectId
+  assignedTo   User?     @relation(fields: [assignedToId], references: [id])
+  assignedDate DateTime?
+  returnDate   DateTime?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Document {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  title       String
+  type        String   // CONTRACT, REPORT, ID, DIPLOMA, OTHER
+  fileUrl     String
+  uploadedAt  DateTime @default(now())
+}
+
+model PerformanceReview {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  reviewerId  String   @db.ObjectId
+  reviewer    User     @relation("Reviewer", fields: [reviewerId], references: [id])
+  revieweeId  String   @db.ObjectId
+  reviewee    User     @relation("Reviewee", fields: [revieweeId], references: [id])
+  period      String   // e.g., "2024-Q1"
+  score       Int      // 1-100
+  feedback    String
+  createdAt   DateTime @default(now())
+}
+
+model Payroll {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  month       Int
+  year        Int
+  baseSalary  Float
+  bonus       Float    @default(0)
+  deductions  Float    @default(0)
+  totalPaid   Float
+  status      String   // DRAFT, PAID
+  note        String?
+  generatedAt DateTime @default(now())
+}
+
+model AdvanceRequest {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  amount      Float
+  reason      String
+  status      String   // PENDING, APPROVED, REJECTED
+  requestedAt DateTime @default(now())
+  processedAt DateTime?
+}
+
+model SystemReport {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   Json
+  createdAt DateTime @default(now())
 }
 
 model Task {
@@ -180,9 +264,113 @@ model EmployeeOfTheMonth {
   @@unique([month, year])
 }
 
+model JobPosting {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  department  String
+  type        String      // FULL_TIME, PART_TIME, REMOTE
+  description String
+  requirements String
+  status      String      // ACTIVE, CLOSED
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  candidates  Candidate[]
+}
 
-model SystemReport {
+model Candidate {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  jobPostingId String     @db.ObjectId
+  jobPosting   JobPosting @relation(fields: [jobPostingId], references: [id])
+  name         String
+  email        String
+  phone        String
+  resumeUrl    String?
+  status       String     // NEW, INTERVIEW, OFFER, HIRED, REJECTED
+  rating       Int        @default(0)
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Visitor {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  phone        String?
+  company      String?
+  visitReason  String
+  hostName     String
+  qrCode       String
+  entryTime    DateTime   @default(now())
+  exitTime     DateTime?
+  status       String     // ACTIVE, COMPLETED
+}
+
+model Training {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  url         String
+  type        String    // VIDEO, DOCUMENT
+  createdAt   DateTime  @default(now())
+  completions TrainingCompletion[]
+}
+
+model TrainingCompletion {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @db.ObjectId
+  user       User     @relation(fields: [userId], references: [id])
+  trainingId String   @db.ObjectId
+  training   Training @relation(fields: [trainingId], references: [id])
+  completedAt DateTime @default(now())
+
+  @@unique([userId, trainingId])
+}
+
+model Resource {
+  id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  type     String    // ROOM, CAR, DEVICE
+  bookings Booking[]
+}
+
+model Booking {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  resourceId String   @db.ObjectId
+  resource   Resource @relation(fields: [resourceId], references: [id])
+  userId     String   @db.ObjectId
+  user       User     @relation(fields: [userId], references: [id])
+  startTime  DateTime
+  endTime    DateTime
+  purpose    String
+  createdAt  DateTime @default(now())
+}
+
+model Survey {
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  questions Json             // Array of questions objects
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  responses SurveyResponse[]
+}
+
+model SurveyResponse {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  content   Json
+  surveyId  String   @db.ObjectId
+  survey    Survey   @relation(fields: [surveyId], references: [id])
+  userId    String?  @db.ObjectId // Optional for anonymous
+  answers   Json
   createdAt DateTime @default(now())
 }
+
+model Event {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  date        DateTime
+  description String
+  type        String   // MEETING, HOLIDAY, SOCIAL, BIRTHDAY
+  createdAt   DateTime @default(now())
+}
+
+
+

@@ -124,67 +124,107 @@ export default function AdminQRPage() {
 
                 <div className="p-8">
                     {activeTab === "GENERATE" ? (
-                        <div className="flex flex-col items-center space-y-6">
-                            <div className="bg-white p-4 border rounded-xl shadow-sm relative">
+                        <div className="flex flex-col items-center space-y-6 animate-in fade-in duration-300">
+                            <div className="bg-white p-4 border border-slate-200 rounded-3xl shadow-lg relative group">
                                 {qrValue ? (
-                                    <QRCodeSVG value={qrValue} size={256} />
+                                    <QRCodeSVG value={qrValue} size={280} level="H" className="drop-shadow-sm" />
                                 ) : (
-                                    <div className="w-64 h-64 flex items-center justify-center bg-slate-100 rounded">
-                                        <Loader2 className="animate-spin text-slate-400" />
+                                    <div className="w-[280px] h-[280px] flex items-center justify-center bg-slate-50 rounded-xl">
+                                        <Loader2 className="animate-spin text-slate-300 h-10 w-10" />
                                     </div>
                                 )}
-                                <div className="absolute top-2 right-2">
-                                    <div className={`w-3 h-3 rounded-full ${locationError ? 'bg-red-500' : 'bg-green-500'} animate-pulse`}
-                                        title={locationError || "Konum aktif, QR güncelleniyor"}
-                                    />
+                                <div className="absolute top-4 right-4">
+                                    <span className="relative flex h-3 w-3">
+                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${locationError ? 'bg-red-400' : 'bg-green-400'}`}></span>
+                                        <span className={`relative inline-flex rounded-full h-3 w-3 ${locationError ? 'bg-red-500' : 'bg-green-500'}`}></span>
+                                    </span>
                                 </div>
                             </div>
 
-                            <div className="text-center max-w-sm w-full">
-                                <p className="font-bold text-slate-900">Dinamik Ofis Giriş Kodu</p>
-                                <p className="text-sm text-slate-500 mt-1">
-                                    QR Kodun her 30 saniyede bir otomatik yenilenir.
+                            <div className="text-center max-w-sm w-full space-y-2">
+                                <h3 className="text-lg font-bold text-slate-900">Ofis Giriş Noktası</h3>
+                                <p className="text-sm text-slate-500">
+                                    Bu kodu tablet veya ekranda açık tutun. Personel giriş/çıkış için okutmalıdır.
                                 </p>
 
-                                {/* Animated Countdown Bar */}
-                                <div className="mt-4 w-full bg-slate-100 h-2 rounded-full overflow-hidden relative">
-                                    <div
-                                        className="h-full bg-blue-500 transition-all duration-1000 ease-linear rounded-full"
-                                        style={{ width: `${(timeLeft / 30) * 100}%` }}
-                                    />
+                                {/* Animated Countdown */}
+                                <div className="pt-4">
+                                    <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">
+                                        <span>Yenilenme</span>
+                                        <span className={timeLeft < 6 ? "text-red-500" : "text-blue-500"}>{timeLeft}sn</span>
+                                    </div>
+                                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                        <div
+                                            className={`h-full transition-all duration-1000 ease-linear rounded-full ${timeLeft < 6 ? "bg-red-500" : "bg-blue-500"}`}
+                                            style={{ width: `${(timeLeft / 30) * 100}%` }}
+                                        />
+                                    </div>
                                 </div>
-                                <p className="text-xs text-blue-500 font-bold mt-1 text-right animate-pulse">
-                                    {timeLeft} saniye sonra değişecek
-                                </p>
 
                                 {locationError && (
-                                    <p className="text-xs text-red-500 mt-2 font-medium bg-red-50 p-2 rounded">
-                                        Konum alınamadı: {locationError}. Sabit modda çalışıyor.
-                                    </p>
+                                    <div className="flex items-center gap-2 justify-center text-xs text-red-500 bg-red-50 p-3 rounded-xl mt-2 border border-red-100">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <span>Konum alınamadı: {locationError || "GPS Kapalı"}</span>
+                                    </div>
                                 )}
                             </div>
                         </div>
                     ) : (
-                        <div className="max-w-md mx-auto aspect-square bg-black rounded-2xl overflow-hidden relative">
-                            {status === "SUCCESS" ? (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-500 text-white p-6 text-center animate-in zoom-in">
-                                    <CheckCircle2 className="h-16 w-16 mb-4" />
-                                    <p className="text-xl font-bold">{message}</p>
-                                </div>
-                            ) : status === "ERROR" ? (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-600 text-white p-6 text-center animate-in zoom-in">
-                                    <AlertTriangle className="h-16 w-16 mb-4" />
-                                    <p className="text-xl font-bold">{message}</p>
-                                </div>
-                            ) : (
-                                <QRScanner onScan={handleScan} />
-                            )}
+                        <div className="flex flex-col items-center animate-in fade-in duration-300">
+                            {/* Scanner Container - Fixed Size for Stability */}
+                            <div className="relative w-full max-w-[400px] h-[400px] bg-black rounded-3xl overflow-hidden shadow-2xl ring-4 ring-slate-100">
 
-                            {status === "PROCESSING" && (
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                    <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+                                {/* Overlay Interface */}
+                                <div className="absolute inset-0 z-20 pointer-events-none">
+                                    {/* Corners */}
+                                    <div className="absolute top-6 left-6 w-12 h-12 border-l-4 border-t-4 border-white/80 rounded-tl-2xl"></div>
+                                    <div className="absolute top-6 right-6 w-12 h-12 border-r-4 border-t-4 border-white/80 rounded-tr-2xl"></div>
+                                    <div className="absolute bottom-6 left-6 w-12 h-12 border-l-4 border-b-4 border-white/80 rounded-bl-2xl"></div>
+                                    <div className="absolute bottom-6 right-6 w-12 h-12 border-r-4 border-b-4 border-white/80 rounded-br-2xl"></div>
+
+                                    {/* Scanning Line Animation */}
+                                    {status === "IDLE" && (
+                                        <div className="absolute inset-0 animate-scan-line bg-gradient-to-b from-transparent via-blue-500/20 to-transparent h-1/2" />
+                                    )}
                                 </div>
-                            )}
+
+                                {/* Content */}
+                                {status === "IDLE" && (
+                                    <QRScanner onScan={handleScan} />
+                                )}
+
+                                {status === "PROCESSING" && (
+                                    <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+                                        <Loader2 className="h-12 w-12 animate-spin text-blue-500 mb-4" />
+                                        <p className="font-bold text-lg">Doğrulanıyor...</p>
+                                    </div>
+                                )}
+
+                                {status === "SUCCESS" && (
+                                    <div className="absolute inset-0 z-30 bg-emerald-600 flex flex-col items-center justify-center text-white animate-in zoom-in duration-300">
+                                        <div className="bg-white/20 p-4 rounded-full mb-4">
+                                            <CheckCircle2 className="h-16 w-16 text-white" />
+                                        </div>
+                                        <h3 className="text-2xl font-bold mb-2">Başarılı!</h3>
+                                        <p className="text-white/90 px-8 text-center">{message.replace("İşlem Başarılı: ", "")}</p>
+                                    </div>
+                                )}
+
+                                {status === "ERROR" && (
+                                    <div className="absolute inset-0 z-30 bg-rose-600 flex flex-col items-center justify-center text-white animate-in zoom-in duration-300">
+                                        <div className="bg-white/20 p-4 rounded-full mb-4">
+                                            <AlertTriangle className="h-16 w-16 text-white" />
+                                        </div>
+                                        <h3 className="text-2xl font-bold mb-2">Hata!</h3>
+                                        <p className="text-white/90 px-8 text-center">{message}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="mt-6 text-center space-y-1">
+                                <p className="font-bold text-slate-900">Personel Kimlik Tarama</p>
+                                <p className="text-sm text-slate-500">Personelin mobil uygulamasındaki QR kodunu okutun</p>
+                            </div>
                         </div>
                     )}
                 </div>

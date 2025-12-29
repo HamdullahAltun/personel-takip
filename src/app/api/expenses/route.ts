@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     try {
         let where: any = {};
         if (session.role !== 'ADMIN') {
-            where = { userId: session.id };
+            where = { userId: session.id as string };
         }
 
         const expenses = await prisma.expense.findMany({

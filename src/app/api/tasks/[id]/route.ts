@@ -17,7 +17,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         });
 
         // If completed, maybe notify admin?
-        if (status === 'COMPLETED' && session.id === task.assignedToId) {
+        if (status === 'COMPLETED' && (session.id as string) === task.assignedToId) {
             const admin = await prisma.user.findUnique({ where: { id: task.assignedById } });
             if (admin?.fcmToken) {
                 const { sendPushNotification } = await import('@/lib/notifications');

@@ -20,7 +20,7 @@ export async function GET(req: Request) {
             where = {};
         } else {
             // Staff sees tasks assigned TO them
-            where = { assignedToId: session.id };
+            where = { assignedToId: session.id as string };
         }
 
         const tasks = await prisma.task.findMany({
@@ -59,11 +59,9 @@ export async function POST(req: Request) {
         });
 
         // Send Notification
-        const assignee = await prisma.user.findUnique({ where: { id: assignedToId } });
-        if (assignee?.fcmToken) {
-            const { sendPushNotification } = await import('@/lib/notifications');
-            await sendPushNotification(assignee.fcmToken, "Yeni Görev Atandı", `Görev: ${title}`);
-        }
+        // Send Notification
+        const { sendPushNotification } = await import('@/lib/notifications');
+        await sendPushNotification(assignedToId, "Yeni Görev Atandı 📋", `Görev: ${title}`);
 
         return NextResponse.json(task);
     } catch (e) {

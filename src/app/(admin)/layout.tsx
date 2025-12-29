@@ -18,8 +18,17 @@ import {
     ClipboardList,
     Receipt,
     BrainCircuit,
-    TentTree, // Added TentTree
-    Megaphone // Added Megaphone
+    TentTree,
+    Megaphone,
+    Laptop,
+    Banknote,
+    TrendingUp,
+    FileText,
+    Briefcase,
+    BookOpen,
+    CalendarClock,
+    MessageSquare,
+    Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -46,11 +55,22 @@ export default function AdminLayout({
 
     const navItems = [
         { href: "/admin", label: "Genel Bakış", icon: LayoutDashboard },
+        { href: "/admin/qr", label: "QR Kod", icon: QrCode }, // Added QR link
         { href: "/admin/employees", label: "Personeller", icon: Users },
         { href: "/admin/attendance", label: "Katılım", icon: CalendarCheck },
         { href: "/admin/leaves", label: "İzinler", icon: TentTree },
         { href: "/admin/tasks", label: "Görevler", icon: ClipboardList },
         { href: "/admin/expenses", label: "Harcamalar", icon: Receipt },
+        { href: "/admin/assets", label: "Demirbaşlar", icon: Laptop },
+        { href: "/admin/payroll", label: "Maaşlar", icon: Banknote },
+        { href: "/admin/performance", label: "Performans", icon: TrendingUp },
+        { href: "/admin/recruitment", label: "İşe Alım (ATS)", icon: Briefcase },
+        { href: "/admin/lms", label: "Eğitim (LMS)", icon: BookOpen },
+        { href: "/admin/booking", label: "Rezervasyon", icon: CalendarClock },
+        { href: "/admin/events", label: "Etkinlikler", icon: Calendar },
+        { href: "/admin/survey", label: "Anketler", icon: MessageSquare },
+        { href: "/admin/visitors", label: "Ziyaretçiler", icon: Users },
+        { href: "/admin/documents", label: "Belgeler", icon: FileText },
         { href: "/admin/messages", label: "Mesajlar", icon: MessageSquareText },
         { href: "/admin/announcements", label: "Duyurular", icon: Megaphone },
         // Admin also gets access to Executive Dashboard
@@ -70,11 +90,11 @@ export default function AdminLayout({
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 z-50 h-screen w-64 bg-slate-900 text-white transition-transform duration-300 lg:translate-x-0",
+                    "fixed top-0 left-0 z-50 h-screen w-64 bg-slate-900 text-white transition-transform duration-300 lg:translate-x-0 flex flex-col",
                     isSidebarOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
-                <div className="flex items-center justify-between p-4 border-b border-slate-700">
+                <div className="flex items-center justify-between p-4 border-b border-slate-700 shrink-0">
                     <div className="flex items-center gap-2 font-bold text-xl">
                         <UserCog className="h-6 w-6 text-blue-400" />
                         <span>Yönetici</span>
@@ -87,7 +107,7 @@ export default function AdminLayout({
                     </button>
                 </div>
 
-                <nav className="p-4 space-y-2">
+                <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
                     {navItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href;
@@ -113,7 +133,7 @@ export default function AdminLayout({
                     })}
                 </nav>
 
-                <div className="absolute bottom-4 left-4 right-4">
+                <div className="p-4 border-t border-slate-700 shrink-0">
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-slate-400 hover:bg-red-900/20 hover:text-red-400 transition-colors"

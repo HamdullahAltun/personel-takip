@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText, LogOut, ChevronDown, Menu as MenuIcon, ClipboardList, Receipt, BrainCircuit } from "lucide-react";
+import { Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText, LogOut, ChevronDown, Menu as MenuIcon, ClipboardList, Receipt, BrainCircuit, Calendar, MessageSquare, BookOpen, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AIAssistant from "@/components/AIAssistant";
 
@@ -67,6 +67,10 @@ export default function StaffLayout({
         { href: "/tasks", label: "Görevler", icon: ClipboardList },
         { href: "/expenses", label: "Harcamalar", icon: Receipt },
         { href: "/users", label: "Personel", icon: User },
+        { href: "/events", label: "Etkinlikler", icon: Calendar },
+        { href: "/survey", label: "Anketler", icon: MessageSquare },
+        { href: "/lms", label: "Eğitim", icon: BookOpen },
+        { href: "/booking", label: "Rezervasyon", icon: CalendarClock },
         { href: "/messages", label: "Mesajlar", icon: MessageSquareText },
     ];
 
@@ -136,7 +140,7 @@ export default function StaffLayout({
             {/* Spacer for Fixed Header */}
             <div className="h-[calc(70px+env(safe-area-inset-top))] lg:hidden" />
 
-            <main className="flex-1 pb-safe-nav p-4">
+            <main className="flex-1 pb-safe-nav p-4 flex flex-col">
                 {children}
             </main>
 

@@ -35,7 +35,8 @@ export async function middleware(request: NextRequest) {
 
     // 4. Protect Executive routes
     if (pathname.startsWith('/executive')) {
-        if (verifiedToken?.role !== 'EXECUTIVE') {
+        if (verifiedToken?.role !== 'EXECUTIVE' && verifiedToken?.role !== 'ADMIN') {
+            // Better to redirect as it is middleware for pages
             return NextResponse.redirect(new URL('/dashboard', request.url));
         }
     }

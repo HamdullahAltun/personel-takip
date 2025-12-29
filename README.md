@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Personel Yönetim Sistemi
 
-## Getting Started
+Bu proje, modern bir personel takip ve yönetim sistemidir. Next.js 16, Prisma (MongoDB), TailwindCSS ve PWA teknolojileri kullanılarak geliştirilmiştir.
 
-First, run the development server:
+## Özellikler
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Yönetici Paneli (Admin):**
+  - Personel ekleme, düzenleme ve silme.
+  - QR Kod ile dinamik ofis giriş sistemi.
+  - İzin, harcama ve görev yönetimi.
+  - Detaylı raporlar ve grafikler.
+  - Yapay zeka destekli yönetici özeti (AI Executive Report).
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Personel Paneli (Mobil Uyumlu):**
+  - QR Kod ile giriş/çıkış yapma (Konum doğrulama ile).
+  - Profil yönetimi.
+  - İzin talebi oluşturma ve takip.
+  - Harcama fişi yükleme.
+  - Görev takibi.
+  - PWA desteği ile mobil uygulama deneyimi (Bildirimler vb.).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Teknolojiler
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Frontend:** Next.js 16 (App Router), React, TailwindCSS, Lucide Icons, Recharts.
+- **Backend:** Next.js API Routes, Prisma ORM.
+- **Veritabanı:** MongoDB.
+- **Kimlik Doğrulama:** SMS (Mock) ve JWT tabanlı güvenli oturum.
+- **AI:** Google Generative AI (Gemini).
+- **Mobil:** PWA & Capacitor (Android APK desteği).
 
-## Learn More
+## Kurulum ve Çalıştırma
 
-To learn more about Next.js, take a look at the following resources:
+1. **Bağımlılıkları Yükleyin:**
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **Çevresel Değişkenleri Ayarlayın (.env):**
+   - `DATABASE_URL` (MongoDB bağlantı stringi)
+   - `JWT_SECRET`
+   - `GEMINI_API_KEY`
+   - vb.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. **Veritabanını Hazırlayın:**
+   ```bash
+   npx prisma generate
+   ```
 
-## Deploy on Vercel
+4. **Uygulamayı Başlatın:**
+   ```bash
+   npm run dev
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Uygulama `http://localhost:3000` adresinde çalışacaktır.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Yönetici Hesabı Oluşturma
+
+İlk yönetici hesabı oluşturmak için veritabanına manuel erişim veya API kullanabilirsiniz. Telefon numarası veritabanında `role: "ADMIN"` olarak ayarlanmalıdır.
+
+---
+Geliştirici: [Adınız/Ekibiniz]

@@ -52,10 +52,21 @@ export default function AIAssistant() {
                 headers: { 'Content-Type': 'application/json' }
             });
 
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`Sunucu Hatası (${res.status}): ${errText.slice(0, 100)}`);
+            }
+
             const data = await res.json();
-            setMessages(prev => [...prev, { role: 'model', parts: data.response }]);
-        } catch (error) {
-            setMessages(prev => [...prev, { role: 'model', parts: "Bağlantı hatası oluştu. Lütfen tekrar deneyin." }]);
+
+            if (!data.response) {
+                setMessages(prev => [...prev, { role: 'model', parts: "Cevap alınamadı. (Veri boş)" }]);
+            } else {
+                setMessages(prev => [...prev, { role: 'model', parts: data.response }]);
+            }
+        } catch (error: any) {
+            console.error(error);
+            setMessages(prev => [...prev, { role: 'model', parts: `Hata: ${error.message}` }]);
         } finally {
             setLoading(false);
         }
