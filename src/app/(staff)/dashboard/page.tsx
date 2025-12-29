@@ -4,12 +4,13 @@ import { verifyJWT } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { format, differenceInMinutes } from "date-fns";
+import { format, differenceInMinutes, startOfWeek, endOfWeek } from "date-fns";
 import { tr } from "date-fns/locale";
 import { ScanLine, LogOut, Clock, Calendar } from "lucide-react";
 import DashboardWidgetsClient from "@/components/staff/DashboardWidgetsClient";
 import WelcomeHeader from "@/components/WelcomeHeader";
 import Announcements from "@/components/Announcements";
+import { cn } from "@/lib/utils";
 
 async function getUser() {
     const token = (await cookies()).get("personel_token")?.value;
@@ -43,6 +44,45 @@ export default async function StaffDashboard() {
         const m = minutes % 60;
         durationText = `${h}s ${m}d`;
     }
+
+    // Weekly Performance Calculation
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }); // Monday start
+    const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+
+    const weeklyRecords = await prisma.attendanceRecord.findMany({
+        where: {
+            userId: user.id,
+            timestamp: {
+                gte: weekStart,
+                lte: weekEnd
+            }
+        },
+        orderBy: { timestamp: 'asc' }
+    });
+
+    let totalMinutes = 0;
+    let lastCheckInTime: Date | null = null;
+
+    weeklyRecords.forEach(record => {
+        if (record.type === 'CHECK_IN') {
+            // Start tracking only if not already tracking (ignore double check-ins or assume first is valid)
+            if (!lastCheckInTime) lastCheckInTime = record.timestamp;
+        } else if (record.type === 'CHECK_OUT') {
+            if (lastCheckInTime) {
+                totalMinutes += differenceInMinutes(record.timestamp, lastCheckInTime);
+                lastCheckInTime = null;
+            }
+        }
+    });
+
+    // Add current session if active
+    if (lastCheckInTime) {
+        totalMinutes += differenceInMinutes(new Date(), lastCheckInTime);
+    }
+
+    const workedHours = (totalMinutes / 60).toFixed(1);
+    const weeklyGoal = user.weeklyGoal || 45; // Default 45 hours if not set
+    const progressPercent = Math.min(100, Math.round((totalMinutes / (weeklyGoal * 60)) * 100));
 
     return (
         <div className="space-y-6">
@@ -86,7 +126,7 @@ export default async function StaffDashboard() {
                     </div>
                 </div>
 
-                {/* Weekly Goal Card - Moved here from below */}
+                {/* Weekly Goal Card */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <Clock className="h-32 w-32 text-green-600" />
@@ -94,13 +134,13 @@ export default async function StaffDashboard() {
                     <div>
                         <p className="text-slate-500 text-sm font-medium">Bu Haftaki Performans</p>
                         <div className="mt-2">
-                            <p className="text-3xl font-bold text-slate-900">32.5 <span className="text-lg text-slate-400 font-normal">Saat</span></p>
+                            <p className="text-3xl font-bold text-slate-900">{workedHours} <span className="text-lg text-slate-400 font-normal">Saat</span></p>
                         </div>
                         {/* Progress Bar */}
                         <div className="mt-4 w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                            <div className="bg-green-500 h-2.5 rounded-full" style={{ width: '75%' }}></div>
+                            <div className={cn("h-2.5 rounded-full transition-all duration-1000", progressPercent >= 100 ? "bg-green-500" : "bg-blue-500")} style={{ width: `${progressPercent}%` }}></div>
                         </div>
-                        <p className="text-slate-400 text-xs mt-2">Hedef: {user.weeklyGoal} Saat (%75 Tamamlandı)</p>
+                        <p className="text-slate-400 text-xs mt-2">Hedef: {weeklyGoal} Saat (%{progressPercent} Tamamlandı)</p>
                     </div>
                 </div>
             </div>
