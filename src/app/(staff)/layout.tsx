@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText, LogOut, ChevronDown, Menu as MenuIcon, ClipboardList, Receipt, BrainCircuit, Calendar, MessageSquare, BookOpen, CalendarClock } from "lucide-react";
+import { Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText, LogOut, ChevronDown, Menu as MenuIcon, ClipboardList, Receipt, BrainCircuit, Calendar, MessageSquare, BookOpen, CalendarClock, LayoutGrid, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AIAssistant from "@/components/AIAssistant";
 
@@ -17,6 +17,7 @@ export default function StaffLayout({
     const [unreadCount, setUnreadCount] = React.useState(0);
     const [userName, setUserName] = React.useState("");
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [showMobileMenu, setShowMobileMenu] = useState(false);
 
     // Notification Logic
     React.useEffect(() => {
@@ -61,23 +62,32 @@ export default function StaffLayout({
         }).catch(() => { });
     }, []);
 
-    const navItems = [
-        { href: "/dashboard", label: "Ana Sayfa", icon: Home },
-        { href: "/scan", label: "İşlem Yap", icon: ScanLine },
-        { href: "/tasks", label: "Görevler", icon: ClipboardList },
-        { href: "/expenses", label: "Harcamalar", icon: Receipt },
-        { href: "/users", label: "Personel", icon: User },
-        { href: "/events", label: "Etkinlikler", icon: Calendar },
-        { href: "/survey", label: "Anketler", icon: MessageSquare },
-        { href: "/lms", label: "Eğitim", icon: BookOpen },
-        { href: "/booking", label: "Rezervasyon", icon: CalendarClock },
-        { href: "/messages", label: "Mesajlar", icon: MessageSquareText },
+    // Mobile Navigation Logic
+    // We will show top 4 items + "Menu" item in the bottom bar.
+    // The rest will go into the "Menu" drawer.
+
+    // Define all items first
+    const allItems = [
+        { href: "/dashboard", label: "Ana Sayfa", icon: Home, priority: 1 },
+        { href: "/scan", label: "İşlem Yap", icon: ScanLine, priority: 2 },
+        { href: "/tasks", label: "Görevler", icon: ClipboardList, priority: 3 },
+        { href: "/messages", label: "Mesajlar", icon: MessageSquareText, priority: 4 },
+        // Secondary
+        { href: "/expenses", label: "Harcamalar", icon: Receipt, priority: 10 },
+        { href: "/users", label: "Personel", icon: User, priority: 10 },
+        { href: "/events", label: "Etkinlikler", icon: Calendar, priority: 10 },
+        { href: "/survey", label: "Anketler", icon: MessageSquare, priority: 10 },
+        { href: "/lms", label: "Eğitim", icon: BookOpen, priority: 10 },
+        { href: "/booking", label: "Rezervasyon", icon: CalendarClock, priority: 10 },
     ];
 
     if (userRole === 'EXECUTIVE') {
-        // Add Executive Dashboard link at pos 1
-        navItems.splice(1, 0, { href: "/executive/dashboard", label: "Rapor", icon: BrainCircuit });
+        allItems.push({ href: "/executive/dashboard", label: "Rapor", icon: BrainCircuit, priority: 5 }); // High priority but maybe inside menu? Let's put in menu to keep bar clean or swap with tasks?
+        // Let's keep bar clean: Home, Scan, Tasks, Messages, Menu. Rapor goes to Menu.
     }
+
+    const primaryNavItems = allItems.filter(i => i.priority <= 4).sort((a, b) => a.priority - b.priority);
+    const secondaryNavItems = allItems.filter(i => i.priority > 4);
 
     const handleLogout = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
@@ -148,41 +158,105 @@ export default function StaffLayout({
             {/* ... */}
 
             {/* Bottom Nav */}
-            <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-10 lg:hidden pb-safe">
-                <div className="flex items-center justify-around h-[70px] px-2">
-                    {navItems.map((item) => {
+            <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-50 lg:hidden pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                <div className="flex items-center justify-between h-[65px] px-2">
+                    {/* Primary Items */}
+                    {primaryNavItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href;
                         return (
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                onClick={() => { if (pathname !== item.href) setIsLoading(true); }}
+                                onClick={() => {
+                                    if (pathname !== item.href) setIsLoading(true);
+                                    setShowMobileMenu(false);
+                                }}
                                 className={cn(
-                                    "flex flex-col items-center justify-center w-full h-full space-y-1 relative group",
-                                    isActive ? "text-indigo-600" : "text-slate-400 hover:text-slate-500"
+                                    "flex flex-col items-center justify-center w-full h-full space-y-1 relative group active:scale-95 transition-transform",
+                                    isActive ? "text-indigo-600" : "text-slate-400"
                                 )}
                             >
                                 <div className={cn(
                                     "relative p-1.5 rounded-xl transition-all duration-300",
-                                    isActive ? "bg-indigo-50 -translate-y-1" : "group-hover:bg-slate-50"
+                                    isActive ? "bg-indigo-50 -translate-y-1" : ""
                                 )}>
                                     <Icon className={cn("h-6 w-6", isActive && "fill-indigo-600/20")} />
                                     {item.href === '/messages' && unreadCount > 0 && (
-                                        <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] min-w-[16px] h-4 flex items-center justify-center rounded-full font-bold shadow-sm border border-white px-0.5">
+                                        <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] min-w-[16px] h-4 flex items-center justify-center rounded-full font-bold shadow-sm border border-white px-0.5 animate-pulse">
                                             {unreadCount}
                                         </div>
                                     )}
                                 </div>
                                 <span className={cn(
-                                    "text-[10px] font-medium transition-all",
+                                    "text-[10px] font-medium transition-all opacity-100",
                                     isActive ? "font-bold" : "font-normal"
                                 )}>{item.label}</span>
                             </Link>
                         );
                     })}
+
+                    {/* Menu Toggle Item */}
+                    <button
+                        onClick={() => setShowMobileMenu(!showMobileMenu)}
+                        className={cn(
+                            "flex flex-col items-center justify-center w-full h-full space-y-1 relative group active:scale-95 transition-transform",
+                            showMobileMenu ? "text-indigo-600" : "text-slate-400"
+                        )}
+                    >
+                        <div className={cn(
+                            "relative p-1.5 rounded-xl transition-all duration-300",
+                            showMobileMenu ? "bg-indigo-50 -translate-y-1" : ""
+                        )}>
+                            <LayoutGrid className={cn("h-6 w-6", showMobileMenu && "fill-indigo-600/20")} />
+                        </div>
+                        <span className={cn(
+                            "text-[10px] font-medium transition-all",
+                            showMobileMenu ? "font-bold" : "font-normal"
+                        )}>Menü</span>
+                    </button>
                 </div>
             </nav>
+
+            {/* Mobile Menu Overlay (Drawer) */}
+            {showMobileMenu && (
+                <div className="fixed inset-0 z-40 lg:hidden">
+                    <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowMobileMenu(false)} />
+                    <div className="absolute bottom-[calc(65px+env(safe-area-inset-bottom))] left-0 right-0 bg-white rounded-t-3xl shadow-2xl p-6 animate-in slide-in-from-bottom-10 border-t border-slate-100 max-h-[70vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-lg text-slate-900">Diğer İşlemler</h3>
+                            <button onClick={() => setShowMobileMenu(false)} className="p-2 bg-slate-100 rounded-full text-slate-500">
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-4 gap-4">
+                            {secondaryNavItems.map((item) => {
+                                const Icon = item.icon;
+                                const isActive = pathname === item.href;
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        onClick={() => {
+                                            if (pathname !== item.href) setIsLoading(true);
+                                            setShowMobileMenu(false);
+                                        }}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center p-3 rounded-2xl gap-2 transition-all active:scale-95",
+                                            isActive ? "bg-indigo-50 text-indigo-600 ring-2 ring-indigo-100" : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                                        )}
+                                    >
+                                        <div className={cn("p-2 rounded-xl", isActive ? "bg-white shadow-sm" : "bg-white shadow-sm")}>
+                                            <Icon className="h-6 w-6" />
+                                        </div>
+                                        <span className="text-[10px] font-medium text-center leading-tight">{item.label}</span>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <AIAssistant />
         </div>

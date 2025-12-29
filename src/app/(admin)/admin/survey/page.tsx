@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MessageSquare, Plus, PieChart, CheckCircle2 } from "lucide-react";
+import { MessageSquare, Plus, PieChart, CheckCircle2, Trash2, Power, Eye, TrendingUp, X } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export default function SurveyPage() {
     const [surveys, setSurveys] = useState<any[]>([]);
@@ -12,6 +13,7 @@ export default function SurveyPage() {
 
     // View Results State
     const [selectedSurvey, setSelectedSurvey] = useState<any>(null);
+    const [resultsModal, setResultsModal] = useState(false);
 
     // Form
     const [title, setTitle] = useState("");
@@ -35,7 +37,6 @@ export default function SurveyPage() {
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Create a simple one-question survey for demo
         const questions = [
             { id: 1, text: questionText, type: 'RATING' }
         ];
@@ -51,12 +52,58 @@ export default function SurveyPage() {
         fetchData();
     };
 
+    const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+        if (!confirm(currentStatus ? "Anketi pasife almak istiyor musunuz?" : "Anketi aktif etmek istiyor musunuz?")) return;
+
+        await fetch('/api/survey', {
+            method: 'PATCH',
+            body: JSON.stringify({ id, isActive: !currentStatus }),
+            headers: { 'Content-Type': 'application/json' }
+        });
+        fetchData();
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("Bu anketi ve tüm yanıtlarını silmek istediğinize emin misiniz?")) return;
+
+        await fetch('/api/survey', {
+            method: 'DELETE',
+            body: JSON.stringify({ id }),
+            headers: { 'Content-Type': 'application/json' }
+        });
+        fetchData();
+    };
+
+    const handleShowResults = (survey: any) => {
+        // Calculate basic stats for the single rating question
+        let totalScore = 0;
+        let count = 0;
+        const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as any;
+
+        survey.responses.forEach((r: any) => {
+            const val = r.answers?.["1"]; // Assuming question ID 1
+            if (typeof val === 'number') {
+                totalScore += val;
+                count++;
+                if (distribution[val] !== undefined) distribution[val]++;
+            }
+        });
+
+        const average = count > 0 ? (totalScore / count).toFixed(1) : "0.0";
+
+        setSelectedSurvey({
+            ...survey,
+            stats: { average, count, distribution }
+        });
+        setResultsModal(true);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Anketler</h1>
-                    <p className="text-slate-500">Personel memnuniyeti ve geri bildirimler</p>
+                    <p className="text-slate-500">Personel memnuniyeti ve geri bildirim yönetimi</p>
                 </div>
                 <button
                     onClick={() => setShowModal(true)}
@@ -69,30 +116,111 @@ export default function SurveyPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {surveys.map(survey => (
-                    <div key={survey.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div key={survey.id} className={cn("bg-white p-6 rounded-xl border shadow-sm transition group", !survey.isActive ? "opacity-75 border-slate-200" : "border-slate-200 hover:shadow-md")}>
                         <div className="flex justify-between items-start mb-4">
-                            <div className="bg-purple-50 p-3 rounded-lg text-purple-600">
+                            <div className={cn("p-3 rounded-lg", survey.isActive ? "bg-purple-50 text-purple-600" : "bg-slate-100 text-slate-400")}>
                                 <MessageSquare className="h-6 w-6" />
                             </div>
-                            <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">Aktif</span>
+                            <div className="flex items-center gap-2">
+                                <span className={cn("px-2 py-1 rounded text-xs font-bold", survey.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500")}>
+                                    {survey.isActive ? "Aktif" : "Pasif"}
+                                </span>
+
+                            </div>
                         </div>
 
                         <h3 className="font-bold text-slate-900 text-lg mb-2">{survey.title}</h3>
-                        <p className="text-sm text-slate-500 mb-6 line-clamp-2">
+                        <p className="text-sm text-slate-500 mb-6 line-clamp-2 h-10">
                             {(survey.questions as any)[0]?.text}
                         </p>
 
                         <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                             <div className="text-xs text-slate-500">
-                                <span className="font-bold text-slate-900 text-lg">{survey._count.responses}</span> Yanıt
+                                <span className="font-bold text-slate-900 text-lg">{survey._count?.responses || 0}</span> Yanıt
                             </div>
-                            <button className="text-sm font-bold text-purple-600 flex items-center gap-1 hover:underline">
-                                <PieChart className="h-4 w-4" /> Sonuçlar
-                            </button>
+
+                            <div className="flex gap-2">
+                                <button onClick={() => handleToggleStatus(survey.id, survey.isActive)} title={survey.isActive ? "Pasife al" : "Aktif et"} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-full">
+                                    <Power className="h-4 w-4" />
+                                </button>
+                                <button onClick={() => handleShowResults(survey)} title="Sonuçları Gör" className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-full">
+                                    <Eye className="h-4 w-4" />
+                                </button>
+                                <button onClick={() => handleDelete(survey.id)} title="Sil" className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full">
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}
             </div>
+
+            {/* RESULTS MODAL */}
+            {resultsModal && selectedSurvey && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-2xl p-6 animate-in zoom-in-95 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 className="text-2xl font-bold text-slate-900">{selectedSurvey.title}</h2>
+                                <p className="text-slate-500 text-sm">Anket Sonuçları</p>
+                            </div>
+                            <button onClick={() => setResultsModal(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div className="bg-indigo-50 p-4 rounded-xl flex items-center gap-4">
+                                <div className="p-3 bg-indigo-100 text-indigo-600 rounded-lg">
+                                    <CheckCircle2 className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-bold text-indigo-900">{selectedSurvey.stats.count}</p>
+                                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">TOPLAM OY</p>
+                                </div>
+                            </div>
+                            <div className="bg-green-50 p-4 rounded-xl flex items-center gap-4 col-span-2">
+                                <div className="p-3 bg-green-100 text-green-600 rounded-lg">
+                                    <TrendingUp className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <div className="flex items-baseline gap-2">
+                                        <p className="text-3xl font-bold text-green-900">{selectedSurvey.stats.average}</p>
+                                        <span className="text-sm text-green-600 font-medium">/ 5.0</span>
+                                    </div>
+                                    <p className="text-xs font-bold text-green-400 uppercase tracking-wider">ORTALAMA PUAN</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <h3 className="font-bold text-slate-900 mb-4">Puan Dağılımı</h3>
+                            {[5, 4, 3, 2, 1].map(score => {
+                                const count = selectedSurvey.stats.distribution[score] || 0;
+                                const percentage = selectedSurvey.stats.count > 0 ? (count / selectedSurvey.stats.count) * 100 : 0;
+                                return (
+                                    <div key={score} className="flex items-center gap-4">
+                                        <div className="w-12 text-sm font-bold text-slate-600 flex items-center gap-1">
+                                            {score} <span className="text-slate-400 font-normal">Yıldız</span>
+                                        </div>
+                                        <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden">
+                                            <div
+                                                className={cn("h-full rounded-full transition-all duration-500",
+                                                    score >= 4 ? "bg-green-500" : score === 3 ? "bg-yellow-400" : "bg-red-500"
+                                                )}
+                                                style={{ width: `${percentage}%` }}
+                                            />
+                                        </div>
+                                        <div className="w-12 text-right text-xs font-bold text-slate-500">
+                                            {count} Oy
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* CREATE MODAL */}
             {showModal && (

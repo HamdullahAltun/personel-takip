@@ -69,7 +69,7 @@ export async function POST(req: Request) {
         (await cookies()).set('personel_token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 60 * 60 * 24 * 7, // 7 days
+            maxAge: 60 * 60 * 24 * 30, // 30 days
             path: '/',
         });
 

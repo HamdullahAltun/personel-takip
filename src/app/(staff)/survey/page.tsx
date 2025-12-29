@@ -20,6 +20,10 @@ export default function StaffSurveyPage() {
             const res = await fetch('/api/survey');
             const data = await res.json();
             setSurveys(data);
+
+            // Initialize submitted state from server
+            const alreadyVoted = data.filter((s: any) => s.hasResponded).map((s: any) => s.id);
+            setSubmitted(alreadyVoted);
         } catch (e) {
             console.error(e);
         } finally {
