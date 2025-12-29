@@ -52,6 +52,22 @@ export default function StaffLayout({
     const [userRole, setUserRole] = useState<string>("");
     const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
+    // Fetch Unread Count
+    useEffect(() => {
+        const fetchUnread = () => {
+            fetch('/api/messages/unread')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.count !== undefined) setUnreadCount(data.count);
+                })
+                .catch(() => { });
+        };
+
+        fetchUnread();
+        const interval = setInterval(fetchUnread, 10000); // Check every 10 seconds
+        return () => clearInterval(interval);
+    }, []);
+
     useEffect(() => {
         fetch('/api/auth/me').then(res => res.json()).then(data => {
             if (data.user) {
