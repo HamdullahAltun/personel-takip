@@ -9,6 +9,7 @@ import Link from "next/link";
 import AttendanceCalendar from "@/components/AttendanceCalendar";
 import ScheduleWidget from "@/components/staff/ScheduleWidget";
 import ProfileAvatar from "@/components/ProfileAvatar";
+import ThemeEditor from "@/components/ThemeEditor";
 
 async function getUser() {
     const token = (await cookies()).get("personel_token")?.value;
@@ -179,6 +180,9 @@ export default async function ProfilePage() {
 
             {/* Schedule Widget */}
             <ScheduleWidget schedules={user.workSchedules} />
+
+            {/* Theme & Appearance */}
+            <ThemeEditor />
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-4 space-y-4">
                 <h3 className="font-bold text-slate-900 border-b border-slate-100 pb-2">Çalışma Takvimim</h3>

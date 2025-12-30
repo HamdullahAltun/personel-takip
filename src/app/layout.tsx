@@ -24,20 +24,24 @@ import PushNotificationListener from "@/components/PushNotificationListener";
 import AppUrlListener from "@/components/AppUrlListener";
 import { Toaster } from "sonner";
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="tr">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <PushNotificationListener />
-        <AppUrlListener />
-        <Toaster position="top-right" richColors />
-        {children}
+        <ThemeProvider>
+          <PushNotificationListener />
+          <AppUrlListener />
+          <Toaster position="top-right" richColors />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

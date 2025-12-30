@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Receipt, Plus, Upload, Trash2, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { Receipt, Plus, Upload, Trash2, AlertCircle, CheckCircle, XCircle, BrainCircuit } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Expense = {
@@ -225,17 +225,48 @@ export default function StaffExpensesPage() {
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Fiş/Fatura Görseli (Opsiyonel)</label>
-                                <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition cursor-pointer relative">
-                                    <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                                    {receiptImage ? (
-                                        <div className="relative h-32 mx-auto">
-                                            <img src={receiptImage} alt="Preview" className="h-full mx-auto object-contain" />
-                                        </div>
-                                    ) : (
-                                        <div className="text-slate-400 py-4">
-                                            <Upload className="h-8 w-8 mx-auto mb-2" />
-                                            <span className="text-sm">Görsel Yükle</span>
-                                        </div>
+                                <div className="space-y-3">
+                                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition cursor-pointer relative">
+                                        <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                        {receiptImage ? (
+                                            <div className="relative h-32 mx-auto">
+                                                <img src={receiptImage} alt="Preview" className="h-full mx-auto object-contain" />
+                                            </div>
+                                        ) : (
+                                            <div className="text-slate-400 py-4">
+                                                <Upload className="h-8 w-8 mx-auto mb-2" />
+                                                <span className="text-sm">Görsel Yükle</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {receiptImage && (
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                const btn = document.getElementById('ocr-btn');
+                                                if (btn) btn.innerText = "Taranıyor...";
+                                                try {
+                                                    const res = await fetch("/api/ai/ocr-expense", {
+                                                        method: "POST",
+                                                        body: JSON.stringify({ image: receiptImage })
+                                                    });
+                                                    if (res.ok) {
+                                                        const data = await res.json();
+                                                        setAmount(data.amount?.toString() || "");
+                                                        setDate(data.date || date);
+                                                        setDesc(data.description || desc);
+                                                        setCategory(data.category || category);
+                                                    }
+                                                } finally {
+                                                    if (btn) btn.innerText = "Sihirli Tarama (AI)";
+                                                }
+                                            }}
+                                            id="ocr-btn"
+                                            className="w-full flex items-center justify-center gap-2 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition"
+                                        >
+                                            <BrainCircuit className="w-4 h-4" />
+                                            Sihirli Tarama (AI)
+                                        </button>
                                     )}
                                 </div>
                             </div>

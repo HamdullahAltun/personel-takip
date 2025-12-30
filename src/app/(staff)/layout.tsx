@@ -7,7 +7,7 @@ import {
     Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText,
     LogOut, ChevronDown, Menu as MenuIcon, ClipboardList, Receipt, BrainCircuit,
     Calendar, MessageSquare, BookOpen, CalendarClock, LayoutGrid, X, UserCog,
-    Share2, CalendarRange, Crown, Network, Bot, Gift, Banknote
+    Share2, CalendarRange, Crown, Network, Bot, Gift, Banknote, MapPin
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -88,12 +88,15 @@ export default function StaffLayout({
         { href: "/messages", label: "Mesajlar", icon: MessageSquareText, priority: 4 },
 
         // New Features (In Menu)
+        { href: "/dashboard/field-tasks", label: "Saha Görevleri", icon: MapPin, priority: 5 },
+        { href: "/dashboard/onboarding", label: "Onboarding", icon: ClipboardList, priority: 5 },
         { href: "/social", label: "Sosyal Akış", icon: Share2, priority: 5 },
         { href: "/shifts", label: "Vardiyalar", icon: CalendarRange, priority: 6 },
         { href: "/leaderboard", label: "Liderlik", icon: Crown, priority: 7 },
         { href: "/organization", label: "Organizasyon", icon: Network, priority: 8 },
         { href: "/ai-assistant", label: "AI Asistan", icon: Bot, priority: 8 },
         { href: "/payroll", label: "Maaşım", icon: Banknote, priority: 8 },
+        { href: "/rewards", label: "Ödül Mağazası", icon: Gift, priority: 8 },
 
         // Secondary
         { href: "/expenses", label: "Harcamalar", icon: Receipt, priority: 10 },
@@ -102,7 +105,6 @@ export default function StaffLayout({
         { href: "/survey", label: "Anketler", icon: MessageSquare, priority: 10 },
         { href: "/lms", label: "Eğitim", icon: BookOpen, priority: 10 },
         { href: "/booking", label: "Rezervasyon", icon: CalendarClock, priority: 10 },
-        { href: "/rewards", label: "Ödül Mağazası", icon: Gift, priority: 10 },
     ];
 
     if (userRole === 'EXECUTIVE') {

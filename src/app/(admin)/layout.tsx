@@ -81,8 +81,9 @@ export default function AdminLayout({
         { href: "/admin/booking", label: "Rezervasyon", icon: CalendarClock },
         { href: "/admin/events", label: "Etkinlikler", icon: Calendar },
         { href: "/admin/survey", label: "Anketler", icon: MessageSquare },
-        { href: "/admin/visitors", label: "Ziyaretçiler", icon: Users },
-        { href: "/admin/documents", label: "Belgeler", icon: FileText },
+        { href: "/admin/field-tasks", label: "Saha Görevleri", icon: TentTree }, // MapPin would be better 
+        { href: "/admin/onboarding", label: "Onboarding", icon: ClipboardList },
+        { href: "/admin/departments", label: "Departmanlar & Bütçe", icon: LayoutDashboard }, // Factory or Building
         { href: "/admin/announcements", label: "Duyurular", icon: Megaphone },
         // Admin also gets access to Executive Dashboard
         { href: "/executive/dashboard", label: "Şirket Raporu", icon: BrainCircuit },

@@ -61,6 +61,12 @@ export async function POST() {
             where: { status: 'APPROVED' }
         });
 
+        const [departments, fieldTasks, checklistProgress] = await Promise.all([
+            (prisma as any).department.findMany(),
+            (prisma as any).fieldTask.findMany({ take: 20, orderBy: { createdAt: 'desc' } }),
+            (prisma as any).checklistAssignment.findMany({ take: 10, include: { checklist: true, user: { select: { name: true } } } })
+        ]);
+
         // 2. Prepare Context for AI
         const context = `
             Act as a Senior Business Consultant. Analyze this company data and provide a report in TURKISH language.
@@ -68,9 +74,18 @@ export async function POST() {
             IMPORTANT: Return ONLY a valid JSON object. Do not include any other text, markdown formatting, or explanations outside the JSON.
             
             Staff Data Summary:
-            ${staff.map((s: any) => `- ${s.name}: ${s.tasksReceived?.filter((t: any) => t.status === 'COMPLETED').length || 0} tasks done. Last Check-in: ${s.attendance?.[0]?.timestamp || 'None'}`).join('\n')}
+            ${staff.map((s: any) => `- ${s.name}: ${s.tasksReceived?.filter((t: any) => t.status === 'COMPLETED').length || 0} tasks done.`).join('\n')}
 
-            Recent Communications (Analyze tone/sentiment):
+            Departments & Budgets:
+            ${departments.map((d: any) => `- ${d.name}: Harcanan ${d.budgetUsed} TL / Limit ${d.budgetLimit} TL`).join('\n')}
+
+            Field Operational Status (Saha Görevleri):
+            ${fieldTasks.map((f: any) => `- ${f.title} @ ${f.clientName}: ${f.status}`).join('\n')}
+
+            Onboarding Progress:
+            ${checklistProgress.map((cp: any) => `- ${cp.user.name}: ${cp.checklist.title} (Status: ${cp.status})`).join('\n')}
+
+            Recent Communications:
             ${messages.map((m: any) => `"${m.content}"`).join('\n')}
 
             Financials:

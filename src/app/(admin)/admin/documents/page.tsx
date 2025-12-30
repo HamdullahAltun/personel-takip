@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Folder, FileText, Upload, Trash, Download, Search, File, Image as ImageIcon } from "lucide-react";
+import { Folder, FileText, Upload, Trash, Download, Search, File, Image as ImageIcon, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export default function AdminDocumentsPage() {
     const [docs, setDocs] = useState<any[]>([]);
@@ -72,39 +73,62 @@ export default function AdminDocumentsPage() {
                         <p className="text-xs text-slate-500">{format(new Date(doc.uploadedAt), 'd MMM yyyy', { locale: tr })}</p>
                         <span className="text-[10px] uppercase bg-slate-100 px-1.5 py-0.5 rounded mt-2 inline-block text-slate-600 font-bold">{doc.type}</span>
 
+                        {doc.expiryDate && (
+                            <div className={cn(
+                                "text-[10px] font-bold px-2 py-1 rounded-full mt-2 flex items-center gap-1 w-fit",
+                                new Date(doc.expiryDate) < new Date()
+                                    ? "bg-rose-100 text-rose-600 border border-rose-200"
+                                    : "bg-amber-100 text-amber-700 border border-amber-200"
+                            )}>
+                                <AlertCircle className="w-3 h-3" />
+                                {new Date(doc.expiryDate) < new Date() ? "Süresi Doldu" : `${format(new Date(doc.expiryDate), 'd MMM yyyy')} tarihinde doluyor`}
+                            </div>
+                        )}
+
                         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded">
-                            <a href={doc.fileUrl} target="_blank" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><Download className="h-4 w-4" /></a>
-                            <button onClick={() => handleDelete(doc.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash className="h-4 w-4" /></button>
+                            <a href={doc.fileUrl} target="_blank" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded shadow-sm"><Download className="h-4 w-4" /></a>
+                            <button onClick={() => handleDelete(doc.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded shadow-sm"><Trash className="h-4 w-4" /></button>
                         </div>
                     </div>
                 ))}
             </div>
 
             {showModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-sm p-6 animate-in zoom-in-95">
-                        <h2 className="text-lg font-bold mb-4">Yeni Belge Yükle</h2>
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-[2rem] w-full max-w-sm p-8 animate-in zoom-in-95 shadow-2xl">
+                        <h2 className="text-xl font-black mb-6 flex items-center gap-2">
+                            <FileText className="text-indigo-600" />
+                            Yeni Belge Yükle
+                        </h2>
                         <form onSubmit={handleUpload} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1">Belge Adı</label>
-                                <input required className="w-full border rounded-lg p-2" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Örn: İş Sözleşmesi" />
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Belge Adı</label>
+                                <input required className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none transition" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Örn: İş Sözleşmesi" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tür</label>
+                                    <select className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none transition" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
+                                        <option value="CONTRACT">Sözleşme</option>
+                                        <option value="REPORT">Rapor</option>
+                                        <option value="POLICY">Politika</option>
+                                        <option value="ID_CARD">Kimlik/Pasaport</option>
+                                        <option value="HEALTH">Sağlık Belgesi</option>
+                                        <option value="OTHER">Diğer</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Son Kullanma</label>
+                                    <input type="date" className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none transition" value={(formData as any).expiryDate} onChange={e => setFormData({ ...formData, expiryDate: e.target.value } as any)} />
+                                </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1">Tür</label>
-                                <select className="w-full border rounded-lg p-2" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
-                                    <option value="CONTRACT">Sözleşme</option>
-                                    <option value="REPORT">Rapor</option>
-                                    <option value="POLICY">Politika</option>
-                                    <option value="OTHER">Diğer</option>
-                                </select>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Dosya Linki (S3/Cloud)</label>
+                                <input required className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none transition" value={formData.fileUrl} onChange={e => setFormData({ ...formData, fileUrl: e.target.value })} placeholder="https://..." />
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1">Dosya URL (Mock)</label>
-                                <input required className="w-full border rounded-lg p-2" value={formData.fileUrl} onChange={e => setFormData({ ...formData, fileUrl: e.target.value })} placeholder="https://..." />
-                            </div>
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg">İptal</button>
-                                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Yükle</button>
+                            <div className="flex gap-3 pt-4">
+                                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition">İptal</button>
+                                <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition">Belgeyi Ekle</button>
                             </div>
                         </form>
                     </div>

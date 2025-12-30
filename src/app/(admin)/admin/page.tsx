@@ -17,6 +17,8 @@ import PendingApprovals from "@/components/PendingApprovals";
 import WeeklyAttendanceChart from "@/components/WeeklyAttendanceChart";
 import RecentActivityList from "@/components/RecentActivityList";
 import DetailedExecutiveReport from "@/components/DetailedExecutiveReport";
+import PredictiveAttritionWidget from "@/components/PredictiveAttritionWidget";
+import BudgetOverviewWidget from "@/components/BudgetOverviewWidget";
 
 export default async function AdminDashboard() {
     // 1. Recent Activity (Server Side)
@@ -74,27 +76,40 @@ export default async function AdminDashboard() {
             {/* Real-time Stats Client Component */}
             <DashboardStats />
 
-            {/* Charts & Recent Activity Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:h-[400px]">
-                <div className="lg:col-span-2 h-[400px] lg:h-full">
+            {/* Dashboard Bottom Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                {/* 2/4 Charts */}
+                <div className="lg:col-span-2 h-[400px]">
                     <WeeklyAttendanceChart data={chartData} />
                 </div>
-                <div className="lg:col-span-1 h-[400px] lg:h-full">
+
+                {/* 1/4 Risk Analysis */}
+                <div className="lg:col-span-1 h-[400px]">
+                    <PredictiveAttritionWidget />
+                </div>
+
+                {/* 1/4 Budget Tracking */}
+                <div className="lg:col-span-1 h-[400px]">
+                    <BudgetOverviewWidget />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2">
+                    <PendingApprovals />
+                </div>
+                <div className="lg:col-span-1">
                     <RecentActivityList activities={recentActivity} />
                 </div>
             </div>
 
-            {/* Interactive Approvals Section (Cards) */}
-            <PendingApprovals />
+            {/* AI Report Section */}
+            <DetailedExecutiveReport />
 
-            {/* Map & AI */}
             {/* Map */}
             <div className="h-[500px]">
                 <LiveOfficeMap />
             </div>
-
-            {/* AI Report Section */}
-            <DetailedExecutiveReport />
         </div>
     );
 }

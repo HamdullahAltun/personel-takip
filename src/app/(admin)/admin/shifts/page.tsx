@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
 import { tr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, X, Users, Trash } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Users, Trash, BrainCircuit } from "lucide-react";
 
 type Shift = {
     id: string;
@@ -117,8 +117,25 @@ export default function ShiftsPage() {
                         <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 hover:bg-white rounded shadow-sm transition"><ChevronRight className="h-4 w-4" /></button>
                     </div>
                 </div>
-                <div>
-                    {/* Legend or Actions */}
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={async () => {
+                            if (!confirm("Önümüzdeki 7 gün için otomatik vardiya planı oluşturulsun mu?")) return;
+                            const btn = document.getElementById('ai-plan-btn');
+                            if (btn) btn.innerText = "Planlanıyor...";
+                            const res = await fetch("/api/admin/shifts/auto-plan", {
+                                method: "POST",
+                                body: JSON.stringify({ startDate: new Date().toISOString() })
+                            });
+                            if (res.ok) fetchShifts();
+                            if (btn) btn.innerText = "Akıllı Planla (AI)";
+                        }}
+                        id="ai-plan-btn"
+                        className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition shadow-sm"
+                    >
+                        <BrainCircuit className="h-4 w-4 text-indigo-400" />
+                        Akıllı Planla (AI)
+                    </button>
                 </div>
             </div>
 

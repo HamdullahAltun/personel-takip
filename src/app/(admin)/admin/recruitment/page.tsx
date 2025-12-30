@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Briefcase, UserPlus, Users, Search, ChevronRight, CheckCircle2, XCircle, Clock, Star, Plus, Pencil, Trash } from "lucide-react";
+import { Briefcase, UserPlus, Users, Search, ChevronRight, CheckCircle2, XCircle, Clock, Star, Plus, Pencil, Trash, BrainCircuit } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
@@ -109,10 +109,32 @@ export default function RecruitmentPage() {
                             </div>
                             <p className="text-slate-500 text-xs mb-2">{c.email}</p>
 
-                            <div className="flex items-center gap-1 mb-3">
-                                {[1, 2, 3, 4, 5].map(star => (
-                                    <Star key={star} className={`h-3 w-3 ${star <= c.rating ? 'fill-yellow-400 text-yellow-400' : 'text-slate-200'}`} />
-                                ))}
+                            <div className="flex items-center justify-between mb-3 border-t border-slate-50 pt-2">
+                                <div className="flex items-center gap-1">
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                        <Star key={star} className={`h-3 w-3 ${star <= c.rating ? 'fill-yellow-400 text-yellow-400' : 'text-slate-200'}`} />
+                                    ))}
+                                </div>
+                                {c.aiScore ? (
+                                    <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-indigo-100" title={c.aiNotes}>
+                                        <BrainCircuit className="h-3 w-3" />
+                                        %{c.aiScore} Uyumluluk
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={async () => {
+                                            const res = await fetch("/api/ai/analyze-candidate", {
+                                                method: "POST",
+                                                body: JSON.stringify({ candidateId: c.id })
+                                            });
+                                            if (res.ok) fetchData();
+                                        }}
+                                        className="text-[9px] bg-slate-900 text-white px-2 py-0.5 rounded flex items-center gap-1 hover:bg-slate-800 transition shadow-sm font-bold"
+                                    >
+                                        <BrainCircuit className="h-2 w-2" />
+                                        AI ANALİZ
+                                    </button>
+                                )}
                             </div>
 
                             <div className="flex justify-between gap-2 pt-2 border-t border-slate-50">

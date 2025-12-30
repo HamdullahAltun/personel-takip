@@ -12,7 +12,7 @@ model User {
   name        String
   phone       String   @unique
   email       String?
-  role        String   @default("STAFF") // ADMIN, STAFF
+  role        String   @default("STAFF") // ADMIN, STAFF, EXECUTIVE
   hourlyRate  Float    @default(0)
   weeklyGoal  Int      @default(0)
   annualLeaveDays Int  @default(0)
@@ -20,6 +20,10 @@ model User {
   fcmToken    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Theme & Preferences
+  theme       String   @default("light") // light, dark, system
+  accentColor String   @default("#4f46e5")
 
   attendance  AttendanceRecord[]
   leaves      LeaveRequest[]
@@ -39,7 +43,7 @@ model User {
 
   documents   Document[]
 
-  // Assets (Zimmet)
+  // Assets
   assets      Asset[]
 
   // Performance Reviews
@@ -62,6 +66,10 @@ model User {
   manager     User?    @relation("Manager", fields: [managerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   reports     User[]   @relation("Manager")
 
+  // Department
+  departmentId String? @db.ObjectId
+  department   Department? @relation(fields: [departmentId], references: [id])
+
   // Gamification
   points      Int      @default(0)
 
@@ -72,6 +80,72 @@ model User {
 
   // Rewards
   rewardRequests RewardRequest[]
+
+  // Onboarding/Offboarding
+  checklistAssignments ChecklistAssignment[]
+  
+  // Field Tasks (Saha)
+  fieldTasks  FieldTask[]
+}
+
+model Department {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String   @unique
+  budgetLimit  Float    @default(0)
+  budgetUsed   Float    @default(0)
+  managerName  String?
+  users        User[]
+  createdAt    DateTime @default(now())
+}
+
+model Checklist {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  type        String   // ONBOARDING, OFFBOARDING, GENERAL
+  items       ChecklistItem[]
+  assignments ChecklistAssignment[]
+  createdAt   DateTime @default(now())
+}
+
+model ChecklistItem {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  checklistId String    @db.ObjectId
+  checklist   Checklist @relation(fields: [checklistId], references: [id])
+  task        String
+  category    String?   // IT, HR, FINANCE
+  createdAt   DateTime  @default(now())
+}
+
+model ChecklistAssignment {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  user        User      @relation(fields: [userId], references: [id])
+  checklistId String    @db.ObjectId
+  checklist   Checklist @relation(fields: [checklistId], references: [id])
+  progress    Json      // Object mapping item IDs to boolean/timestamp
+  status      String    @default("IN_PROGRESS") // COMPLETED, IN_PROGRESS
+  assignedAt  DateTime  @default(now())
+  completedAt DateTime?
+}
+
+model FieldTask {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  user        User      @relation(fields: [userId], references: [id])
+  title       String
+  description String?
+  clientName  String?
+  location    String?   // Text address
+  lat         Float?
+  lng         Float?
+  status      String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+  checkInTime DateTime?
+  checkOutTime DateTime?
+  checkInLat  Float?
+  checkInLng  Float?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Asset {
@@ -96,6 +170,7 @@ model Document {
   title       String
   type        String   // CONTRACT, REPORT, ID, DIPLOMA, OTHER
   fileUrl     String
+  expiryDate  DateTime? // ⚠️ Belge Son Kullanma Uyarısı için
   uploadedAt  DateTime @default(now())
 }
 
@@ -108,6 +183,7 @@ model PerformanceReview {
   period      String   // e.g., "2024-Q1"
   score       Int      // 1-100
   feedback    String
+  aiInsight   String?  // ⚠️ Attrition prediction veya yetenek analizi
   createdAt   DateTime @default(now())
 }
 
@@ -168,8 +244,9 @@ model Expense {
   description String
   amount      Float
   date        DateTime
-  category    String?       // "Food", "Travel", "Equipment" etc.
-  receiptImage String?      // Base64 string for now
+  category    String?       // "Food", "Travel", "Equipment", etc.
+  receiptImage String?      
+  ocrData     Json?         // ⚠️ AI Fatura/Fiş Okuma verisi
   status      ExpenseStatus @default(PENDING)
   
   userId      String        @db.ObjectId
@@ -204,7 +281,7 @@ enum TaskPriority {
 
 model Message {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  content   String? // Made optional if sending only image
+  content   String? 
   attachmentUrl String?
   senderId  String   @db.ObjectId
   receiverId String  @db.ObjectId
@@ -311,6 +388,8 @@ model Candidate {
   resumeUrl    String?
   status       String     // NEW, INTERVIEW, OFFER, HIRED, REJECTED
   rating       Int        @default(0)
+  aiScore      Int?       // ⚠️ Otomatik Mülakat Değerlendirme skoru
+  aiNotes      String?    // ⚠️ AI'nın aday analizi
   notes        String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt

@@ -58,7 +58,10 @@ export async function POST(req: Request) {
                 companySettings,
                 assets,
                 advanceRequests,
-                upcomingShifts
+                upcomingShifts,
+                fieldTasks,
+                departments,
+                checklists
             ] = await Promise.all([
                 // Staff Details
                 (prisma.user as any).findMany({
@@ -131,10 +134,24 @@ export async function POST(req: Request) {
                     where: { start: { gte: today } },
                     take: 10,
                     include: { user: { select: { name: true } } }
+                }),
+                // Field Tasks
+                (prisma as any).fieldTask.findMany({
+                    where: { status: { not: 'COMPLETED' } },
+                    include: { user: { select: { name: true } } }
+                }),
+                // Departments & Budgets
+                (prisma as any).department.findMany({
+                    include: { _count: { select: { users: true } } }
+                }),
+                // Checklists
+                (prisma as any).checklistAssignment.findMany({
+                    where: { status: { not: 'COMPLETED' } },
+                    include: { user: { select: { name: true } }, checklist: { select: { title: true, items: true } } }
                 })
             ]);
 
-            // Data Processing for Context Window Optimization
+            // Data Processing
             const totalStaff = allStaff.length;
             const staffSummary = allStaff.map((s: any) => {
                 const lastSeen = s.attendance[0]
@@ -146,6 +163,18 @@ export async function POST(req: Request) {
 
                 return `- ${s.name} (${s.role}): Puan:${s.points}, Maaş:${s.hourlyRate}/saat, İzin:${s.annualLeaveDays} gün. Son:${lastSeen}. Geç:${lateness}. Açık İş:${openTasks}. Perf:${perfScore}`;
             }).join('\n');
+
+            const fieldTasksStr = (fieldTasks as any[] || []).map((ft: any) =>
+                `- ${ft.user?.name || 'Atanmamış'}: ${ft.title} @ ${ft.clientName} (Konum: ${ft.location}, Durum: ${ft.status})`
+            ).join('\n') || "Aktif saha görevi yok.";
+
+            const deptBudgetsStr = (departments as any[] || []).map((d: any) =>
+                `- ${d.name}: Harcanan ${d.budgetUsed} TL / Limit ${d.budgetLimit} TL (%${((d.budgetUsed / d.budgetLimit) * 100 || 0).toFixed(1)})`
+            ).join('\n') || "Departman verisi yok.";
+
+            const checklistStr = (checklists as any[] || []).map((ca: any) =>
+                `- ${ca.user.name}: ${ca.checklist.title} (%${(Object.values(ca.progress || {}).filter(v => v).length / (ca.checklist?.items?.length || 1) * 100).toFixed(0)})`
+            ).join('\n') || "Aktif onboarding süreci yok.";
 
             const pendingLeavesStr = pendingLeaves.map((l: any) =>
                 `- ${l.user.name}: ${format(l.startDate, 'dd.MM')} - ${format(l.endDate, 'dd.MM')} (${l.reason})`
@@ -183,6 +212,15 @@ Ofis Konumu: ${companySettings ? `${companySettings.officeLat}, ${companySetting
 
 === PERSONEL DETAYLARI (Gizli Veriler Dahil) ===
 ${staffSummary}
+
+=== SAHA GÖREVLERİ ===
+${fieldTasksStr}
+
+=== DEPARTMAN BÜTÇELERİ ===
+${deptBudgetsStr}
+
+=== ONBOARDING SÜREÇLERİ ===
+${checklistStr}
 
 === BEKLEYEN ONAYLAR ===
 İzin İstekleri:
