@@ -117,7 +117,7 @@ function TreeNode({ node }: { node: UserNode }) {
                            Children Container (Flex Row)
                         */}
 
-                        {node.children.map((child, index) => (
+                        {node.children?.map((child, index) => (
                             <div key={child.id} className="flex flex-col items-center relative">
                                 {/* Connector Up - using negative margin or absolute?
                                     Actually the simplest recursive tree CSS is:
@@ -143,7 +143,7 @@ function TreeNode({ node }: { node: UserNode }) {
                                 */}
                                 {/* Simple Horizontal Line Wrapper */}
                                 <div className={`absolute top-[-1px] left-0 w-1/2 h-px bg-slate-300 ${index === 0 ? 'hidden' : ''}`}></div>
-                                <div className={`absolute top-[-1px] right-0 w-1/2 h-px bg-slate-300 ${index === node.children.length - 1 ? 'hidden' : ''}`}></div>
+                                <div className={`absolute top-[-1px] right-0 w-1/2 h-px bg-slate-300 ${index === (node.children?.length || 0) - 1 ? 'hidden' : ''}`}></div>
                                 <div className="absolute top-[-17px] w-px h-[17px] bg-slate-300"></div>
 
                                 <TreeNode node={child} />
