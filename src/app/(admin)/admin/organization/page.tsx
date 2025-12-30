@@ -103,52 +103,19 @@ function TreeNode({ node }: { node: UserNode }) {
 
                     {/* Horizontal Connector */}
                     <div className="relative flex justify-center gap-8 pt-4 border-t border-slate-300">
-                        {/* 
-                           We need a way to draw the horizontal line ONLY between first and last child.
-                           CSS pseudo elements on the 'ul/li' structure is easier.
-                           But with Flexbox:
-                           We can use a wrapper that has border-top.
-                           
-                           Actually, a better trick for Flex lines:
-                           Parent 
-                             |
-                           Div (Connects Parent to Children Container)
-                             |
-                           Children Container (Flex Row)
-                        */}
+                        {node.children.map((child, index) => {
+                            const childrenCount = node.children?.length || 0;
+                            return (
+                                <div key={child.id} className="flex flex-col items-center relative">
+                                    {/* Simple Horizontal Line Wrapper */}
+                                    <div className={`absolute top-[-1px] left-0 w-1/2 h-px bg-slate-300 ${index === 0 ? 'hidden' : ''}`}></div>
+                                    <div className={`absolute top-[-1px] right-0 w-1/2 h-px bg-slate-300 ${index === childrenCount - 1 ? 'hidden' : ''}`}></div>
+                                    <div className="absolute top-[-17px] w-px h-[17px] bg-slate-300"></div>
 
-                        {node.children?.map((child, index) => (
-                            <div key={child.id} className="flex flex-col items-center relative">
-                                {/* Connector Up - using negative margin or absolute?
-                                    Actually the simplest recursive tree CSS is:
-                                    Parent -> Line Down -> Children Wrapper (Flex) -> (Line Up + Child + Line Down)
-                                */}
-                                {/* Top vertical line for each child, but we need horizontal bar too. 
-                                    Let's cheat: The border-t on the PARENT wrapper serves as horizontal.
-                                    But it spans full width. We need it only between first and last center.
-                                */}
-
-                                {/* Workaround: Absolute lines on children */}
-                                <div className="absolute top-[-17px] w-full h-[17px] border-t border-slate-300 left-1/2 -ml-[50%] first:ml-0 first:w-1/2 last:w-1/2 last:ml-0 last:border-l-0 last:left-0 first:left-1/2 first:border-r-0"></div>
-                                {/* The above logic is complex. Let's stick to a simpler visual: just vertical lines, or standard tree.
-                                    
-                                    Let's try standard CSS Tree structure reused in Flex.
-                                    
-                                    <div className="relative flex flex-col items-center ...">
-                                      <div className="-mt-4 w-px h-4 bg-slate-300 absolute top-0"></div> 
-                                      <TreeNode ... />
-                                    </div>
-                                    
-                                    But the horizontal line is key.
-                                */}
-                                {/* Simple Horizontal Line Wrapper */}
-                                <div className={`absolute top-[-1px] left-0 w-1/2 h-px bg-slate-300 ${index === 0 ? 'hidden' : ''}`}></div>
-                                <div className={`absolute top-[-1px] right-0 w-1/2 h-px bg-slate-300 ${index === (node.children?.length || 0) - 1 ? 'hidden' : ''}`}></div>
-                                <div className="absolute top-[-17px] w-px h-[17px] bg-slate-300"></div>
-
-                                <TreeNode node={child} />
-                            </div>
-                        ))}
+                                    <TreeNode node={child} />
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}
