@@ -58,4 +58,4 @@ Uygulama `http://localhost:3000` adresinde çalışacaktır.
 İlk yönetici hesabı oluşturmak için veritabanına manuel erişim veya API kullanabilirsiniz. Telefon numarası veritabanında `role: "ADMIN"` olarak ayarlanmalıdır.
 
 ---
-Geliştirici: [Adınız/Ekibiniz]
+Geliştirici: Hamdullah Altun
