@@ -62,6 +62,13 @@ export async function POST(req: Request) {
             }
         });
 
+        const { sendPushNotification } = await import("@/lib/notifications");
+        sendPushNotification(userId, "Ayın Elemanı Seçildin! 🌟", `Tebrikler! Bu ayın elemanı seçildin. ${note ? `Not: ${note}` : ""}`).catch(console.error);
+
+        // Optional: Broadcast to everyone else?
+        // const { sendBroadcastNotification } = await import("@/lib/notifications");
+        // sendBroadcastNotification("Ayın Elemanı Belli Oldu! 🌟", "Uygulamaya girip kimin seçildiğini gör!");
+
         return NextResponse.json(record);
     } catch (error) {
         console.error(error);

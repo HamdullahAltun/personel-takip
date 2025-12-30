@@ -1,26 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import admin from "firebase-admin";
+import * as admin from "firebase-admin";
+import { createFirebaseAdminApp } from "./firebase-admin";
 
-// Initialize Firebase Admin (Singleton)
-if (!admin.apps.length) {
-    try {
-        const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-        const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-        const privateKey = (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, '\n');
-
-        if (projectId && clientEmail && privateKey) {
-            admin.initializeApp({
-                credential: admin.credential.cert({
-                    projectId,
-                    clientEmail,
-                    privateKey,
-                }),
-            });
-        }
-    } catch (error) {
-        console.error("Firebase Admin Init Error:", error);
-    }
-}
+// Ensure App is initialized
+createFirebaseAdminApp();
 
 export async function sendPushNotification(userId: string, title: string, body: string, data?: any) {
     // 1. Get User's FCM Token
@@ -30,7 +13,7 @@ export async function sendPushNotification(userId: string, title: string, body: 
     });
 
     if (!user || !user.fcmToken) {
-        console.log(`No FCM token found for user ${userId}`);
+        // console.log(`No FCM token found for user ${userId}`);
         return;
     }
 
@@ -67,8 +50,6 @@ export async function sendPushNotification(userId: string, title: string, body: 
 }
 
 export async function sendBroadcastNotification(title: string, body: string) {
-    // For simplicity, we loop through users with tokens. 
-    // Ideally, subscribe everyone to a 'general' topic.
     const users = await prisma.user.findMany({
         where: { fcmToken: { not: null } },
         select: { id: true }

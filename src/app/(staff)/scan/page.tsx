@@ -55,27 +55,27 @@ export default function ScanPage() {
         setStatus("PROCESSING");
         setMessage("Konum doğrulanıyor...");
 
+        let location = null;
         try {
-            let location = null;
-            try {
-                const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        enableHighAccuracy: true,
-                        timeout: 10000
-                    });
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 5000 // Reduced timeout
                 });
-                location = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                };
-            } catch (locErr: any) {
-                console.error("Location error:", locErr);
-                // We proceed without location if error, API handles strictness
-                throw new Error("Konum alınamadı. Lütfen GPS izni verin.");
-            }
+            });
+            location = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+        } catch (locErr: any) {
+            console.warn("Location error (proceeding without location):", locErr);
+            // We proceed without location if error, API handles strictness
+            // Do NOT throw here. 
+        }
 
-            setMessage("Giriş yapılıyor...");
+        setMessage("Giriş yapılıyor...");
 
+        try {
             const res = await fetch("/api/attendance", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

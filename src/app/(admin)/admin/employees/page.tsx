@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { Plus } from "lucide-react";
 import EmployeeTable from "@/components/admin/EmployeeTable";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Personeller",
+};
+
 
 export default async function EmployeesPage() {
     const employees = await prisma.user.findMany({

@@ -15,18 +15,39 @@ export default function AdminAssetsPage() {
 
     useEffect(() => {
         fetchData();
-        // Fetch users for dropdown
-        fetch('/api/users').then(r => r.json()).then(setUsers).catch(console.error);
+        // Fetch users for dropdown safely
+        fetch('/api/users')
+            .then(r => r.json())
+            .then(data => {
+                if (Array.isArray(data)) setUsers(data);
+                else setUsers([]);
+            })
+            .catch(e => {
+                console.error("Users fetch error:", e);
+                setUsers([]);
+            });
     }, []);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             const res = await fetch('/api/assets');
+
+            if (res.status === 401) {
+                window.location.href = "/api/auth/logout";
+                return;
+            }
+
             const data = await res.json();
-            setAssets(data);
+            if (res.ok && Array.isArray(data)) {
+                setAssets(data);
+            } else {
+                console.error("Assets fetch failed:", res.status, data);
+                setAssets([]);
+            }
         } catch (e) {
-            console.error(e);
+            console.error("Assets fetch error:", e);
+            setAssets([]);
         } finally {
             setLoading(false);
         }

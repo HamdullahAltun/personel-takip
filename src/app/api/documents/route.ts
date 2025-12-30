@@ -2,66 +2,48 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
 
-export async function GET(req: Request) {
+export async function GET() {
     const session = await getAuth();
-    if (!session || session.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    try {
-        const documents = await prisma.document.findMany({
-            include: {
-                user: { select: { name: true, phone: true } }
-            },
-            orderBy: { uploadedAt: 'desc' }
-        });
-        return NextResponse.json(documents);
-    } catch (error) {
-        return NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
-    }
+    const documents = await prisma.document.findMany({
+        include: { user: { select: { name: true } } },
+        orderBy: { uploadedAt: 'desc' }
+    });
+
+    return NextResponse.json(documents);
 }
 
 export async function POST(req: Request) {
     const session = await getAuth();
-    if (!session || session.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Allow Staff to upload? Maybe only Admin for Company Drive. 
+    // Let's assume Admin uploads Company docs, Staff uploads Personal docs.
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    try {
-        const body = await req.json();
-        const { userId, title, type, fileUrl } = body;
+    const body = await req.json();
+    const { title, type, fileUrl, userId } = body; // userId optional if Admin uploading for someone
 
-        const doc = await prisma.document.create({
-            data: {
-                userId,
-                title,
-                type,
-                fileUrl
-            }
-        });
+    // Default to current user if not specified
+    const targetUserId = userId || session.id;
 
-        return NextResponse.json(doc);
-    } catch (error) {
-        console.error(error);
-        return NextResponse.json({ error: 'Failed to create document' }, { status: 500 });
-    }
+    const doc = await prisma.document.create({
+        data: {
+            title,
+            type,
+            fileUrl,
+            userId: targetUserId
+        }
+    });
+
+    return NextResponse.json(doc);
 }
 
 export async function DELETE(req: Request) {
     const session = await getAuth();
-    if (!session || session.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    try {
-        const { searchParams } = new URL(req.url);
-        const id = searchParams.get('id');
+    const { id } = await req.json();
+    await prisma.document.delete({ where: { id } });
 
-        if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
-
-        await prisma.document.delete({ where: { id } });
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
-    }
+    return NextResponse.json({ success: true });
 }

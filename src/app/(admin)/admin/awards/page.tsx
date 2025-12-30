@@ -204,76 +204,132 @@ export default function AwardsPage() {
             )}
 
             {activeTab === 'ACHIEVEMENT' && (
-                <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm max-w-2xl">
-                    <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
-                        <Medal className="h-6 w-6 text-purple-600" />
-                        Yeni Başarım Tanımla
-                    </h3>
+                <div className="grid lg:grid-cols-2 gap-8">
+                    {/* Achievement Form */}
+                    <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
+                            <Medal className="h-6 w-6 text-purple-600" />
+                            Yeni Başarım Tanımla
+                        </h3>
 
-                    <form onSubmit={handleAssignAchievement} className="space-y-5">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Personel</label>
-                            <select
-                                className="w-full border border-slate-300 rounded-lg p-2 bg-white"
-                                value={selectedUserAch}
-                                onChange={e => setSelectedUserAch(e.target.value)}
-                                required
-                            >
-                                <option value="">Seçiniz...</option>
-                                {users.filter(u => u.role !== 'ADMIN').map(u => (
-                                    <option key={u.id} value={u.id}>{u.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
+                        <form onSubmit={handleAssignAchievement} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Başarım Adı</label>
-                                <input
-                                    className="w-full border border-slate-300 rounded-lg p-2"
-                                    placeholder="Örn: Hızlı Çözümcü"
-                                    value={achTitle}
-                                    onChange={e => setAchTitle(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">İkon</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Personel</label>
                                 <select
                                     className="w-full border border-slate-300 rounded-lg p-2 bg-white"
-                                    value={achIcon}
-                                    onChange={e => setAchIcon(e.target.value)}
+                                    value={selectedUserAch}
+                                    onChange={e => setSelectedUserAch(e.target.value)}
+                                    required
                                 >
-                                    <option value="star">Yıldız</option>
-                                    <option value="trophy">Kupa</option>
-                                    <option value="medal">Madalya</option>
-                                    <option value="thumbsUp">Beğeni</option>
-                                    <option value="zap">Yıldırım</option>
+                                    <option value="">Seçiniz...</option>
+                                    {users.filter(u => u.role !== 'ADMIN').map(u => (
+                                        <option key={u.id} value={u.id}>{u.name}</option>
+                                    ))}
                                 </select>
                             </div>
-                        </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
-                            <textarea
-                                className="w-full border border-slate-300 rounded-lg p-2"
-                                rows={2}
-                                placeholder="Başarımın detayı..."
-                                value={achDesc}
-                                onChange={e => setAchDesc(e.target.value)}
-                            />
-                        </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Başarım Adı</label>
+                                    <input
+                                        className="w-full border border-slate-300 rounded-lg p-2"
+                                        placeholder="Örn: Hızlı Çözümcü"
+                                        value={achTitle}
+                                        onChange={e => setAchTitle(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">İkon</label>
+                                    <select
+                                        className="w-full border border-slate-300 rounded-lg p-2 bg-white"
+                                        value={achIcon}
+                                        onChange={e => setAchIcon(e.target.value)}
+                                    >
+                                        <option value="star">Yıldız</option>
+                                        <option value="trophy">Kupa</option>
+                                        <option value="medal">Madalya</option>
+                                        <option value="thumbsUp">Beğeni</option>
+                                        <option value="zap">Yıldırım</option>
+                                    </select>
+                                </div>
+                            </div>
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition"
-                        >
-                            {loading ? "Veriliyor..." : "Başarımı Ver"}
-                        </button>
-                    </form>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
+                                <textarea
+                                    className="w-full border border-slate-300 rounded-lg p-2"
+                                    rows={2}
+                                    placeholder="Başarımın detayı..."
+                                    value={achDesc}
+                                    onChange={e => setAchDesc(e.target.value)}
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition"
+                            >
+                                {loading ? "Veriliyor..." : "Başarımı Ver"}
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* Recent Achievements List */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-lg mb-4 text-slate-800">Son Verilen Başarımlar</h3>
+                        <AchievementList key={loading ? 'loading' : 'loaded'} />
+                    </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+function AchievementList() {
+    const [achievements, setAchievements] = useState<any[]>([]);
+
+    useEffect(() => {
+        fetch('/api/achievements').then(r => r.json()).then(setAchievements);
+    }, []);
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("Bu başarımı silmek istediğinize emin misiniz?")) return;
+        const res = await fetch(`/api/achievements?id=${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            setAchievements(prev => prev.filter(a => a.id !== id));
+        }
+    };
+
+    if (achievements.length === 0) return <p className="text-slate-400 text-sm">Henüz başarım verilmemiş.</p>;
+
+    return (
+        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+            {achievements.map((ach) => (
+                <div key={ach.id} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl group hover:border-purple-200 transition">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white p-2 rounded-lg shadow-sm text-purple-600">
+                            {ach.icon === 'star' && <Star className="h-4 w-4" />}
+                            {ach.icon === 'trophy' && <Trophy className="h-4 w-4" />}
+                            {ach.icon === 'medal' && <Medal className="h-4 w-4" />}
+                            {ach.icon === 'thumbsUp' && <Award className="h-4 w-4" />}
+                            {ach.icon === 'zap' && <Award className="h-4 w-4" />}
+                        </div>
+                        <div>
+                            <p className="font-bold text-slate-800 text-sm">{ach.title}</p>
+                            <p className="text-xs text-slate-500">{ach.user.name}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => handleDelete(ach.id)}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                        title="Sil"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </button>
+                </div>
+            ))}
         </div>
     );
 }

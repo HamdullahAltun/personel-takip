@@ -36,5 +36,5 @@ export async function generateUserToken() {
         timestamp: Date.now()
     };
     // Sign with 1 minute expiration
-    return await signJWT(payload, '1m');
+    return await signJWT(payload, '15m');
 }

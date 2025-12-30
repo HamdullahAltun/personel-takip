@@ -25,5 +25,27 @@ export async function getAuth() {
     const cookieStore = await cookies();
     const token = cookieStore.get('personel_token')?.value;
     if (!token) return null;
-    return await verifyJWT(token);
+    const payload = await verifyJWT(token);
+
+    if (payload && payload.id) {
+        try {
+            // Check DB to ensure user still exists and get latest role
+            // Dynamic import to avoid breaking Middleware (Edge Runtime)
+            const { prisma } = await import('@/lib/prisma');
+            const user = await prisma.user.findUnique({
+                where: { id: payload.id as string },
+                select: { id: true, role: true }
+            });
+
+            if (!user) return null; // User deleted
+            return { ...payload, role: user.role };
+        } catch (e) {
+            // Fallback for non-DB environments or errors
+            // Trust valid signature if DB check fails to avoid blocking valid users during glitches
+            console.error("Auth check internal error (falling back to token):", e);
+            return payload;
+        }
+    }
+
+    return payload;
 }

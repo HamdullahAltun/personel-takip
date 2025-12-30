@@ -2,8 +2,12 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getAuth } from "@/lib/auth";
 
 export async function createEmployee(prevState: any, formData: FormData) {
+    const session = await getAuth();
+    if (!session || session.role !== 'ADMIN') return { error: "Unauthorized" };
+
     try {
         const name = formData.get("name") as string;
         const phone = formData.get("phone") as string;
@@ -11,17 +15,15 @@ export async function createEmployee(prevState: any, formData: FormData) {
         const hourlyRate = parseFloat(formData.get("hourlyRate") as string) || 0;
         const weeklyGoal = parseInt(formData.get("weeklyGoal") as string) || 40;
         const annualLeaveDays = parseInt(formData.get("annualLeaveDays") as string) || 0;
-        const role = formData.get("role") as "STAFF" | "ADMIN" || "STAFF";
+        const role = formData.get("role") as "STAFF" | "ADMIN" | "EXECUTIVE" || "STAFF";
 
         if (!name || !phone) {
             return { error: "Name and Phone are required" };
         }
 
-        // Check phone
         const existingPhone = await prisma.user.findUnique({ where: { phone } });
         if (existingPhone) return { error: "Phone number already registered" };
 
-        // Check email distinct uniqueness if provided? No strict unique constraint on DB now but good to check
         if (email) {
             const existingEmail = await prisma.user.findFirst({ where: { email } });
             if (existingEmail) return { error: "Email already registered" };
@@ -48,6 +50,9 @@ export async function createEmployee(prevState: any, formData: FormData) {
 }
 
 export async function deleteEmployee(id: string) {
+    const session = await getAuth();
+    if (!session || session.role !== 'ADMIN') return { error: "Unauthorized" };
+
     try {
         await prisma.user.delete({ where: { id } });
         revalidatePath("/admin/employees");
@@ -57,9 +62,10 @@ export async function deleteEmployee(id: string) {
     }
 }
 
-// ... existing imports
-
 export async function updateEmployee(id: string, prevState: any, formData: FormData) {
+    const session = await getAuth();
+    if (!session || session.role !== 'ADMIN') return { error: "Unauthorized" };
+
     try {
         const name = formData.get("name") as string;
         const phone = formData.get("phone") as string;
@@ -67,7 +73,7 @@ export async function updateEmployee(id: string, prevState: any, formData: FormD
         const hourlyRate = parseFloat(formData.get("hourlyRate") as string) || 0;
         const weeklyGoal = parseInt(formData.get("weeklyGoal") as string) || 40;
         const annualLeaveDays = parseInt(formData.get("annualLeaveDays") as string) || 0;
-        const role = formData.get("role") as "STAFF" | "ADMIN" || "STAFF";
+        const role = formData.get("role") as "STAFF" | "ADMIN" | "EXECUTIVE" || "STAFF";
         const profilePicture = formData.get("profilePicture") as string;
 
         await prisma.user.update({
@@ -80,7 +86,7 @@ export async function updateEmployee(id: string, prevState: any, formData: FormD
                 weeklyGoal,
                 annualLeaveDays,
                 role,
-                ...(profilePicture && { profilePicture }) // Only update if provided
+                ...(profilePicture && { profilePicture })
             }
         });
 
@@ -95,7 +101,6 @@ export async function updateEmployee(id: string, prevState: any, formData: FormD
 
 export async function updateProfilePicture(formData: FormData) {
     try {
-        const { getAuth } = await import("@/lib/auth");
         const session = await getAuth();
         if (!session) return { error: "Unauthorized" };
 

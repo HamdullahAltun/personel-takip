@@ -11,6 +11,7 @@ import { tr } from "date-fns/locale";
 type LeaveRequestWithUser = LeaveRequest & { user: User };
 
 import useSWR from 'swr';
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -122,8 +123,12 @@ export default function LeaveRequestTable({ pendingLeaves, pastLeaves }: { pendi
                         ))}
                         {(activeTab === "PENDING" ? activePending : activePast).length === 0 && (
                             <tr>
-                                <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                                    {activeTab === "PENDING" ? "Bekleyen talep yok." : "Geçmiş talep bulunamadı."}
+                                <td colSpan={5}>
+                                    <EmptyState
+                                        icon={activeTab === "PENDING" ? Clock : Calendar}
+                                        title={activeTab === "PENDING" ? "Bekleyen Talep Yok" : "Geçmiş Kayıt Bulunamadı"}
+                                        description={activeTab === "PENDING" ? "Şu anda onay bekleyen izin talebi bulunmuyor." : "Geçmişe ait herhangi bir izin kaydı mevcut değil."}
+                                    />
                                 </td>
                             </tr>
                         )}

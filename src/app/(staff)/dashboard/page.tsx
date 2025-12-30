@@ -1,16 +1,21 @@
 import { prisma } from "@/lib/prisma";
-import AIExecutiveSummary from "@/components/AIExecutiveSummary";
 import { verifyJWT } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format, differenceInMinutes, startOfWeek, endOfWeek } from "date-fns";
 import { tr } from "date-fns/locale";
-import { ScanLine, LogOut, Clock, Calendar } from "lucide-react";
+import { ScanLine, Clock, Trophy, Crown, Star } from "lucide-react";
 import DashboardWidgetsClient from "@/components/staff/DashboardWidgetsClient";
 import WelcomeHeader from "@/components/WelcomeHeader";
-import Announcements from "@/components/Announcements";
+
 import { cn } from "@/lib/utils";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Ana Sayfa",
+};
+
 
 async function getUser() {
     const token = (await cookies()).get("personel_token")?.value;
@@ -24,6 +29,12 @@ async function getUser() {
             attendance: {
                 orderBy: { timestamp: 'desc' },
                 take: 1
+            },
+            achievements: {
+                orderBy: { date: 'desc' }
+            },
+            employeeOfTheMonths: {
+                orderBy: { createdAt: 'desc' }
             }
         }
     });
@@ -65,7 +76,6 @@ export default async function StaffDashboard() {
 
     weeklyRecords.forEach(record => {
         if (record.type === 'CHECK_IN') {
-            // Start tracking only if not already tracking (ignore double check-ins or assume first is valid)
             if (!lastCheckInTime) lastCheckInTime = record.timestamp;
         } else if (record.type === 'CHECK_OUT') {
             if (lastCheckInTime) {
@@ -75,22 +85,19 @@ export default async function StaffDashboard() {
         }
     });
 
-    // Add current session if active
     if (lastCheckInTime) {
         totalMinutes += differenceInMinutes(new Date(), lastCheckInTime);
     }
 
     const workedHours = (totalMinutes / 60).toFixed(1);
-    const weeklyGoal = user.weeklyGoal || 45; // Default 45 hours if not set
+    const weeklyGoal = user.weeklyGoal || 45;
     const progressPercent = Math.min(100, Math.round((totalMinutes / (weeklyGoal * 60)) * 100));
 
     return (
         <div className="space-y-6">
             <WelcomeHeader userName={user.name} />
 
-            <Announcements />
-
-            <AIExecutiveSummary />
+            <DashboardWidgetsClient />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Status Card */}
@@ -136,7 +143,6 @@ export default async function StaffDashboard() {
                         <div className="mt-2">
                             <p className="text-3xl font-bold text-slate-900">{workedHours} <span className="text-lg text-slate-400 font-normal">Saat</span></p>
                         </div>
-                        {/* Progress Bar */}
                         <div className="mt-4 w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                             <div className={cn("h-2.5 rounded-full transition-all duration-1000", progressPercent >= 100 ? "bg-green-500" : "bg-blue-500")} style={{ width: `${progressPercent}%` }}></div>
                         </div>
@@ -145,14 +151,40 @@ export default async function StaffDashboard() {
                 </div>
             </div>
 
-            {/* Widgets (Real-time) */}
-            <DashboardWidgetsClient />
+            {/* Achievements Section */}
+            {(user.achievements.length > 0 || user.employeeOfTheMonths.length > 0) && (
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <h2 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <Trophy className="h-5 w-5 text-yellow-500" />
+                        Başarımlarım
+                    </h2>
+                    <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                        {user.employeeOfTheMonths.map(e => (
+                            <div key={e.id} className="min-w-[140px] bg-gradient-to-br from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200 text-center flex-shrink-0">
+                                <div className="bg-white rounded-full h-10 w-10 flex items-center justify-center mx-auto mb-2 shadow-sm">
+                                    <Crown className="h-6 w-6 text-yellow-500" />
+                                </div>
+                                <p className="font-bold text-slate-800 text-sm whitespace-nowrap">{e.month}. Ayın Personeli</p>
+                                <p className="text-xs text-slate-500">{e.year}</p>
+                            </div>
+                        ))}
+                        {user.achievements.map(a => (
+                            <div key={a.id} className="min-w-[140px] bg-slate-50 p-4 rounded-xl border border-slate-200 text-center flex-shrink-0">
+                                <div className="bg-white rounded-full h-10 w-10 flex items-center justify-center mx-auto mb-2 shadow-sm">
+                                    <Star className="h-6 w-6 text-indigo-500" />
+                                </div>
+                                <p className="font-bold text-slate-800 text-sm">{a.title}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
                 <h2 className="font-bold text-slate-900 mb-4">Son İşlemler</h2>
                 <div className="space-y-4">
-                    {/* Placeholder loop, normally map user.attendance but take more than 1 */}
-                    {/* Fetch again or pass more data. For now, empty or mock. */}
                     <div className="text-center text-slate-400 py-4 text-sm">
                         Henüz geçmiş görüntülenemiyor.
                     </div>

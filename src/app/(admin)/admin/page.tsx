@@ -1,40 +1,37 @@
+
 import { prisma } from "@/lib/prisma";
-import { getAuth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import AdminDashboardClient from "@/components/admin/AdminDashboardClient";
-import { startOfDay, subDays, format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Genel Bakış",
+};
 
 export const dynamic = 'force-dynamic';
 
-async function getDashboardData() {
-    const today = startOfDay(new Date());
-    const lastWeek = subDays(today, 6);
+import AutoRefresh from "@/components/AutoRefresh";
+import DashboardStats from "@/components/DashboardStats";
+import LiveOfficeMap from "@/components/LiveOfficeMap";
+import PendingApprovals from "@/components/PendingApprovals";
+import WeeklyAttendanceChart from "@/components/WeeklyAttendanceChart";
+import RecentActivityList from "@/components/RecentActivityList";
+import DetailedExecutiveReport from "@/components/DetailedExecutiveReport";
 
-    // 1. Basic Counts
-    const totalStaff = await prisma.user.count({ where: { role: 'STAFF' } });
-
-    // Who is in office NOW? (Last record is CHECK_IN)
-    // This is tricky in simple query, fetching all and filtering in JS is easier for small/medium teams
-    const allStaff = await prisma.user.findMany({
-        where: { role: 'STAFF' },
-        include: {
-            attendance: {
-                orderBy: { timestamp: 'desc' },
-                take: 1
-            }
-        }
+export default async function AdminDashboard() {
+    // 1. Recent Activity (Server Side)
+    const recentActivity = await prisma.attendanceRecord.findMany({
+        take: 10,
+        orderBy: { timestamp: 'desc' },
+        include: { user: true }
     });
 
-    const activeStaffCount = allStaff.filter(u => u.attendance[0]?.type === 'CHECK_IN').length;
-    const lateCount = allStaff.filter(u => u.attendance[0]?.isLate && u.attendance[0]?.timestamp >= today).length;
+    // 2. Weekly Attendance Data for Chart
+    const today = new Date();
+    const lastWeek = new Date(today);
+    lastWeek.setDate(lastWeek.getDate() - 6);
+    lastWeek.setHours(0, 0, 0, 0);
 
-    // 2. Pending Requests
-    const pendingLeaves = await prisma.leaveRequest.count({ where: { status: 'PENDING' } });
-    const pendingExpenses = await prisma.expense.count({ where: { status: 'PENDING' } });
-
-    // 3. Weekly Attendance Data for Chart
-    // Fetch all check-ins from last 7 days
     const weeklyAttendance = await prisma.attendanceRecord.findMany({
         where: {
             timestamp: { gte: lastWeek },
@@ -43,69 +40,61 @@ async function getDashboardData() {
         orderBy: { timestamp: 'asc' }
     });
 
-    // Group by day
     const chartData = [];
-    for (let i = 0; i < 7; i++) {
-        const d = subDays(new Date(), 6 - i);
-        const dayStr = format(d, 'yyyy-MM-dd');
-        const displayDay = format(d, 'EEE', { locale: tr }); // Pzt, Sal...
+    const trDays = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dayLabel = trDays[d.getDay()]; // e.g. Çar
+        const dayStr = d.toISOString().split('T')[0];
 
-        const count = weeklyAttendance.filter(a => format(a.timestamp, 'yyyy-MM-dd') === dayStr).length;
-        // Mocking 'expected' based on total staff (assuming all should come)
+        // Count unique users who checked in this day
+        const dailyRecords = weeklyAttendance.filter(r => r.timestamp.toISOString().startsWith(dayStr));
+        const uniqueUsers = new Set(dailyRecords.map(r => r.userId));
+
         chartData.push({
-            name: displayDay,
-            katilim: count,
-            beklenen: totalStaff
+            name: dayLabel,
+            katilim: uniqueUsers.size
         });
     }
 
-    // 4. Recent Activities
-    const recentActivities = await prisma.attendanceRecord.findMany({
-        take: 5,
-        orderBy: { timestamp: 'desc' },
-        include: { user: { select: { name: true, role: true, profilePicture: true } } }
-    });
+    return (
+        <div className="space-y-8 pb-12">
+            <AutoRefresh interval={30000} />
+            <div className="flex justify-between items-end">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900">Genel Bakış</h1>
+                    <p className="text-slate-500">Bugünün personel durumu ve istatistikleri</p>
+                </div>
+                <div className="hidden md:block text-right">
+                    <p className="text-sm font-medium text-slate-900">{new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+            </div>
 
-    // 5. New Modules Stats
-    const activeVisitors = await prisma.visitor.count({ where: { exitTime: null } });
-    const newCandidates = await prisma.candidate.count({ where: { status: 'NEW' } });
-    const todayBookings = await prisma.booking.count({
-        where: {
-            startTime: { gte: today, lt: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
-        }
-    });
+            {/* Real-time Stats Client Component */}
+            <DashboardStats />
 
-    return {
-        stats: {
-            totalStaff,
-            activeStaffCount,
-            lateCount,
-            pendingLeaves,
-            pendingExpenses,
-            absentToday: totalStaff - activeStaffCount,
-            activeVisitors,
-            newCandidates,
-            todayBookings
-        },
-        chartData,
-        recentActivities: recentActivities.map(a => ({
-            id: a.id,
-            user: a.user.name,
-            avatar: a.user.profilePicture,
-            type: a.type,
-            time: format(a.timestamp, 'HH:mm'),
-            isLate: a.isLate
-        }))
-    };
-}
+            {/* Charts & Recent Activity Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:h-[400px]">
+                <div className="lg:col-span-2 h-[400px] lg:h-full">
+                    <WeeklyAttendanceChart data={chartData} />
+                </div>
+                <div className="lg:col-span-1 h-[400px] lg:h-full">
+                    <RecentActivityList activities={recentActivity} />
+                </div>
+            </div>
 
-export default async function AdminDashboardPage() {
-    const session = await getAuth();
-    if (!session || (session.role !== 'ADMIN' && session.role !== 'EXECUTIVE')) {
-        redirect('/login');
-    }
+            {/* Interactive Approvals Section (Cards) */}
+            <PendingApprovals />
 
-    const data = await getDashboardData();
+            {/* Map & AI */}
+            {/* Map */}
+            <div className="h-[500px]">
+                <LiveOfficeMap />
+            </div>
 
-    return <AdminDashboardClient data={data} role={session.role} />;
+            {/* AI Report Section */}
+            <DetailedExecutiveReport />
+        </div>
+    );
 }

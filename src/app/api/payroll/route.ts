@@ -1,96 +1,188 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
-import { calculatePayroll } from '@/lib/payroll';
+
+// Force dynamic to ensure we get fresh date data
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
     const session = await getAuth();
-    if (!session || session.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
-    const month = parseInt(searchParams.get('month') || new Date().getMonth() + 1 + "");
-    const year = parseInt(searchParams.get('year') || new Date().getFullYear() + "");
+    const userId = searchParams.get('userId');
 
-    try {
-        const payrolls = await prisma.payroll.findMany({
-            where: { month, year },
-            include: { user: { select: { name: true, phone: true, hourlyRate: true } } },
-            orderBy: { generatedAt: 'desc' }
-        });
-        return NextResponse.json(payrolls);
-    } catch (error) {
-        return NextResponse.json({ error: 'Failed to fetch payrolls' }, { status: 500 });
-    }
-}
+    const paramMonth = searchParams.get('month');
+    const paramYear = searchParams.get('year');
 
-export async function POST(req: Request) {
-    const session = await getAuth();
-    if (!session || session.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    try {
-        const body = await req.json();
-        const { userId, month, year, action } = body;
-
-        // Calculate specific user
-        if (userId) {
-            const payroll = await calculatePayroll(userId, month, year);
-            return NextResponse.json(payroll);
+    // Admin can see everyone's payroll if no userId specific
+    const where: any = {};
+    if (userId) {
+        where.userId = userId;
+        // Security check: Staff can only see own payroll
+        if (session.role !== 'ADMIN' && userId !== session.id) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
-
-        // Calculate ALL Staff (Bulk)
-        if (action === 'CALCULATE_ALL') {
-            const users = await prisma.user.findMany({ where: { role: 'STAFF' } });
-            const results = [];
-            for (const u of users) {
-                results.push(await calculatePayroll(u.id, month, year));
-            }
-            return NextResponse.json({ count: results.length, message: "All payrolls calculated" });
+    } else {
+        // If no userId, default to ALL if admin
+        if (session.role !== 'ADMIN') {
+            // Staff accessing /api/payroll without userId -> show own
+            where.userId = session.id;
         }
-
-        return NextResponse.json({ error: "Invalid Action" }, { status: 400 });
-
-    } catch (error) {
-        console.error(error);
-        return NextResponse.json({ error: 'Calculation failed' }, { status: 500 });
     }
+
+    if (paramMonth) where.month = parseInt(paramMonth);
+    if (paramYear) where.year = parseInt(paramYear);
+
+    const payrolls = await prisma.payroll.findMany({
+        where,
+        orderBy: [
+            { year: 'desc' },
+            { month: 'desc' }
+        ],
+        include: { user: true }
+    });
+
+    return NextResponse.json(payrolls);
 }
 
 export async function PATCH(req: Request) {
     const session = await getAuth();
-    if (!session || session.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await req.json();
+    const { id, status } = body;
+
+    const updated = await prisma.payroll.update({
+        where: { id },
+        data: { status }
+    });
+
+    return NextResponse.json(updated);
+}
+
+export async function POST(req: Request) {
+    // Generate Payroll for all active users for a given month
+    const session = await getAuth();
+    if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { month, year } = await req.json();
+
+    // Calculate time range for the selected month
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59);
+
+    const users = await prisma.user.findMany({
+        where: { role: 'STAFF' }
+    });
+
+    // Bulk fetch all attendance for this period
+    const allRecords = await prisma.attendanceRecord.findMany({
+        where: {
+            timestamp: {
+                gte: startDate,
+                lte: endDate
+            },
+            user: { role: 'STAFF' }
+        },
+        orderBy: { timestamp: 'asc' }
+    });
+
+    // Group records by userId
+    const recordsByUser: Record<string, typeof allRecords> = {};
+    for (const record of allRecords) {
+        if (!recordsByUser[record.userId]) recordsByUser[record.userId] = [];
+        recordsByUser[record.userId].push(record);
     }
 
-    try {
-        const body = await req.json();
-        const { id, status, bonus, deductions } = body;
+    const payrolls = [];
 
-        const updateData: any = {};
-        if (status) updateData.status = status;
-        if (bonus !== undefined) updateData.bonus = parseFloat(bonus);
-        if (deductions !== undefined) updateData.deductions = parseFloat(deductions);
+    for (const user of users) {
+        const userRecords = recordsByUser[user.id] || [];
 
-        // Recalculate total if financial fields change
-        if (bonus !== undefined || deductions !== undefined) {
-            const current = await prisma.payroll.findUnique({ where: { id } });
-            if (current) {
-                const newBonus = bonus !== undefined ? parseFloat(bonus) : current.bonus;
-                const newDeductions = deductions !== undefined ? parseFloat(deductions) : current.deductions;
-                updateData.totalPaid = current.baseSalary + newBonus - newDeductions;
+        let totalMilliseconds = 0;
+        let checkInTime: Date | null = null;
+
+        for (const record of userRecords) {
+            if (record.type === 'CHECK_IN') {
+                // If we already have a checkInTime, it means previous check-in was not closed.
+                // We restart the session from this new check-in.
+                checkInTime = new Date(record.timestamp);
+            } else if (record.type === 'CHECK_OUT' && checkInTime) {
+                const checkOutTime = new Date(record.timestamp);
+                const duration = checkOutTime.getTime() - checkInTime.getTime();
+
+                // Sanity check: ignore if duration > 16 hours (forgot checkout?)
+                // Also ignore negative duration (shouldn't happen with correct DB time)
+                if (duration > 0 && duration < 16 * 60 * 60 * 1000) {
+                    totalMilliseconds += duration;
+                }
+                checkInTime = null; // Reset
             }
         }
 
-        const updated = await prisma.payroll.update({
-            where: { id },
-            data: updateData
-        });
+        const totalHours = totalMilliseconds / (1000 * 60 * 60);
 
-        return NextResponse.json(updated);
-    } catch (error) {
-        return NextResponse.json({ error: 'Update failed' }, { status: 500 });
+        // 2. Base Salary Calculation
+        const hourlyRate = user.hourlyRate || 0;
+        const baseSalary = totalHours * hourlyRate;
+
+        // 3. Bonus/Deductions
+        const bonus = 0;
+        const deductions = 0;
+
+        const totalPaid = baseSalary + bonus - deductions;
+
+        try {
+            // Only update DRAFT payrolls. If PAID, do not overwrite unless forced (logic for force not here yet).
+            // Actually, for simplicity, we allow overwriting DRAFT and assume PAID are locked by UI logic or check here.
+
+            // Allow update even if PAID? No, that's dangerous. Check first.
+            const existingPayroll = await prisma.payroll.findFirst({
+                where: {
+                    userId: user.id,
+                    month,
+                    year
+                }
+            });
+
+            if (existingPayroll && existingPayroll.status === 'PAID') {
+                continue;
+            }
+
+            const data = {
+                baseSalary,
+                bonus,
+                deductions,
+                totalPaid: Math.max(0, totalPaid),
+                note: `Otomatik: ${totalHours.toFixed(1)} saat çalışma (${hourlyRate}₺/saat)`
+            };
+
+            if (existingPayroll) {
+                await prisma.payroll.update({
+                    where: { id: existingPayroll.id },
+                    data: {
+                        baseSalary,
+                        totalPaid: Math.max(0, totalPaid),
+                        note: data.note
+                    }
+                });
+            } else {
+                await prisma.payroll.create({
+                    data: {
+                        userId: user.id,
+                        month,
+                        year,
+                        ...data,
+                        status: 'DRAFT'
+                    }
+                });
+            }
+            payrolls.push({ status: 'OK' });
+        } catch (e) {
+            console.error(`Failed to generate payroll for ${user.name}`, e);
+        }
     }
+
+    return NextResponse.json({ count: payrolls.length });
 }

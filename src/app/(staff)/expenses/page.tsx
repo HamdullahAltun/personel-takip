@@ -22,6 +22,7 @@ export default function StaffExpensesPage() {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
 
     // Form
     const [desc, setDesc] = useState("");
@@ -45,9 +46,16 @@ export default function StaffExpensesPage() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Limit to 1MB
-            if (file.size > 1024 * 1024) {
-                alert("Dosya boyutu 1MB'dan küçük olmalıdır.");
+            // Validate Type
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+            if (!allowedTypes.includes(file.type)) {
+                alert("Sadece resim dosyaları (JPG, PNG, WEBP, GIF) yüklenebilir.");
+                return;
+            }
+
+            // Limit to 5MB
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Dosya boyutu 5MB'dan küçük olmalıdır.");
                 return;
             }
             const reader = new FileReader();
@@ -62,11 +70,14 @@ export default function StaffExpensesPage() {
         e.preventDefault();
         setSubmitting(true);
         try {
-            const res = await fetch('/api/expenses', {
-                method: 'POST',
+            const method = editingId ? 'PUT' : 'POST';
+            const url = editingId ? `/api/expenses/${editingId}` : '/api/expenses';
+
+            const res = await fetch(url, {
+                method,
                 body: JSON.stringify({
                     description: desc,
-                    amount,
+                    amount: parseFloat(amount),
                     date,
                     category,
                     receiptImage
@@ -76,11 +87,29 @@ export default function StaffExpensesPage() {
             if (res.ok) {
                 setShowModal(false);
                 fetchExpenses();
-                // Reset
-                setDesc(""); setAmount(""); setReceiptImage(null);
+                resetForm();
             }
         } catch (e) { console.error(e); }
         finally { setSubmitting(false); }
+    };
+
+    const resetForm = () => {
+        setDesc("");
+        setAmount("");
+        setReceiptImage(null);
+        setEditingId(null);
+        setCategory("Yemek");
+        setDate(new Date().toISOString().split('T')[0]);
+    };
+
+    const handleEdit = (expense: Expense) => {
+        setEditingId(expense.id);
+        setDesc(expense.description);
+        setAmount(expense.amount.toString());
+        setDate(expense.date.split('T')[0]);
+        setCategory(expense.category || "Yemek");
+        setReceiptImage(expense.receiptImage || null);
+        setShowModal(true);
     };
 
     const handleDelete = async (id: string) => {
@@ -99,7 +128,7 @@ export default function StaffExpensesPage() {
                     <h1 className="text-2xl font-bold text-slate-900">Harcamalarım</h1>
                 </div>
                 <button
-                    onClick={() => setShowModal(true)}
+                    onClick={() => { resetForm(); setShowModal(true); }}
                     className="h-10 w-10 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-200 active:scale-95 transition"
                 >
                     <Plus className="h-6 w-6" />
@@ -144,9 +173,14 @@ export default function StaffExpensesPage() {
                         </div>
 
                         {expense.status === 'PENDING' && (
-                            <button onClick={() => handleDelete(expense.id)} className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-500">
-                                <Trash2 className="h-4 w-4" />
-                            </button>
+                            <div className="absolute top-2 right-2 flex gap-2">
+                                <button onClick={() => handleEdit(expense)} className="p-1.5 text-slate-300 hover:text-blue-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                                </button>
+                                <button onClick={() => handleDelete(expense.id)} className="p-1.5 text-slate-300 hover:text-red-500">
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </div>
                         )}
                     </div>
                 ))}
@@ -157,13 +191,14 @@ export default function StaffExpensesPage() {
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4 backdrop-blur-sm sm:p-6">
                     <div className="bg-white rounded-2xl w-full max-w-md p-6 animate-in slide-in-from-bottom-10 space-y-4">
                         <div className="flex justify-between items-center border-b pb-4">
-                            <h2 className="text-lg font-bold text-slate-900">Yeni Harcama</h2>
+                            <h2 className="text-lg font-bold text-slate-900">{editingId ? 'Harcamayı Düzenle' : 'Yeni Harcama'}</h2>
                             <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
                                 <XCircle className="h-6 w-6" />
                             </button>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Hidden field for ID if needed for debugging, but using state */}
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase">Açıklama</label>
                                 <input className="w-full border rounded-lg p-2 mt-1" required value={desc} onChange={e => setDesc(e.target.value)} placeholder="Örn: Müşteri Yemeği" />

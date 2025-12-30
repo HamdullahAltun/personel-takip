@@ -8,31 +8,53 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const { id } = await params;
     const body = await req.json();
-    const { status, rejectionReason } = body;
 
     try {
-        const expense = await prisma.expense.update({
-            where: { id },
-            data: {
-                status,
-                rejectionReason: status === 'REJECTED' ? rejectionReason : null
-            },
-            include: { user: true }
-        });
+        const existingconfig = await prisma.expense.findUnique({ where: { id } });
+        if (!existingconfig) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-        // Notify User
-        if (expense.user.fcmToken) {
-            const { sendPushNotification } = await import('@/lib/notifications');
-            const title = status === 'APPROVED' ? "Harcama Onaylandı" : "Harcama Reddedildi";
-            const body = status === 'APPROVED'
-                ? `${expense.amount}₺ tutarındaki harcamanız onaylandı.`
-                : `${expense.amount}₺ tutarındaki harcamanız reddedildi. Sebep: ${rejectionReason}`;
+        // Logic split
+        if (session.role === 'ADMIN') {
+            // Admin can update everything
+            const expense = await prisma.expense.update({
+                where: { id },
+                data: { ...body }, // Be careful with this spread in production, but okay for now
+                include: { user: true }
+            });
 
-            await sendPushNotification(expense.user.fcmToken, title, body);
+            // If status changed to approved/rejected, notify
+            if (body.status && body.status !== existingconfig.status) {
+                // sendPushNotification takes userId, looks up token internally
+                const { sendPushNotification } = await import('@/lib/notifications');
+                const title = body.status === 'APPROVED' ? "Harcama Onaylandı" : "Harcama Reddedildi";
+                const notifBody = body.status === 'APPROVED'
+                    ? `${expense.amount}₺ tutarındaki harcamanız onaylandı.`
+                    : `${expense.amount}₺ tutarındaki harcamanız reddedildi. Sebep: ${body.rejectionReason}`;
+
+                await sendPushNotification(expense.userId, title, notifBody);
+            }
+            return NextResponse.json(expense);
+
+        } else {
+            // Staff can only update if PENDING and only ownership
+            if (existingconfig.userId !== (session.id as string)) {
+                return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            }
+            if (existingconfig.status !== 'PENDING') {
+                return NextResponse.json({ error: "Cannot edit processed expense" }, { status: 400 });
+            }
+
+            // Allowed fields
+            const { description, amount, date, category } = body;
+            const expense = await prisma.expense.update({
+                where: { id },
+                data: { description, amount, date, category }
+            });
+            return NextResponse.json(expense);
         }
 
-        return NextResponse.json(expense);
     } catch (e) {
+        console.error(e);
         return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
 }

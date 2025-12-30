@@ -83,17 +83,7 @@ export default function MessageListPage() {
                 </button>
             </div>
 
-            <div className="px-4">
-                <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                    <input
-                        className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Sohbet ara..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                    />
-                </div>
-            </div>
+
 
             <div className="flex-1 overflow-y-auto px-4 pb-20">
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 divide-y divide-slate-100">

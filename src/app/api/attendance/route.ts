@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyJWT } from '@/lib/auth';
+import { verifyJWT, getAuth } from '@/lib/auth';
 import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
@@ -30,8 +30,26 @@ export async function POST(req: Request) {
         }
 
         if (isUserScan) {
-            if (userPayload?.role !== 'ADMIN') {
-                return NextResponse.json({ error: 'Only admins can scan employee badges' }, { status: 403 });
+            // Check if the scanned QR belongs to an ADMIN
+            // We need to fetch the role of the targetUserId (the user in the QR)
+            const scannedUser = await prisma.user.findUnique({
+                where: { id: targetUserId },
+                select: { role: true }
+            });
+
+            if (scannedUser?.role === 'ADMIN' || scannedUser?.role === 'admin') {
+                // If scanning an Admin, we treat this as the Scanner checking themselves in
+                // So targetUserId becomes the UserPayload.id (the one holding the phone)
+                if (!userPayload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+                targetUserId = userPayload.id;
+
+                // We implicitly allow this as a valid location/check-in
+            } else {
+                // Determine if the *Scanner* is allowed to scan *someone else*
+                if (userPayload?.role !== 'ADMIN') {
+                    return NextResponse.json({ error: 'Only admins can scan employee badges' }, { status: 403 });
+                }
+                // If Scanner is Admin, they are checking in the Target (Staff) -> continue
             }
         }
 
@@ -47,30 +65,37 @@ export async function POST(req: Request) {
             }
 
             // Verify Co-location (Geofence)
-            // If QR has location, we must be close to it
-            if (qrPayload.location) {
+            // If the QR is confirmed as OFFICE_QR, we fetch the golden source of truth from DB
+            const companySettings = await prisma.companySettings.findFirst();
+
+            // If settings exist, enforce them. If not, fallback or skip (depending on strictness preference).
+            // Here we assume if settings exist, we MUST enforce.
+            if (companySettings) {
                 if (!userLocation || !userLocation.lat || !userLocation.lng) {
                     return NextResponse.json({ error: 'Konum verisi alınamadı. Lütfen GPS izni verin.' }, { status: 400 });
                 }
 
                 const distance = getDistanceInMeters(
-                    qrPayload.location.lat,
-                    qrPayload.location.lng,
+                    companySettings.officeLat,
+                    companySettings.officeLng,
                     userLocation.lat,
                     userLocation.lng
                 );
 
-                // Allow 200 meters tolerance (GPS drift + office size)
-                if (distance > 200) {
+                if (distance > companySettings.geofenceRadius) {
                     return NextResponse.json({
-                        error: `Ofis konumundan uzaktasınız! (${Math.round(distance)}m)`
+                        error: `Ofis konumundan uzaktasınız! (${Math.round(distance)}m > ${companySettings.geofenceRadius}m)`
                     }, { status: 400 });
                 }
             } else {
-                // Optional: If Admin didn't provide location, maybe we allow it or warn?
-                // For strictness, if system demands location, we might fail here.
-                // But user wanted "onay verilsin", so if QR lacks location, we might skip check?
-                // Let's assume skip if admin has no GPS.
+                // Legacy Fallback if CompanySettings table is empty: 
+                // Rely on QR Payload if it has location, otherwise skip.
+                if (qrPayload.location) {
+                    const fakeDistance = getDistanceInMeters(qrPayload.location.lat, qrPayload.location.lng, userLocation?.lat || 0, userLocation?.lng || 0);
+                    if (fakeDistance > 200) {
+                        return NextResponse.json({ error: 'Konum doğrulanamadı (Legacy).' }, { status: 400 });
+                    }
+                }
             }
         }
 
@@ -153,4 +178,53 @@ function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: num
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c; // in metres
+}
+
+export async function GET(req: Request) {
+    try {
+        const session = await getAuth();
+        if (!session || session.role !== 'ADMIN') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { searchParams } = new URL(req.url);
+        const userId = searchParams.get('userId');
+        const dateStr = searchParams.get('date');
+
+        // Date handling
+        let dateFilter = {};
+        if (dateStr) {
+            // Assume user sends YYYY-MM-DD. 
+            // We want full UTC day.
+            const start = new Date(dateStr);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(dateStr);
+            end.setHours(23, 59, 59, 999);
+
+            dateFilter = {
+                gte: start,
+                lte: end
+            };
+        }
+
+        const records = await prisma.attendanceRecord.findMany({
+            where: {
+                ...(dateStr ? { timestamp: dateFilter } : {}),
+                ...(userId ? { userId: userId } : {})
+            },
+            include: {
+                user: {
+                    select: { name: true, role: true }
+                }
+            },
+            orderBy: { timestamp: 'desc' },
+            take: 200
+        });
+
+        return NextResponse.json(records);
+
+    } catch (error) {
+        console.error("Attendance GET Error:", error);
+        return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 });
+    }
 }

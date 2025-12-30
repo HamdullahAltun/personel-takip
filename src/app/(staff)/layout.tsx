@@ -3,9 +3,13 @@
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText, LogOut, ChevronDown, Menu as MenuIcon, ClipboardList, Receipt, BrainCircuit, Calendar, MessageSquare, BookOpen, CalendarClock, LayoutGrid, X } from "lucide-react";
+import {
+    Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText,
+    LogOut, ChevronDown, Menu as MenuIcon, ClipboardList, Receipt, BrainCircuit,
+    Calendar, MessageSquare, BookOpen, CalendarClock, LayoutGrid, X, UserCog,
+    Share2, CalendarRange, Crown, Network, Bot, Gift, Banknote
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import AIAssistant from "@/components/AIAssistant";
 
 export default function StaffLayout({
     children,
@@ -25,7 +29,6 @@ export default function StaffLayout({
             if (typeof window !== 'undefined' && 'Notification' in window) {
                 if (Notification.permission === 'default') {
                     try {
-                        // Dynamic import to avoid SSR issues if firebase uses window
                         const { messaging } = await import('@/lib/firebase');
                         if (messaging) {
                             const { getToken } = await import('firebase/messaging');
@@ -45,7 +48,6 @@ export default function StaffLayout({
                 }
             }
         };
-        // Delay slightly
         setTimeout(checkPermission, 3000);
     }, []);
 
@@ -78,16 +80,21 @@ export default function StaffLayout({
         }).catch(() => { });
     }, []);
 
-    // Mobile Navigation Logic
-    // We will show top 4 items + "Menu" item in the bottom bar.
-    // The rest will go into the "Menu" drawer.
-
-    // Define all items first
+    // Define all items
     const allItems = [
         { href: "/dashboard", label: "Ana Sayfa", icon: Home, priority: 1 },
         { href: "/scan", label: "İşlem Yap", icon: ScanLine, priority: 2 },
         { href: "/tasks", label: "Görevler", icon: ClipboardList, priority: 3 },
         { href: "/messages", label: "Mesajlar", icon: MessageSquareText, priority: 4 },
+
+        // New Features (In Menu)
+        { href: "/social", label: "Sosyal Akış", icon: Share2, priority: 5 },
+        { href: "/shifts", label: "Vardiyalar", icon: CalendarRange, priority: 6 },
+        { href: "/leaderboard", label: "Liderlik", icon: Crown, priority: 7 },
+        { href: "/organization", label: "Organizasyon", icon: Network, priority: 8 },
+        { href: "/ai-assistant", label: "AI Asistan", icon: Bot, priority: 8 },
+        { href: "/payroll", label: "Maaşım", icon: Banknote, priority: 8 },
+
         // Secondary
         { href: "/expenses", label: "Harcamalar", icon: Receipt, priority: 10 },
         { href: "/users", label: "Personel", icon: User, priority: 10 },
@@ -95,11 +102,11 @@ export default function StaffLayout({
         { href: "/survey", label: "Anketler", icon: MessageSquare, priority: 10 },
         { href: "/lms", label: "Eğitim", icon: BookOpen, priority: 10 },
         { href: "/booking", label: "Rezervasyon", icon: CalendarClock, priority: 10 },
+        { href: "/rewards", label: "Ödül Mağazası", icon: Gift, priority: 10 },
     ];
 
     if (userRole === 'EXECUTIVE') {
-        allItems.push({ href: "/executive/dashboard", label: "Rapor", icon: BrainCircuit, priority: 5 }); // High priority but maybe inside menu? Let's put in menu to keep bar clean or swap with tasks?
-        // Let's keep bar clean: Home, Scan, Tasks, Messages, Menu. Rapor goes to Menu.
+        allItems.push({ href: "/executive/dashboard", label: "Rapor", icon: BrainCircuit, priority: 5 });
     }
 
     const primaryNavItems = allItems.filter(i => i.priority <= 4).sort((a, b) => a.priority - b.priority);
@@ -139,8 +146,16 @@ export default function StaffLayout({
                             <div className="absolute top-12 right-0 bg-white rounded-2xl shadow-xl border border-slate-100 w-56 py-2 z-50 animate-in fade-in slide-in-from-top-2">
                                 <div className="px-4 py-2 border-b border-slate-50 mb-2">
                                     <p className="text-sm font-bold text-slate-900">{userName}</p>
-                                    <p className="text-xs text-slate-500">Personel</p>
+                                    <p className="text-xs text-slate-500">
+                                        {userRole === 'ADMIN' ? 'Yönetici' : userRole === 'EXECUTIVE' ? 'Üst Yönetici' : 'Personel'}
+                                    </p>
                                 </div>
+                                {userRole === 'ADMIN' && (
+                                    <Link href="/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm text-purple-600 hover:bg-slate-50 font-bold transition-colors">
+                                        <UserCog className="h-4 w-4" />
+                                        Yönetici Paneli
+                                    </Link>
+                                )}
                                 <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium transition-colors">
                                     <User className="h-4 w-4" />
                                     Profilim
@@ -169,9 +184,6 @@ export default function StaffLayout({
             <main className="flex-1 pb-safe-nav p-4 flex flex-col">
                 {children}
             </main>
-
-            {/* Loading Overlay */}
-            {/* ... */}
 
             {/* Bottom Nav */}
             <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-50 lg:hidden pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
@@ -240,7 +252,7 @@ export default function StaffLayout({
                     <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowMobileMenu(false)} />
                     <div className="absolute bottom-[calc(65px+env(safe-area-inset-bottom))] left-0 right-0 bg-white rounded-t-3xl shadow-2xl p-6 animate-in slide-in-from-bottom-10 border-t border-slate-100 max-h-[70vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-lg text-slate-900">Diğer İşlemler</h3>
+                            <h3 className="font-bold text-lg text-slate-900">Tüm Uygulamalar</h3>
                             <button onClick={() => setShowMobileMenu(false)} className="p-2 bg-slate-100 rounded-full text-slate-500">
                                 <X className="h-4 w-4" />
                             </button>
@@ -274,7 +286,6 @@ export default function StaffLayout({
                 </div>
             )}
 
-            <AIAssistant />
         </div>
     );
 }

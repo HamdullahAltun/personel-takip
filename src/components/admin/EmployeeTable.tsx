@@ -5,6 +5,7 @@ import { User } from "@prisma/client";
 import { Plus, Pencil, Trash2, Search, X, Loader2 } from "lucide-react";
 import { createEmployee, deleteEmployee, updateEmployee } from "@/app/actions/employee";
 import { useRouter } from "next/navigation";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function EmployeeTable({ initialEmployees }: { initialEmployees: User[] }) {
     const [employees] = useState(initialEmployees);
@@ -114,9 +115,21 @@ export default function EmployeeTable({ initialEmployees }: { initialEmployees: 
                 </table>
 
                 {filtered.length === 0 && (
-                    <div className="p-8 text-center text-slate-500">
-                        Kayıt bulunamadı.
-                    </div>
+                    <EmptyState
+                        icon={Search}
+                        title="Personel Bulunamadı"
+                        description={search ? `"${search}" araması ile eşleşen sonuç bulunamadı.` : "Henüz hiç personel eklenmemiş."}
+                        action={
+                            !search && (
+                                <button
+                                    onClick={() => { setEditingEmployee(null); setIsModalOpen(true); }}
+                                    className="text-blue-600 font-medium hover:underline"
+                                >
+                                    İlk Personeli Ekle
+                                </button>
+                            )
+                        }
+                    />
                 )}
             </div>
 

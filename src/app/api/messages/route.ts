@@ -42,11 +42,12 @@ export async function POST(req: Request) {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { receiverId, content } = await req.json();
+    const { receiverId, content, attachmentUrl } = await req.json();
 
     const message = await prisma.message.create({
         data: {
-            content,
+            content: content || "",
+            attachmentUrl,
             senderId: session.id as string,
             receiverId
         }

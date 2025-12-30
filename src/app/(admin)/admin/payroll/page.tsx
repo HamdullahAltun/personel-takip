@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Calculator, CheckCircle, Banknote, AlertCircle, RefreshCw } from "lucide-react";
@@ -13,11 +13,7 @@ export default function AdminPayrollPage() {
     const [month, setMonth] = useState(new Date().getMonth() + 1);
     const [year, setYear] = useState(new Date().getFullYear());
 
-    useEffect(() => {
-        fetchData();
-    }, [month, year]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const res = await fetch(`/api/payroll?month=${month}&year=${year}`);
@@ -28,7 +24,12 @@ export default function AdminPayrollPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [month, year]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
 
     const handleCalculateAll = async () => {
         setCalculating(true);

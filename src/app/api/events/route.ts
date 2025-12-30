@@ -30,6 +30,10 @@ export async function POST(req: Request) {
                 type
             }
         });
+
+        const { sendBroadcastNotification } = await import("@/lib/notifications");
+        sendBroadcastNotification(`Yeni Etkinlik: ${title} 📅`, `Tarih: ${new Date(date).toLocaleDateString()}`).catch(console.error);
+
         return NextResponse.json(event);
     } catch (e) {
         return NextResponse.json({ error: 'Failed' }, { status: 500 });

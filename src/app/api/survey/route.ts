@@ -68,6 +68,10 @@ export async function POST(req: Request) {
             const survey = await prisma.survey.create({
                 data: { title, questions }
             });
+
+            const { sendBroadcastNotification } = await import("@/lib/notifications");
+            sendBroadcastNotification("Yeni Anket Yayında! 📝", `Lütfen "${title}" anketimize katılın.`).catch(console.error);
+
             return NextResponse.json(survey);
         }
 

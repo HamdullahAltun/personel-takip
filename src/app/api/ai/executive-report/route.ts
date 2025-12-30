@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
-import { model } from '@/lib/ai';
+import { groq } from '@/lib/ai';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,11 +93,19 @@ export async function POST() {
         `;
 
         // 3. Generate Content
-        if (!model) throw new Error("AI Model not initialized");
+        const client = groq;
+        if (!client) throw new Error("AI Model not initialized (API Key missing)");
 
-        const result = await model.generateContent(context);
-        const response = result.response;
-        let text = response.text();
+        const completion = await client.chat.completions.create({
+            messages: [
+                { role: "system", content: "You are a helpful assistant that outputs only valid JSON." },
+                { role: "user", content: context }
+            ],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.2, // Lower temperature for more consistent JSON
+        });
+
+        let text = completion.choices[0]?.message?.content || "";
 
         // 4. Parse JSON (Robust cleaning)
         const firstBrace = text.indexOf('{');

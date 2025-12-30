@@ -28,7 +28,11 @@ import {
     BookOpen,
     CalendarClock,
     MessageSquare,
-    Calendar
+    Calendar,
+    Network,
+    CalendarRange,
+    Crown,
+    Share2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -55,11 +59,19 @@ export default function AdminLayout({
 
     const navItems = [
         { href: "/admin", label: "Genel Bakış", icon: LayoutDashboard },
-        { href: "/admin/qr", label: "QR Kod", icon: QrCode }, // Added QR link
+        { href: "/dashboard", label: "Personel Paneli", icon: Users }, // Easy switch
+
+        { href: "/admin/qr", label: "QR Kod", icon: QrCode },
         { href: "/admin/employees", label: "Personeller", icon: Users },
         { href: "/admin/attendance", label: "Katılım", icon: CalendarCheck },
+        { href: "/admin/shifts", label: "Vardiyalar", icon: CalendarRange }, // New
+        { href: "/admin/organization", label: "Organizasyon", icon: Network }, // New
+        { href: "/admin/social", label: "Sosyal Akış", icon: Share2 }, // New
+        { href: "/admin/messages", label: "Mesajlar", icon: MessageSquareText },
+        { href: "/admin/tasks", label: "Görevler (Kanban)", icon: ClipboardList }, // Updated Label
         { href: "/admin/leaves", label: "İzinler", icon: TentTree },
-        { href: "/admin/tasks", label: "Görevler", icon: ClipboardList },
+        { href: "/admin/awards", label: "Ödüller", icon: Trophy },
+        { href: "/admin/leaderboard", label: "Liderlik", icon: Crown }, // New
         { href: "/admin/expenses", label: "Harcamalar", icon: Receipt },
         { href: "/admin/assets", label: "Demirbaşlar", icon: Laptop },
         { href: "/admin/payroll", label: "Maaşlar", icon: Banknote },
@@ -71,7 +83,6 @@ export default function AdminLayout({
         { href: "/admin/survey", label: "Anketler", icon: MessageSquare },
         { href: "/admin/visitors", label: "Ziyaretçiler", icon: Users },
         { href: "/admin/documents", label: "Belgeler", icon: FileText },
-        { href: "/admin/messages", label: "Mesajlar", icon: MessageSquareText },
         { href: "/admin/announcements", label: "Duyurular", icon: Megaphone },
         // Admin also gets access to Executive Dashboard
         { href: "/executive/dashboard", label: "Şirket Raporu", icon: BrainCircuit },
@@ -107,7 +118,7 @@ export default function AdminLayout({
                     </button>
                 </div>
 
-                <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
+                <nav className="p-4 space-y-2 flex-1 overflow-y-auto custom-scrollbar">
                     {navItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href;

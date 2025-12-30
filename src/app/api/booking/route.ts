@@ -15,13 +15,26 @@ export async function GET(req: Request) {
             return NextResponse.json(resources);
         }
 
-        // Filter: Only future bookings
+        if (mode === 'my-bookings') {
+            const bookings = await prisma.booking.findMany({
+                where: {
+                    userId: session.id as string,
+                    // return recent history + futures
+                    // startTime: { gte: new Date(Date.now() - 86400000) } 
+                },
+                include: { resource: { select: { name: true, type: true } } },
+                orderBy: { startTime: 'desc' },
+                take: 50
+            });
+            return NextResponse.json(bookings);
+        }
+
+        // Filter: Only future ACTIVE bookings
         try {
             const bookings = await prisma.booking.findMany({
                 where: {
-                    startTime: {
-                        gte: new Date()
-                    }
+                    startTime: { gte: new Date() },
+                    status: { not: 'CANCELLED' }
                 },
                 include: {
                     user: { select: { name: true } },
@@ -87,6 +100,24 @@ export async function POST(req: Request) {
             return NextResponse.json(resource);
         }
 
+        if (action === 'UPDATE_RESOURCE') {
+            if (session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            const { id, name, type } = body;
+            const resource = await prisma.resource.update({ where: { id }, data: { name, type } });
+            return NextResponse.json(resource);
+        }
+
+        if (action === 'DELETE_RESOURCE') {
+            if (session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            const { id } = body;
+
+            // Delete all bookings associated with this resource first
+            await prisma.booking.deleteMany({ where: { resourceId: id } });
+
+            await prisma.resource.delete({ where: { id } });
+            return NextResponse.json({ success: true });
+        }
+
         if (action === 'BOOK') {
             const { resourceId, startTime, endTime, purpose } = body;
             const start = new Date(startTime);
@@ -104,10 +135,11 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
             }
 
-            // Check overlap
+            // Check overlap (excluding CANCELLED)
             const overlap = await prisma.booking.findFirst({
                 where: {
                     resourceId,
+                    status: { not: 'CANCELLED' }, // Ignore cancelled bookings
                     OR: [
                         { startTime: { lt: end, gte: start } },
                         { endTime: { gt: start, lte: end } },
@@ -126,25 +158,38 @@ export async function POST(req: Request) {
                     userId: session.id as string,
                     startTime: start,
                     endTime: end,
-                    purpose
+                    purpose,
+                    status: 'CONFIRMED'
                 }
             });
             return NextResponse.json(booking);
         }
 
-        // DELETE BOOKING
-        if (action === 'DELETE') {
-            const { id } = body;
+        // CANCEL / DELETE BOOKING
+        if (action === 'DELETE' || action === 'CANCEL') {
+            const { id, reason } = body;
             if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 
             const booking = await prisma.booking.findUnique({ where: { id } });
             if (!booking) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-            if (session.role !== 'ADMIN' && booking.userId !== (session.id as string)) {
+            const isAdmin = session.role === 'ADMIN';
+            const isOwner = booking.userId === (session.id as string);
+
+            if (!isAdmin && !isOwner) {
                 return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
             }
 
-            await prisma.booking.delete({ where: { id } });
+            // If Admin, they can provide a reason and it's a cancellation
+            // If Staff, they are just cancelling their own
+            await prisma.booking.update({
+                where: { id },
+                data: {
+                    status: 'CANCELLED',
+                    cancellationReason: reason || (isOwner ? 'Kullanıcı tarafından iptal edildi' : 'Yönetici tarafından iptal edildi')
+                }
+            });
+
             return NextResponse.json({ success: true });
         }
 

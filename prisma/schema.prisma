@@ -51,6 +51,27 @@ model User {
   advanceRequests AdvanceRequest[]
   trainingCompletions TrainingCompletion[]
   bookings            Booking[]
+
+  // Social Wall
+  posts       Post[]
+  likes       Like[]
+  comments    Comment[]
+
+  // Org Chart
+  managerId   String?  @db.ObjectId
+  manager     User?    @relation("Manager", fields: [managerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reports     User[]   @relation("Manager")
+
+  // Gamification
+  points      Int      @default(0)
+
+  // Shifts
+  shifts      Shift[]
+  shiftTradesRequested ShiftTrade[] @relation("TradeRequester")
+  shiftTradesReceived  ShiftTrade[] @relation("TradeRecipient")
+
+  // Rewards
+  rewardRequests RewardRequest[]
 }
 
 model Asset {
@@ -103,6 +124,8 @@ model Payroll {
   status      String   // DRAFT, PAID
   note        String?
   generatedAt DateTime @default(now())
+
+  @@unique([userId, month, year])
 }
 
 model AdvanceRequest {
@@ -181,7 +204,8 @@ enum TaskPriority {
 
 model Message {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  content   String
+  content   String? // Made optional if sending only image
+  attachmentUrl String?
   senderId  String   @db.ObjectId
   receiverId String  @db.ObjectId
   
@@ -196,7 +220,7 @@ model WorkSchedule {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
-  dayOfWeek Int      // 1=Monday, ..., 7=Sunday (or 0-6). Let's use ISO: 1-7
+  dayOfWeek Int      // 1=Monday, ..., 7=Sunday
   startTime String   @default("09:00")
   endTime   String   @default("18:00")
   isOffDay  Boolean  @default(false)
@@ -311,6 +335,7 @@ model Training {
   description String
   url         String
   type        String    // VIDEO, DOCUMENT
+  assignedToIds String[] @db.ObjectId
   createdAt   DateTime  @default(now())
   completions TrainingCompletion[]
 }
@@ -343,6 +368,8 @@ model Booking {
   endTime    DateTime
   purpose    String
   createdAt  DateTime @default(now())
+  status     String   @default("CONFIRMED") // CONFIRMED, CANCELLED
+  cancellationReason String?
 }
 
 model Survey {
@@ -372,5 +399,88 @@ model Event {
   createdAt   DateTime @default(now())
 }
 
+// Social Wall
+model Post {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  imageUrl  String?
+  userId    String    @db.ObjectId
+  user      User      @relation(fields: [userId], references: [id])
+  likes     Like[]
+  comments  Comment[]
+  createdAt DateTime  @default(now())
+}
 
+model Like {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  postId    String   @db.ObjectId
+  post      Post     @relation(fields: [postId], references: [id])
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 
+  @@unique([postId, userId])
+}
+
+model Comment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  postId    String   @db.ObjectId
+  post      Post     @relation(fields: [postId], references: [id])
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
+
+// Shifts
+model Shift {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  start     DateTime
+  end       DateTime
+  title     String? 
+  color     String?
+  trades    ShiftTrade[]
+}
+
+model Reward {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  cost        Int
+  image       String? 
+  stock       Int      @default(-1)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  requests    RewardRequest[]
+}
+
+model RewardRequest {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  rewardId  String   @db.ObjectId
+  reward    Reward   @relation(fields: [rewardId], references: [id])
+  status    String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt DateTime @default(now())
+}
+
+model ShiftTrade {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  shiftId     String   @db.ObjectId
+  shift       Shift    @relation(fields: [shiftId], references: [id])
+  requesterId String   @db.ObjectId
+  requester   User     @relation("TradeRequester", fields: [requesterId], references: [id])
+  recipientId String?  @db.ObjectId
+  recipient   User?    @relation("TradeRecipient", fields: [recipientId], references: [id])
+  status      String   @default("OPEN") // OPEN, ACCEPTED, APPROVED, REJECTED (APPROVED means manager said yes)
+  createdAt   DateTime @default(now())
+}
+
+model CompanySettings {
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  officeLat      Float  @default(41.0082) // Default Istanbul
+  officeLng      Float  @default(28.9784)
+  geofenceRadius Int    @default(500) // meters
+}

@@ -2,7 +2,37 @@ import "server-only";
 import * as admin from "firebase-admin";
 
 function formatPrivateKey(key: string | undefined) {
-    return key?.replace(/\\n/g, "\n");
+    if (!key) return undefined;
+
+    let cleanKey = key;
+    // Remove wrapping quotes if present
+    if (cleanKey.startsWith('"') && cleanKey.endsWith('"')) {
+        cleanKey = cleanKey.slice(1, -1);
+    }
+
+    // Replace literal '\n' with actual newlines if they exist (handling single-line input)
+    cleanKey = cleanKey.replace(/\\n/g, "\n");
+
+    // Robust PEM reconstruction
+    try {
+        const header = "-----BEGIN PRIVATE KEY-----";
+        const footer = "-----END PRIVATE KEY-----";
+
+        if (cleanKey.includes(header) && cleanKey.includes(footer)) {
+            // Extract body
+            const body = cleanKey
+                .replace(header, "")
+                .replace(footer, "")
+                .replace(/\s/g, ""); // Remove ALL whitespace (spaces, tabs, newlines) from body
+
+            // Reconstruct perfect PEM
+            return `${header}\n${body}\n${footer}`;
+        }
+    } catch (e) {
+        // Fallback
+    }
+
+    return cleanKey;
 }
 
 export function createFirebaseAdminApp() {
@@ -15,36 +45,36 @@ export function createFirebaseAdminApp() {
     const privateKey = formatPrivateKey(process.env.FIREBASE_PRIVATE_KEY);
 
     if (!projectId || !clientEmail || !privateKey) {
-        // During build or if envs are missing, we might want to throw or return null.
-        // For build safety, if we are in a static generation phase where these aren't needed, we can skip.
-        // But API routes need them.
-        if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-            // If we are strictly building and don't have secrets, we can't init.
-            // Returning null or a mock might be dangerous if used.
-            throw new Error("Missing Firebase Admin credentials in .env");
+        if (process.env.NODE_ENV === 'production') {
+            console.error("FIREBASE CREDENTIALS MISSING IN PRODUCTION");
         }
-
-        // Fallback for dev/build without creds (to avoid crash on import)
-        console.warn("Firebase Admin credentials missing. Skipping initialization.");
         return null;
     }
 
-    return admin.initializeApp({
-        credential: admin.credential.cert({
-            projectId,
-            clientEmail,
-            privateKey,
-        }),
-    });
-}
+    // Debug Key (Safe log - don't log full key)
+    console.log(`[Firebase Admin] Init Project: ${projectId}`);
+    console.log(`[Firebase Admin] Key Length: ${privateKey.length}`);
+    console.log(`[Firebase Admin] Key Start: ${privateKey.substring(0, 20)}...`);
+    console.log(`[Firebase Admin] Key End: ...${privateKey.substring(privateKey.length - 20)}`);
 
-// Initialize lazily or export safe accessor
-// Changing pattern: Export a function to get Auth, not the Auth instance directly object-level.
-// This prevents crash on file import.
+    try {
+        return admin.initializeApp({
+            credential: admin.credential.cert({
+                projectId,
+                clientEmail,
+                privateKey,
+            }),
+        });
+    } catch (error) {
+        console.error("Firebase Admin Init Failed:", error);
+        return null;
+    }
+}
 
 export async function getFirebaseAuth() {
     const app = createFirebaseAdminApp();
     if (!app) {
+        // Return a mock or throw? Throwing effectively disables auth routes.
         throw new Error("Firebase Admin not initialized. Check environment variables.");
     }
     return app.auth();

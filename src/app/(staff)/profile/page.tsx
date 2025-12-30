@@ -51,6 +51,11 @@ export default async function ProfilePage() {
                     <div className="mt-4">
                         <h2 className="text-xl font-bold text-slate-900">{user.name}</h2>
                         <p className="text-slate-500">{user.role === 'ADMIN' ? 'Yönetici' : user.role === 'EXECUTIVE' ? 'Üst Yönetici' : 'Personel'}</p>
+
+                        <a href={`/card/${user.id}`} target="_blank" className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-colors">
+                            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                            Dijital Kartvizitimi Paylaş
+                        </a>
                     </div>
 
                     <div className="mt-8 space-y-4">
@@ -91,7 +96,9 @@ export default async function ProfilePage() {
                             <Shield className="h-5 w-5 text-slate-400" />
                             <div>
                                 <p className="text-xs text-slate-500 font-medium">Rol</p>
-                                <p className="text-sm font-semibold text-slate-900">{user.role}</p>
+                                <p className="text-sm font-semibold text-slate-900">
+                                    {user.role === 'ADMIN' ? 'Yönetici' : user.role === 'EXECUTIVE' ? 'Üst Yönetici' : 'Personel'}
+                                </p>
                             </div>
                         </div>
 
