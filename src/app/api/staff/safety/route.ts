@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     try {
         const { status } = await req.json(); // SAFE, DANGER
         const user = await prisma.user.update({
-            where: { id: (session as any).user.id },
+            where: { id: session.id as string },
             data: {
                 safetyStatus: status,
                 lastSafetyUpdate: new Date()

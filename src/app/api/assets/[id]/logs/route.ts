@@ -26,7 +26,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 description,
                 cost: Number(cost),
                 date: new Date(date),
-                performedBy: (session as any).user.name
+                performedBy: session.name || "System"
             }
         });
 

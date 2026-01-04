@@ -2,10 +2,15 @@
 
 import { useState, useEffect } from "react";
 import useSWR from "swr";
-import { TrendingUp, CheckCircle, Circle, ArrowRight, Target, Plus, Calendar } from "lucide-react";
+import { TrendingUp, CheckCircle, Circle, ArrowRight, Target, Plus, Calendar, MessageSquare, Award, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function StaffGoalsPage() {
+    const [activeTab, setActiveTab] = useState<'goals' | 'reviews'>('goals');
     const { data: goals = [], mutate } = useSWR('/api/goals', (url) => fetch(url).then(r => r.json()));
+    const { data: reviews = [] } = useSWR('/api/performance', (url) => fetch(url).then(r => r.json()));
+    const { data: kudos = [] } = useSWR('/api/social?type=kudos', (url) => fetch(url).then(r => r.json()));
+
     const [showModal, setShowModal] = useState(false);
     const [newGoal, setNewGoal] = useState({ title: "", description: "", dueDate: "" });
 
@@ -48,77 +53,174 @@ export default function StaffGoalsPage() {
         <div className="max-w-2xl mx-auto pb-24 space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Hedeflerim (OKRs)</h1>
-                    <p className="text-slate-500 text-sm">Performans döneminiz için belirlenen hedefler.</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Gelişim & Performans</h1>
+                    <p className="text-slate-500 text-sm">Hedefleriniz, geri bildirimleriniz ve başarılarınız.</p>
                 </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex bg-slate-100 p-1 rounded-2xl">
                 <button
-                    onClick={() => setShowModal(true)}
-                    className="bg-indigo-600 text-white rounded-full p-2 hover:bg-indigo-700 shadow-md transition"
+                    onClick={() => setActiveTab('goals')}
+                    className={cn("flex-1 py-2 rounded-xl text-sm font-bold transition-all",
+                        activeTab === 'goals' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
                 >
-                    <Plus className="h-6 w-6" />
+                    Hedeflerim
+                </button>
+                <button
+                    onClick={() => setActiveTab('reviews')}
+                    className={cn("flex-1 py-2 rounded-xl text-sm font-bold transition-all",
+                        activeTab === 'reviews' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+                >
+                    Değerlendirmeler
                 </button>
             </div>
 
-            {goals.length === 0 && (
-                <div className="text-center py-12 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                    <Target className="h-12 w-12 text-slate-200 mx-auto mb-3" />
-                    <h3 className="text-slate-900 font-bold mb-1">Henüz hedef eklenmemiş.</h3>
-                    <p className="text-slate-500 text-sm">Bu dönem için kendinize yeni bir hedef belirleyin.</p>
+            {activeTab === 'goals' ? (
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                    <div className="flex justify-between items-center px-1">
+                        <h2 className="font-bold text-slate-800">Aktif Hedefler ({goals.length})</h2>
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className="bg-indigo-600 text-white rounded-full p-2 hover:bg-indigo-700 shadow-md transition"
+                        >
+                            <Plus className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    {goals.length === 0 && (
+                        <div className="text-center py-12 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                            <Target className="h-12 w-12 text-slate-200 mx-auto mb-3" />
+                            <h3 className="text-slate-900 font-bold mb-1">Henüz hedef eklenmemiş.</h3>
+                            <p className="text-slate-500 text-sm">Bu dönem için kendinize yeni bir hedef belirleyin.</p>
+                        </div>
+                    )}
+
+                    <div className="space-y-4">
+                        {goals.map((goal: any) => (
+                            <div key={goal.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                                <div className={`absolute top-0 left-0 w-1.5 h-full ${goal.status === 'COMPLETED' ? 'bg-green-500' :
+                                    goal.status === 'IN_PROGRESS' ? 'bg-blue-500' : 'bg-slate-300'
+                                    }`} />
+
+                                <div className="pl-3 flex justify-between items-start">
+                                    <div className="flex-1">
+                                        <h3 className={`font-bold text-lg ${goal.status === 'COMPLETED' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                                            {goal.title}
+                                        </h3>
+                                        <p className="text-slate-500 text-sm mt-1">{goal.description}</p>
+
+                                        {goal.dueDate && (
+                                            <div className="flex items-center gap-1 mt-3 text-xs text-orange-600 font-medium bg-orange-50 px-2 py-1 rounded w-fit">
+                                                <Calendar className="h-3 w-3" />
+                                                {new Date(goal.dueDate).toLocaleDateString('tr-TR')}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        onClick={() => handleProgress(goal.id, goal.status, goal.progress)}
+                                        className={`rounded-full p-2 transition shrink-0 ${goal.status === 'COMPLETED' ? 'text-green-600 bg-green-50' : 'text-slate-300 hover:text-blue-600 hover:bg-blue-50'
+                                            }`}
+                                    >
+                                        {goal.status === 'COMPLETED' ? <CheckCircle className="h-6 w-6" /> : <Circle className="h-6 w-6" />}
+                                    </button>
+                                </div>
+
+                                {/* Progress Bar */}
+                                <div className="mt-4 pl-3">
+                                    <div className="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                                        <span>İlerleme</span>
+                                        <span>%{goal.progress}</span>
+                                    </div>
+                                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                        <div
+                                            className={`h-full rounded-full transition-all duration-500 ${goal.status === 'COMPLETED' ? 'bg-green-500' : 'bg-blue-500'
+                                                }`}
+                                            style={{ width: `${goal.progress}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+                    {/* Performance Reviews */}
+                    <div className="space-y-4">
+                        <h2 className="font-bold text-slate-800 px-1 flex items-center gap-2">
+                            <TrendingUp className="h-5 w-5 text-indigo-600" />
+                            Performans Değerlendirmeleri
+                        </h2>
+                        {reviews.length === 0 ? (
+                            <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-slate-200">
+                                <p className="text-slate-400 text-sm">Henüz bir değerlendirme yapılmadı.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {reviews.map((rev: any) => (
+                                    <div key={rev.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                {format(new Date(rev.createdAt), 'MMMM yyyy', { locale: tr })}
+                                            </span>
+                                            <div className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-sm font-bold border border-indigo-100">
+                                                Puan: {rev.score}/10
+                                            </div>
+                                        </div>
+                                        <p className="text-slate-700 text-sm leading-relaxed">{rev.feedback}</p>
+                                        {rev.aiInsight && (
+                                            <div className="bg-indigo-900/5 p-3 rounded-xl border border-indigo-900/10">
+                                                <div className="flex items-center gap-2 text-indigo-900 text-[10px] font-bold uppercase tracking-wider mb-1">
+                                                    <Sparkles className="h-3 w-3" />
+                                                    AI Önerisi
+                                                </div>
+                                                <p className="text-indigo-900/60 text-xs italic">
+                                                    &quot;{rev.aiInsight}&quot;
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Kudos Section */}
+                    <div className="space-y-4">
+                        <h2 className="font-bold text-slate-800 px-1 flex items-center gap-2">
+                            <Award className="h-5 w-5 text-orange-600" />
+                            Alınan Takdirler (Kudos)
+                        </h2>
+                        {kudos.length === 0 ? (
+                            <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-slate-200">
+                                <p className="text-slate-400 text-sm">Henüz bir takdir almadınız. Başarılarınız yakında burada görünecek!</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-3">
+                                {kudos.map((k: any) => (
+                                    <div key={k.id} className="bg-white p-4 rounded-2xl border border-orange-100 shadow-sm flex gap-4 items-center">
+                                        <div className="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shrink-0">
+                                            <Award className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-slate-400">
+                                                <span className="font-bold text-slate-900">{k.author.name}</span> tarafından gönderildi
+                                            </div>
+                                            <p className="text-slate-800 font-medium text-sm mt-1">{k.content}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
-            <div className="space-y-4">
-                {goals.map((goal: any) => (
-                    <div key={goal.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
-                        <div className={`absolute top-0 left-0 w-1.5 h-full ${goal.status === 'COMPLETED' ? 'bg-green-500' :
-                                goal.status === 'IN_PROGRESS' ? 'bg-blue-500' : 'bg-slate-300'
-                            }`} />
-
-                        <div className="pl-3 flex justify-between items-start">
-                            <div>
-                                <h3 className={`font-bold text-lg ${goal.status === 'COMPLETED' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
-                                    {goal.title}
-                                </h3>
-                                <p className="text-slate-500 text-sm mt-1">{goal.description}</p>
-
-                                {goal.dueDate && (
-                                    <div className="flex items-center gap-1 mt-3 text-xs text-orange-600 font-medium bg-orange-50 px-2 py-1 rounded w-fit">
-                                        <Calendar className="h-3 w-3" />
-                                        {new Date(goal.dueDate).toLocaleDateString()}
-                                    </div>
-                                )}
-                            </div>
-
-                            <button
-                                onClick={() => handleProgress(goal.id, goal.status, goal.progress)}
-                                className={`rounded-full p-2 transition ${goal.status === 'COMPLETED' ? 'text-green-600 bg-green-50' : 'text-slate-300 hover:text-blue-600 hover:bg-blue-50'
-                                    }`}
-                            >
-                                {goal.status === 'COMPLETED' ? <CheckCircle className="h-6 w-6" /> : <Circle className="h-6 w-6" />}
-                            </button>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div className="mt-4 pl-3">
-                            <div className="flex justify-between text-xs font-bold text-slate-500 mb-1">
-                                <span>İlerleme</span>
-                                <span>%{goal.progress}</span>
-                            </div>
-                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                <div
-                                    className={`h-full rounded-full transition-all duration-500 ${goal.status === 'COMPLETED' ? 'bg-green-500' : 'bg-blue-500'
-                                        }`}
-                                    style={{ width: `${goal.progress}%` }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Create Modal */}
+            {/* Create Goal Modal */}
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95">
                         <h2 className="text-xl font-bold mb-4">Yeni Hedef Belirle</h2>
                         <form onSubmit={handleCreate} className="space-y-4">
@@ -162,3 +264,6 @@ export default function StaffGoalsPage() {
         </div>
     );
 }
+
+import { tr } from "date-fns/locale";
+import { format } from "date-fns";
