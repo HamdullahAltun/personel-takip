@@ -35,7 +35,8 @@ import {
     Share2,
     MapPin,
     GraduationCap,
-    Activity
+    Activity,
+    ShoppingBag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -73,7 +74,8 @@ export default function AdminLayout({
         { href: "/admin/messages", label: "Mesajlar", icon: MessageSquareText },
         { href: "/admin/tasks", label: "Görevler (Kanban)", icon: ClipboardList }, // Updated Label
         { href: "/admin/leaves", label: "İzinler", icon: TentTree },
-        { href: "/admin/awards", label: "Ödüller", icon: Trophy },
+        { href: "/admin/awards", label: "Başarımlar", icon: Trophy },
+        { href: "/admin/rewards/shop", label: "Ödül Mağazası", icon: ShoppingBag }, // New
         { href: "/admin/leaderboard", label: "Liderlik", icon: Crown }, // New
         { href: "/admin/expenses", label: "Harcamalar", icon: Receipt },
         { href: "/admin/assets", label: "Demirbaşlar", icon: Laptop },
