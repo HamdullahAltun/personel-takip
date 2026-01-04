@@ -32,7 +32,10 @@ import {
     Network,
     CalendarRange,
     Crown,
-    Share2
+    Share2,
+    MapPin,
+    GraduationCap,
+    Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +84,10 @@ export default function AdminLayout({
         { href: "/admin/booking", label: "Rezervasyon", icon: CalendarClock },
         { href: "/admin/events", label: "Etkinlikler", icon: Calendar },
         { href: "/admin/survey", label: "Anketler", icon: MessageSquare },
-        { href: "/admin/field-tasks", label: "Saha Görevleri", icon: TentTree }, // MapPin would be better 
+        { href: "/admin/knowledge", label: "Şirket Hafızası", icon: BookOpen },
+        { href: "/admin/culture", label: "Şirket Kültürü", icon: Activity },
+        { href: "/admin/field-tasks", label: "Saha Görevleri", icon: ClipboardList },
+        { href: "/admin/operations", label: "Canlı Takip", icon: MapPin },
         { href: "/admin/onboarding", label: "Onboarding", icon: ClipboardList },
         { href: "/admin/departments", label: "Departmanlar & Bütçe", icon: LayoutDashboard }, // Factory or Building
         { href: "/admin/announcements", label: "Duyurular", icon: Megaphone },

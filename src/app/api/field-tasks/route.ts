@@ -55,5 +55,17 @@ export async function PATCH(req: Request) {
         data
     });
 
+    // Update User's last known location globally
+    if (checkInLat && checkInLng) {
+        await (prisma.user as any).update({
+            where: { id: task.userId },
+            data: {
+                lastLat: checkInLat,
+                lastLng: checkInLng,
+                lastLocationUpdate: new Date()
+            }
+        });
+    }
+
     return NextResponse.json(task);
 }

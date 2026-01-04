@@ -6,14 +6,14 @@ import { Loader2, AlertTriangle, RefreshCw } from "lucide-react";
 
 export default function QRScanner({
     onScan,
+    onError,
 }: {
     onScan: (decodedText: string) => void,
-    onError?: (error: any) => void
+    onError?: (error: Error) => void
 }) {
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>("");
-    const [permissionGranted, setPermissionGranted] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -77,22 +77,21 @@ export default function QRScanner({
 
                 if (mounted) {
                     setLoading(false);
-                    setPermissionGranted(true);
                 }
 
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("Scanner Error:", err);
+                const error = err as Error;
                 if (mounted) {
                     setLoading(false);
-                    if (typeof err === 'string') {
-                        setError(err);
-                    } else if (err.name === 'NotAllowedError' || err.message?.includes("Permission")) {
+                    if (error.name === 'NotAllowedError' || error.message?.includes("Permission")) {
                         setError("Kamera izni verilmedi. Lütfen tarayıcı ayarlarından izin verin.");
-                    } else if (err.name === 'NotFoundError' || err.message?.includes("device")) {
+                    } else if (error.name === 'NotFoundError' || error.message?.includes("device")) {
                         setError("Kamera cihazı bulunamadı.");
                     } else {
-                        setError("Kamera başlatılamadı. (" + (err.message || "Bilinmeyen Hata") + ")");
+                        setError("Kamera başlatılamadı. (" + (error.message || "Bilinmeyen Hata") + ")");
                     }
+                    if (onError) onError(error);
                 }
             }
         };
@@ -113,7 +112,7 @@ export default function QRScanner({
                 });
             }
         };
-    }, [onScan]);
+    }, [onScan, onError]);
 
     const handleRetry = () => {
         window.location.reload();

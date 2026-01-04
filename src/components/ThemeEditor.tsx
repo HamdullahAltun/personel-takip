@@ -51,7 +51,7 @@ export default function ThemeEditor() {
                             <button
                                 key={t.id}
                                 onClick={() => {
-                                    setTheme(t.id as any);
+                                    setTheme(t.id as "LIGHT" | "DARK" | "SYSTEM");
                                     saveSettings(t.id, accentColor);
                                 }}
                                 className={cn(

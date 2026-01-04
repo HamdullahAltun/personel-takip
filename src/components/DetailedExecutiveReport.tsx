@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, BrainCircuit, TrendingUp, AlertTriangle, CheckCircle2, MessageSquare, Clock, Wallet } from "lucide-react";
+import { Loader2, BrainCircuit, TrendingUp, AlertTriangle, CheckCircle2, MessageSquare, Clock, Wallet, LucideIcon } from "lucide-react";
 
 interface AnalysisReport {
     summary: string;
@@ -75,7 +75,7 @@ export default function DetailedExecutiveReport() {
                             AI Genel Değerlendirme
                         </div>
                         <h2 className="text-2xl md:text-3xl font-light leading-relaxed">
-                            "{analysis.summary}"
+                            &quot;{analysis.summary}&quot;
                         </h2>
                     </div>
 
@@ -170,7 +170,15 @@ export default function DetailedExecutiveReport() {
     );
 }
 
-function AnalysisCard({ title, content, icon: Icon, color, bg }: any) {
+interface AnalysisCardProps {
+    title: string;
+    content: string;
+    icon: LucideIcon;
+    color: string;
+    bg: string;
+}
+
+function AnalysisCard({ title, content, icon: Icon, color, bg }: AnalysisCardProps) {
     return (
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 h-full hover:shadow-md transition-shadow">
             <div className={`w-12 h-12 ${bg} ${color} rounded-xl flex items-center justify-center mb-4`}>

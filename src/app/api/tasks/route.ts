@@ -8,10 +8,8 @@ export async function GET(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
-    const filter = searchParams.get('filter'); // 'assigned' | 'created'
-
     try {
-        let where: any = {};
+        let where: { assignedToId?: string } = {};
 
         if (session.role === 'ADMIN') {
             // Admin can see all or filter
@@ -33,7 +31,7 @@ export async function GET(req: Request) {
         });
 
         return NextResponse.json(tasks);
-    } catch (e) {
+    } catch {
         return NextResponse.json({ error: "Fetch failed" }, { status: 500 });
     }
 }
@@ -64,7 +62,7 @@ export async function POST(req: Request) {
         await sendPushNotification(assignedToId, "Yeni Görev Atandı 📋", `Görev: ${title}`);
 
         return NextResponse.json(task);
-    } catch (e) {
+    } catch {
         return NextResponse.json({ error: "Create failed" }, { status: 500 });
     }
 }

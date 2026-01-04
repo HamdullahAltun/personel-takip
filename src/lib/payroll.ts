@@ -27,11 +27,9 @@ export async function calculatePayroll(userId: string, month: number, year: numb
 
     // 4. Calculate Hours Worked
     let totalMinutes = 0;
-    let daysWorked = 0;
-
     // Simple logic: Pair CHECK_IN and CHECK_OUT
     // Or just group by day and calculate diff first-last
-    const dailyRecords = new Map<string, any[]>();
+    const dailyRecords = new Map<string, typeof records>();
 
     records.forEach(r => {
         const day = r.timestamp.toDateString();
@@ -40,7 +38,6 @@ export async function calculatePayroll(userId: string, month: number, year: numb
     });
 
     dailyRecords.forEach((dayRecs) => {
-        daysWorked++;
         const checkIn = dayRecs.find(r => r.type === 'CHECK_IN');
         const checkOut = dayRecs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).find(r => r.type === 'CHECK_OUT'); // Late one
 

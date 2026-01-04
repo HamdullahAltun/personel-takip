@@ -6,9 +6,28 @@ import { tr } from "date-fns/locale";
 import { Check, X, FileText, CalendarClock, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
+interface PendingLeave {
+    id: string;
+    startDate: string;
+    endDate: string;
+    reason: string;
+    user: { name: string };
+}
+
+interface PendingExpense {
+    id: string;
+    date: string;
+    amount: number;
+    description: string;
+    category?: string;
+    receiptImage?: string;
+    status: string;
+    user: { name: string };
+}
+
 export default function PendingApprovals() {
-    const [leaves, setLeaves] = useState<any[]>([]);
-    const [expenses, setExpenses] = useState<any[]>([]);
+    const [leaves, setLeaves] = useState<PendingLeave[]>([]);
+    const [expenses, setExpenses] = useState<PendingExpense[]>([]);
     const [loading, setLoading] = useState(true);
     const [expanded, setExpanded] = useState<'leaves' | 'expenses' | null>(null);
 
@@ -23,7 +42,7 @@ export default function PendingApprovals() {
             const expenseRes = await fetch('/api/expenses');
             const expenseData = await expenseRes.json();
             if (Array.isArray(expenseData)) {
-                setExpenses(expenseData.filter((e: any) => e.status === 'PENDING'));
+                setExpenses(expenseData.filter((e: PendingExpense) => e.status === 'PENDING'));
             }
         } catch (e) {
             console.error(e);
@@ -209,7 +228,7 @@ export default function PendingApprovals() {
                                     </div>
                                 </div>
                                 <p className="text-sm text-slate-600 mb-3 bg-slate-50 p-3 rounded-lg border border-slate-100 italic">
-                                    "{leave.reason}"
+                                    &quot;{leave.reason}&quot;
                                 </p>
                                 <div className="flex gap-2 justify-end pt-2 border-t border-slate-100 border-dashed">
                                     <button

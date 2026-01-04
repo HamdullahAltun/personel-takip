@@ -34,7 +34,7 @@ export async function GET(
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
-        let extensiveData: any = {};
+        let extensiveData: Record<string, unknown> = {};
         if (isAuthorizedToViewDetails) {
             const details = await prisma.user.findUnique({
                 where: { id },

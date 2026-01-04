@@ -4,8 +4,23 @@ import { useEffect, useState } from "react";
 import AnnouncementWidget from "@/components/staff/AnnouncementWidget";
 import EOMWidget from "@/components/staff/EOMWidget";
 
+interface DashboardStats {
+    announcement: {
+        id: string;
+        title: string;
+        content: string;
+        createdAt: Date;
+    } | null;
+    eom: {
+        user: { name: string };
+        note: string | null;
+        month: number;
+        year: number;
+    } | null;
+}
+
 export default function DashboardWidgets() {
-    const [data, setData] = useState<any>({ announcement: null, eom: null });
+    const [data, setData] = useState<DashboardStats>({ announcement: null, eom: null });
 
     const fetchData = async () => {
         try {
@@ -14,11 +29,14 @@ export default function DashboardWidgets() {
                 const json = await res.json();
                 setData(json);
             }
-        } catch (e) { }
+        } catch { }
     };
 
     useEffect(() => {
-        fetchData();
+        const init = async () => {
+            await fetchData();
+        };
+        init();
         const interval = setInterval(fetchData, 10000); // Poll every 10s
         return () => clearInterval(interval);
     }, []);

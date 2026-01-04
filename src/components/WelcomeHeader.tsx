@@ -1,25 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sun, Moon, CloudSun, Calendar } from "lucide-react";
+import { Sun, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
 export default function WelcomeHeader({ userName }: { userName: string }) {
     const [time, setTime] = useState(new Date());
-    const [greeting, setGreeting] = useState("");
+    const hour = time.getHours();
+    const greeting = hour < 12 ? "Günaydın" : hour < 18 ? "Tünaydın" : "İyi Akşamlar";
 
     useEffect(() => {
         const timer = setInterval(() => setTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
-
-    useEffect(() => {
-        const hour = time.getHours();
-        if (hour < 12) setGreeting("Günaydın");
-        else if (hour < 18) setGreeting("Tünaydın");
-        else setGreeting("İyi Akşamlar");
-    }, [time]);
 
     return (
         <div className="relative overflow-hidden rounded-3xl bg-indigo-600 text-white shadow-xl">

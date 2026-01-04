@@ -10,7 +10,12 @@ import {
     ResponsiveContainer
 } from "recharts";
 
-export default function WeeklyAttendanceChart({ data }: { data: any[] }) {
+interface AttendanceChartData {
+    name: string;
+    katilim: number;
+}
+
+export default function WeeklyAttendanceChart({ data }: { data: AttendanceChartData[] }) {
     return (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-full">
             <div className="mb-6">

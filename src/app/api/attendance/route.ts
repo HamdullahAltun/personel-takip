@@ -148,6 +148,18 @@ export async function POST(req: Request) {
             }
         });
 
+        // Update User's last known location
+        if (userLocation && userLocation.lat && userLocation.lng) {
+            await (prisma.user as any).update({
+                where: { id: targetUserId },
+                data: {
+                    lastLat: userLocation.lat,
+                    lastLng: userLocation.lng,
+                    lastLocationUpdate: today
+                }
+            });
+        }
+
         const isLateMessage = isLate ? " (Geç Kaldınız!)" : "";
 
         return NextResponse.json({

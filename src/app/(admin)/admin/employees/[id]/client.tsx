@@ -210,7 +210,7 @@ export default function EmployeeDetailClient({ user }: { user: UserWithRelations
                     </div>
 
                     <div className="">
-                        <AchievementsList achievements={user.achievements} userId={user.id} />
+                        <AchievementsList achievements={user.achievements} />
                     </div>
                 </div>
 

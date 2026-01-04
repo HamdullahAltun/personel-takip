@@ -30,7 +30,7 @@ export default function EOMWidget({ data }: { data: EOMData | null }) {
             <h3 className="font-bold text-2xl leading-tight mb-2">{data.user.name}</h3>
             {data.note && (
                 <p className="text-yellow-50 text-xs italic opacity-90 line-clamp-2">
-                    "{data.note}"
+                    &quot;{data.note}&quot;
                 </p>
             )}
         </div>

@@ -10,6 +10,7 @@ import {
     Share2, CalendarRange, Crown, Network, Bot, Gift, Banknote, MapPin
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import VoiceAssistant from "@/components/VoiceAssistant";
 
 export default function StaffLayout({
     children,

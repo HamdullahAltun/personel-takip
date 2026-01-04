@@ -1,10 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { BrainCircuit, AlertCircle, TrendingDown, Clock, ShieldAlert } from "lucide-react";
+import { useState } from "react";
+import { BrainCircuit, ShieldAlert } from "lucide-react";
+
+interface AttritionRisk {
+    name: string;
+    riskLevel: number;
+    reason: string;
+}
+
+interface AttritionAnalysis {
+    topRisks: AttritionRisk[];
+}
 
 export default function PredictiveAttritionWidget() {
-    const [analysis, setAnalysis] = useState<any>(null);
+    const [analysis, setAnalysis] = useState<AttritionAnalysis | null>(null);
     const [loading, setLoading] = useState(false);
 
     const runAnalysis = async () => {
@@ -42,7 +52,7 @@ export default function PredictiveAttritionWidget() {
                     </div>
                 ) : analysis ? (
                     <div className="space-y-4">
-                        {analysis.topRisks.map((risk: any, i: number) => (
+                        {analysis.topRisks.map((risk: AttritionRisk, i: number) => (
                             <div key={i} className="flex gap-3 p-3 rounded-xl border border-rose-100 bg-rose-50/30 group hover:bg-rose-50 transition-colors">
                                 <div className="flex flex-col items-center justify-center bg-rose-100 text-rose-600 w-10 h-10 rounded-lg shrink-0">
                                     <span className="text-[10px] font-bold">RISK</span>

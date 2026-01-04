@@ -5,7 +5,7 @@ import { createFirebaseAdminApp } from "./firebase-admin";
 // Ensure App is initialized
 createFirebaseAdminApp();
 
-export async function sendPushNotification(userId: string, title: string, body: string, data?: any) {
+export async function sendPushNotification(userId: string, title: string, body: string, data?: Record<string, string>) {
     // 1. Get User's FCM Token
     const user = await prisma.user.findUnique({
         where: { id: userId },

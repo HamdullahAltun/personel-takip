@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2, Trophy, Star, Medal, Award, ThumbsUp, Zap } from "lucide-react";
+import { Trash2, Trophy, Star, Medal, ThumbsUp, Zap, LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -13,7 +13,7 @@ type Achievement = {
     date: Date;
 };
 
-const ICONS: Record<string, any> = {
+const ICONS: Record<string, LucideIcon> = {
     star: Star,
     trophy: Trophy,
     medal: Medal,
@@ -21,7 +21,7 @@ const ICONS: Record<string, any> = {
     zap: Zap
 };
 
-export default function AchievementsList({ achievements, userId }: { achievements: Achievement[], userId: string }) {
+export default function AchievementsList({ achievements }: { achievements: Achievement[] }) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
 

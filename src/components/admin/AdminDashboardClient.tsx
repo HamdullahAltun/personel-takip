@@ -9,9 +9,10 @@ import {
     Wallet,
     CalendarClock,
     MoreHorizontal,
-    Briefcase
+    Briefcase,
+    LucideIcon
 } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import AIExecutiveSummary from "@/components/AIExecutiveSummary";
 
 interface DashboardData {
@@ -26,11 +27,11 @@ interface DashboardData {
         newCandidates: number;
         todayBookings: number;
     };
-    chartData: any[];
-    recentActivities: any[];
+    chartData: { name: string; katilim: number }[];
+    recentActivities: { user: string; type: 'CHECK_IN' | 'CHECK_OUT'; time: string; isLate?: boolean }[];
 }
 
-export default function AdminDashboardClient({ data, role }: { data: DashboardData, role: string }) {
+export default function AdminDashboardClient({ data }: { data: DashboardData, role: string }) {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Header */}
@@ -243,7 +244,17 @@ export default function AdminDashboardClient({ data, role }: { data: DashboardDa
     );
 }
 
-function StatCard({ title, value, icon: Icon, trend, color, bg, borderColor }: any) {
+interface StatCardProps {
+    title: string;
+    value: number | string;
+    icon: LucideIcon;
+    trend?: string;
+    color: string;
+    bg: string;
+    borderColor: string;
+}
+
+function StatCard({ title, value, icon: Icon, trend, color, bg, borderColor }: StatCardProps) {
     return (
         <div className={`p-6 rounded-2xl border ${borderColor} ${bg} relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300`}>
             <div className="relative z-10">

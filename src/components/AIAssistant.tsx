@@ -64,9 +64,10 @@ export default function AIAssistant() {
             } else {
                 setMessages(prev => [...prev, { role: 'model', parts: data.response }]);
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
-            setMessages(prev => [...prev, { role: 'model', parts: `Hata: ${error.message}` }]);
+            const errMsg = error instanceof Error ? error.message : "Bilinmeyen bir hata oluştu";
+            setMessages(prev => [...prev, { role: 'model', parts: `Hata: ${errMsg}` }]);
         } finally {
             setLoading(false);
         }

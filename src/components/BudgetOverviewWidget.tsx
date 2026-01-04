@@ -1,10 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DollarSign, Building2, TrendingUp, AlertTriangle } from "lucide-react";
+import { DollarSign, Building2 } from "lucide-react";
+
+interface Department {
+    id: string;
+    name: string;
+    budgetLimit: number;
+    budgetUsed: number;
+}
 
 export default function BudgetOverviewWidget() {
-    const [departments, setDepartments] = useState<any[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {

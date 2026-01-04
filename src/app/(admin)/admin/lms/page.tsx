@@ -1,20 +1,30 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PlayCircle, CheckCircle2, BookOpen, Plus } from "lucide-react";
+import { PlayCircle, CheckCircle2, BookOpen, Plus, BrainCircuit, Save, X, Trash2, Award } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function AdminLMSPage() {
-    const [trainings, setTrainings] = useState<any[]>([]);
+    const [modules, setModules] = useState<any[]>([]);
     const [showModal, setShowModal] = useState(false);
-    const [formData, setFormData] = useState({ title: "", description: "", url: "", type: "VIDEO" });
+    const [formData, setFormData] = useState({
+        title: "",
+        description: "",
+        contentUrl: "",
+        type: "VIDEO",
+        category: "TECHNICAL",
+        points: "10"
+    });
+    const [generatingQuiz, setGeneratingQuiz] = useState<string | null>(null);
+    const [editingQuiz, setEditingQuiz] = useState<any | null>(null);
 
     useEffect(() => {
-        fetchTrainings();
+        fetchModules();
     }, []);
 
-    const fetchTrainings = async () => {
+    const fetchModules = async () => {
         const res = await fetch('/api/lms');
-        if (res.ok) setTrainings(await res.json());
+        if (res.ok) setModules(await res.json());
     }
 
     const handleCreate = async (e: React.FormEvent) => {
@@ -25,27 +35,56 @@ export default function AdminLMSPage() {
             headers: { 'Content-Type': 'application/json' }
         });
         setShowModal(false);
-        setFormData({ title: "", description: "", url: "", type: "VIDEO" });
-        fetchTrainings();
+        setFormData({ title: "", description: "", contentUrl: "", type: "VIDEO", category: "TECHNICAL", points: "10" });
+        fetchModules();
+    }
+
+    const generateAIQuiz = async (module: any) => {
+        setGeneratingQuiz(module.id);
+        try {
+            const res = await fetch('/api/lms', {
+                method: 'POST',
+                body: JSON.stringify({ action: 'GENERATE_QUIZ', title: module.title, description: module.description }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (data.quiz) {
+                // Save immediately or let admin edit
+                setEditingQuiz({ moduleId: module.id, questions: data.quiz });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        setGeneratingQuiz(null);
+    }
+
+    const saveQuiz = async () => {
+        await fetch('/api/lms', {
+            method: 'POST',
+            body: JSON.stringify({ action: 'UPDATE_QUIZ', moduleId: editingQuiz.moduleId, quizData: editingQuiz.questions }),
+            headers: { 'Content-Type': 'application/json' }
+        });
+        setEditingQuiz(null);
+        fetchModules();
     }
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Eğitim Platformu (LMS)</h1>
-                    <p className="text-slate-500">Personel eğitimlerini oluşturun ve takip edin</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Akıllı Eğitim Yönetimi (LMS)</h1>
+                    <p className="text-slate-500">AI destekli eğitimler oluşturun ve yetkinlikleri ölçün</p>
                 </div>
-                <button onClick={() => setShowModal(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2">
+                <button onClick={() => setShowModal(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5">
                     <Plus className="h-4 w-4" /> Eğitim Ekle
                 </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {trainings.map(training => (
-                    <div key={training.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group hover:shadow-md transition">
-                        <div className="aspect-video bg-slate-100 relative group">
-                            {training.type === 'VIDEO' ? (
+                {modules.map(module => (
+                    <div key={module.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden group hover:shadow-xl transition-all duration-300">
+                        <div className="aspect-video bg-slate-100 relative overflow-hidden">
+                            {module.type === 'VIDEO' ? (
                                 <div className="absolute inset-0 flex items-center justify-center bg-indigo-900/10 group-hover:bg-indigo-900/20 transition">
                                     <PlayCircle className="h-16 w-16 text-indigo-600 opacity-80 group-hover:scale-110 transition-transform" />
                                 </div>
@@ -54,56 +93,158 @@ export default function AdminLMSPage() {
                                     <BookOpen className="h-16 w-16 text-blue-600 opacity-80" />
                                 </div>
                             )}
+                            <div className="absolute top-4 left-4">
+                                <span className="bg-white/90 backdrop-blur px-2 py-1 rounded-md text-[10px] font-bold text-slate-600 shadow-sm border border-white/50">
+                                    {module.category}
+                                </span>
+                            </div>
+                            <div className="absolute top-4 right-4">
+                                <span className="bg-amber-500 text-white px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                                    <Award className="h-3 w-3" /> {module.points} Puan
+                                </span>
+                            </div>
                         </div>
-                        <div className="p-5">
-                            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded mb-2 inline-block shadow-sm">
-                                {training.type === 'VIDEO' ? 'VİDEO EĞİTİM' : 'DÖKÜMAN'}
-                            </span>
-                            <h3 className="font-bold text-lg text-slate-900 line-clamp-1 mb-1">{training.title}</h3>
-                            <p className="text-sm text-slate-500 line-clamp-2 mb-4 h-10">{training.description}</p>
 
-                            <div className="flex items-center gap-2 pt-2 border-t text-sm text-slate-500">
-                                <span>Tamamlanma Oranı:</span>
-                                <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                    {/* Mock Progress */}
-                                    <div className="h-full bg-green-500 w-[65%]" />
-                                </div>
-                                <span className="font-bold text-slate-900">%65</span>
+                        <div className="p-5">
+                            <h3 className="font-bold text-lg text-slate-900 line-clamp-1 mb-1">{module.title}</h3>
+                            <p className="text-sm text-slate-500 line-clamp-2 mb-4 h-10">{module.description}</p>
+
+                            <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-50">
+                                {module.quizData ? (
+                                    <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                                        <CheckCircle2 className="h-3 w-3" /> Quiz Hazır
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => generateAIQuiz(module)}
+                                        disabled={generatingQuiz === module.id}
+                                        className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                                    >
+                                        <BrainCircuit className="h-3 w-3" />
+                                        {generatingQuiz === module.id ? 'Sorular Hazırlanıyor...' : 'AI Seçin (Quiz Üret)'}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
 
+            {/* Create Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-sm p-6 animate-in zoom-in-95">
-                        <h2 className="text-lg font-bold mb-4">Yeni Eğitim Ekle</h2>
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-lg p-8 animate-in zoom-in-95 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-slate-900">Yeni Eğitim Modülü</h2>
+                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                <X className="h-5 w-5 text-slate-400" />
+                            </button>
+                        </div>
                         <form onSubmit={handleCreate} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1">Eğitim Başlığı</label>
-                                <input required className="w-full border rounded-lg p-2" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Örn: İş Güvenliği" />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Başlık</label>
+                                    <input required className="w-full border-slate-200 border rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 transition-shadow outline-none" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Örn: İleri Excel Eğitimi" />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Açıklama</label>
+                                    <textarea required className="w-full border-slate-200 border rounded-xl p-3 h-24 focus:ring-2 focus:ring-indigo-500 transition-shadow outline-none" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Eğitim içeriğinde neler var?" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Kategori</label>
+                                    <select className="w-full border-slate-200 border rounded-xl p-3 outline-none" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                                        <option value="TECHNICAL">Teknik</option>
+                                        <option value="SOFT_SKILLS">Sosyal Beceri</option>
+                                        <option value="COMPLIANCE">Yönetmelik</option>
+                                        <option value="ONBOARDING">Oryantasyon</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Eğitim Puanı</label>
+                                    <input required type="number" className="w-full border-slate-200 border rounded-xl p-3 outline-none" value={formData.points} onChange={e => setFormData({ ...formData, points: e.target.value })} />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">İçerik URL (YouTube/MP4/PDF)</label>
+                                    <input required className="w-full border-slate-200 border rounded-xl p-3 outline-none" value={formData.contentUrl} onChange={e => setFormData({ ...formData, contentUrl: e.target.value })} placeholder="https://..." />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1">Açıklama</label>
-                                <textarea required className="w-full border rounded-lg p-2 h-20" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="İçerik hakkında..." />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1">İçerik URL (Youtube/PDF)</label>
-                                <input required className="w-full border rounded-lg p-2" value={formData.url} onChange={e => setFormData({ ...formData, url: e.target.value })} placeholder="https://..." />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1">Tip</label>
-                                <select className="w-full border rounded-lg p-2" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
-                                    <option value="VIDEO">Video</option>
-                                    <option value="DOCUMENT">Döküman</option>
-                                </select>
-                            </div>
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg">İptal</button>
-                                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Oluştur</button>
+                            <div className="flex gap-3 pt-6">
+                                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors">İptal</button>
+                                <button type="submit" className="flex-2 px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all active:scale-95">Eğitimi Yayınla</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Quiz Editor Modal */}
+            {editingQuiz && (
+                <div className="fixed inset-0 bg-indigo-900/40 backdrop-blur-md flex items-center justify-center z-[60] p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-2xl p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-5">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl">
+                                <BrainCircuit className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-900">AI Quiz Editörü</h2>
+                                <p className="text-sm text-slate-500">Hazırlanan soruları onaylayın veya düzenleyin</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                            {editingQuiz.questions.map((q: any, i: number) => (
+                                <div key={i} className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
+                                    <div className="flex gap-4">
+                                        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">{i + 1}</span>
+                                        <div className="flex-1 space-y-4">
+                                            <input
+                                                className="w-full bg-transparent font-bold text-slate-800 border-b border-slate-200 pb-2 focus:border-indigo-500 outline-none"
+                                                value={q.question}
+                                                onChange={(e) => {
+                                                    const newQ = [...editingQuiz.questions];
+                                                    newQ[i].question = e.target.value;
+                                                    setEditingQuiz({ ...editingQuiz, questions: newQ });
+                                                }}
+                                            />
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {q.options.map((opt: string, oi: number) => (
+                                                    <div key={oi} className={cn(
+                                                        "flex items-center gap-2 p-2 rounded-lg border transition-all",
+                                                        q.answer === oi ? "bg-green-50 border-green-200" : "bg-white border-slate-100"
+                                                    )}>
+                                                        <input
+                                                            type="radio"
+                                                            checked={q.answer === oi}
+                                                            onChange={() => {
+                                                                const newQ = [...editingQuiz.questions];
+                                                                newQ[i].answer = oi;
+                                                                setEditingQuiz({ ...editingQuiz, questions: newQ });
+                                                            }}
+                                                        />
+                                                        <input
+                                                            className="flex-1 bg-transparent text-sm outline-none"
+                                                            value={opt}
+                                                            onChange={(e) => {
+                                                                const newQ = [...editingQuiz.questions];
+                                                                newQ[i].options[oi] = e.target.value;
+                                                                setEditingQuiz({ ...editingQuiz, questions: newQ });
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-3 pt-8 mt-4 border-t border-slate-100">
+                            <button onClick={() => setEditingQuiz(null)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-colors">İptal</button>
+                            <button onClick={saveQuiz} className="flex-2 px-12 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 transition-all active:scale-95">
+                                <Save className="h-5 w-5" /> Quiz'i Kaydet ve Yayınla
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -6,8 +6,8 @@ export async function GET() {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const assignments = await (prisma as any).checklistAssignment.findMany({
-        where: { userId: session.id },
+    const assignments = await prisma.checklistAssignment.findMany({
+        where: { userId: session.id as string },
         include: { checklist: { include: { items: true } } }
     });
 
@@ -20,16 +20,16 @@ export async function PATCH(req: Request) {
 
     const { assignmentId, itemId, completed } = await req.json();
 
-    const assignment = await (prisma as any).checklistAssignment.findUnique({
-        where: { id: assignmentId }
+    const assignment = await prisma.checklistAssignment.findUnique({
+        where: { id: assignmentId as string }
     });
 
     if (!assignment) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const progress = (assignment.progress as any) || {};
+    const progress = (assignment.progress as Record<string, boolean>) || {};
     progress[itemId] = completed;
 
-    const updated = await (prisma as any).checklistAssignment.update({
+    const updated = await prisma.checklistAssignment.update({
         where: { id: assignmentId },
         data: {
             progress,

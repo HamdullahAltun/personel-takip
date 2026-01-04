@@ -24,7 +24,22 @@ model User {
   // Theme & Preferences
   theme       String   @default("light") // light, dark, system
   accentColor String   @default("#4f46e5")
+  voiceEnabled Boolean  @default(false)
 
+  // Real-time Tracking
+  lastLat     Float?
+  lastLng     Float?
+  lastLocationUpdate DateTime?
+
+  // GPS capture on start/end
+  startLat     Float?
+  startLng     Float?
+  endLat       Float?
+  endLng       Float?
+
+  // Competency
+  skillScore  Float    @default(0)
+  
   attendance  AttendanceRecord[]
   leaves      LeaveRequest[]
   achievements        Achievement[]
@@ -86,6 +101,9 @@ model User {
   
   // Field Tasks (Saha)
   fieldTasks  FieldTask[]
+
+  // LMS
+  lmsCompletions LmsCompletion[]
 }
 
 model Department {
@@ -291,6 +309,11 @@ model Message {
   
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  // AI Sentiment
+  sentimentScore Float?  // -1.0 to 1.0 (Very Negative to Very Positive)
+  sentimentLabel String? // Positive, Neutral, Negative
+  isAnonymous   Boolean @default(false)
 }
 
 model WorkSchedule {
@@ -562,4 +585,44 @@ model CompanySettings {
   officeLat      Float  @default(41.0082) // Default Istanbul
   officeLng      Float  @default(28.9784)
   geofenceRadius Int    @default(500) // meters
+}
+
+// --- MODULE: SMART LMS ---
+
+model LmsModule {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  description  String
+  type         String   // VIDEO, ARTICLE, DOCUMENT
+  contentUrl   String
+  category     String   // TECHNICAL, SOFT_SKILLS, COMPLIANCE
+  points       Int      @default(10)
+  quizData     Json?    // Optional JSON for quiz questions/answers
+  completions  LmsCompletion[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model LmsCompletion {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  user         User     @relation(fields: [userId], references: [id])
+  moduleId     String   @db.ObjectId
+  module       LmsModule @relation(fields: [moduleId], references: [id])
+  score        Int?     // Quiz result
+  isCompleted  Boolean  @default(false)
+  completedAt  DateTime @default(now())
+}
+
+// --- MODULE: COMPANY MEMORY (KNOWLEDGE BASE) ---
+
+model KnowledgeBaseDoc {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  content      String   // Extracted text content
+  fileUrl      String
+  type         String   // POLICY, MANUAL, GUIDELINE
+  tags         String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

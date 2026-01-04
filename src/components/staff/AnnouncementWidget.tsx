@@ -18,7 +18,8 @@ export default function AnnouncementWidget({ announcement }: { announcement: Ann
             const readKey = `read_announcement_${announcement.id}`;
             const isRead = localStorage.getItem(readKey);
             if (!isRead) {
-                setShowPopup(true);
+                // Use a non-blocking update pattern
+                requestAnimationFrame(() => setShowPopup(true));
             }
         }
     }, [announcement]);

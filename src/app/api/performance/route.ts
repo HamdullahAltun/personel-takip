@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getAuth } from '@/lib/auth';
+import { getAuth, AppJWTPayload } from '@/lib/auth';
 
 export async function GET(req: Request) {
-    const session = await getAuth();
+    const session = await getAuth() as AppJWTPayload | null;
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
@@ -22,15 +22,15 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-    const session = await getAuth();
+    const session = await getAuth() as AppJWTPayload | null;
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { revieweeId, period, score, feedback } = body;
+    const { revieweeId, period, score, feedback } = body as { revieweeId: string, period: string, score: string, feedback: string };
 
     const review = await prisma.performanceReview.create({
         data: {
-            reviewerId: session.id,
+            reviewerId: session.id as string,
             revieweeId: revieweeId,
             period,
             score: parseInt(score),

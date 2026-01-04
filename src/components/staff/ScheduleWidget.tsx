@@ -1,7 +1,7 @@
 "use client";
 
 import { WorkSchedule } from "@prisma/client";
-import { CalendarClock, Check, X } from "lucide-react";
+import { CalendarClock } from "lucide-react";
 
 export default function ScheduleWidget({ schedules }: { schedules: WorkSchedule[] }) {
     if (!schedules || schedules.length === 0) return null;

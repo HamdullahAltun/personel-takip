@@ -3,14 +3,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BrainCircuit, TrendingUp, AlertTriangle, Lightbulb, RefreshCw, Clock, X, ChevronRight } from "lucide-react";
+import { BrainCircuit, AlertTriangle, Lightbulb, RefreshCw, Clock, X, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
 type AnalysisReport = {
     summary: string;
     score: number;
-    details: any;
+    details: {
+        attendance: string;
+        tasks: string;
+        expenses: string;
+        communication: string;
+    };
     recommendations: string[];
     risks: string[];
 }
@@ -56,14 +61,13 @@ export default function AIExecutiveSummary() {
                 setReport(data.report);
                 setLastUpdated(new Date().toISOString());
             } else {
-                const errData = await res.json();
                 if (res.status === 429) {
                     setError("AI kotası doldu. Lütfen 1-2 dakika bekleyip tekrar deneyin.");
                 } else {
                     setError("Rapor oluşturulamadı.");
                 }
             }
-        } catch (err) {
+        } catch {
             setError("Bağlantı hatası.");
         } finally {
             setGenerating(false);

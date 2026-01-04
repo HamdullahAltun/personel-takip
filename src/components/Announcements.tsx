@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Megaphone, X } from "lucide-react";
+import { Megaphone } from "lucide-react";
+
+interface Announcement {
+    id: string;
+    title: string;
+    content: string;
+}
 
 export default function Announcements() {
-    const [announcements, setAnnouncements] = useState<any[]>([]);
-    const [visible, setVisible] = useState(true);
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
 
     useEffect(() => {
         fetch('/api/announcements')
@@ -16,7 +21,7 @@ export default function Announcements() {
             .catch(err => console.error(err));
     }, []);
 
-    if (!visible || announcements.length === 0) return null;
+    if (announcements.length === 0) return null;
 
     return (
         <div className="mb-6 space-y-3">

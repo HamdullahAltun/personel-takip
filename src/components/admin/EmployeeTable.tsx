@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import { User } from "@prisma/client";
-import { Plus, Pencil, Trash2, Search, X, Loader2 } from "lucide-react";
+import { Plus, Search, X, Loader2 } from "lucide-react";
 import { createEmployee, deleteEmployee, updateEmployee } from "@/app/actions/employee";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function EmployeeTable({ initialEmployees }: { initialEmployees: User[] }) {
-    const [employees] = useState(initialEmployees);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
     const [search, setSearch] = useState("");
@@ -28,11 +27,6 @@ export default function EmployeeTable({ initialEmployees }: { initialEmployees: 
         emp.phone.includes(search)
     );
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Bu personeli silmek istediğinize emin misiniz?")) return;
-        await deleteEmployee(id);
-        router.refresh(); // Refresh server data
-    };
 
     return (
         <div>
@@ -85,6 +79,7 @@ export default function EmployeeTable({ initialEmployees }: { initialEmployees: 
                                     <div className="flex items-center gap-3">
                                         <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200">
                                             {emp.profilePicture ? (
+                                                /* eslint-disable-next-line @next/next/no-img-element */
                                                 <img src={emp.profilePicture} alt={emp.name} className="w-full h-full object-cover" />
                                             ) : (
                                                 <span className="font-bold text-slate-500 text-xs">{emp.name.charAt(0)}</span>
