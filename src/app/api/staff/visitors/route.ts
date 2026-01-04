@@ -9,7 +9,7 @@ export async function GET(req: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const visitors = await prisma.visitor.findMany({
-        where: { invitedById: (session as any).user.id },
+        where: { invitedById: session.id as string },
         orderBy: { entryTime: 'desc' }
     });
 
@@ -33,8 +33,9 @@ export async function POST(req: Request) {
                 company,
                 visitReason,
                 phone,
-                hostName: (session as any).user.name,
-                invitedById: (session as any).user.id,
+                // Fallback to "Personel" if name is missing in session, or fetching it would be better but this fixes the crash
+                hostName: session.name || "Personel",
+                invitedById: session.id as string,
                 qrCode: qrCode,
                 status: 'PENDING',
                 // For future visits, we might want a separate scheduledDate field,
