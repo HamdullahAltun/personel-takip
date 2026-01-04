@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import VoiceAssistant from "@/components/VoiceAssistant";
 import StatusPoller from "@/components/StatusPoller";
 import LocationTracker from "@/components/LocationTracker";
+import EmergencyButton from "@/components/EmergencyButton";
 
 export default function StaffLayout({
     children,
@@ -93,6 +94,7 @@ export default function StaffLayout({
         { href: "/survey", label: "Anketler", icon: MessageSquare, priority: 10 },
         { href: "/lms", label: "Eğitim", icon: BookOpen, priority: 10 },
         { href: "/booking", label: "Rezervasyon", icon: CalendarClock, priority: 10 },
+        { href: "/visitors", label: "Ziyaretçi Davet", icon: QrCode, priority: 10 },
     ];
 
     if (userRole === 'EXECUTIVE') {

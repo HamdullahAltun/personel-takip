@@ -38,6 +38,23 @@ export async function POST(req: Request) {
     }
 }
 
+export async function GET(req: Request) {
+    const session = await getAuth();
+    if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const trades = await prisma.shiftTrade.findMany({
+        where: { status: 'ACCEPTED' }, // Only show those ready for approval
+        include: {
+            shift: true,
+            requester: { select: { name: true } },
+            recipient: { select: { name: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+    });
+
+    return NextResponse.json(trades);
+}
+
 export async function PUT(req: Request) {
     // Take/Accept a trade
     try {
@@ -76,9 +93,57 @@ export async function PUT(req: Request) {
             }
         });
 
-        // Notify manager logic here (omitted for brevity)
-
         return NextResponse.json({ success: true, message: 'Takas talebi kabul edildi. Yönetici onayı bekleniyor.' });
+
+    } catch (e) {
+        return NextResponse.json({ error: 'Failed' }, { status: 500 });
+    }
+}
+
+export async function PATCH(req: Request) {
+    // Admin Approval/Rejection
+    try {
+        const session = await getAuth();
+        if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const { tradeId, action } = await req.json(); // action: 'APPROVE' | 'REJECT'
+
+        const trade = await prisma.shiftTrade.findUnique({
+            where: { id: tradeId },
+            include: { shift: true }
+        });
+
+        if (!trade) return NextResponse.json({ error: 'Takas bulunamadı.' }, { status: 404 });
+
+        if (action === 'REJECT') {
+            await prisma.shiftTrade.update({
+                where: { id: tradeId },
+                data: { status: 'REJECTED' }
+            });
+            return NextResponse.json({ success: true, message: 'Takas reddedildi.' });
+        }
+
+        if (action === 'APPROVE') {
+            if (!trade.recipientId) return NextResponse.json({ error: 'Alıcı yok, onaylanamaz.' }, { status: 400 });
+
+            // Execute Swap
+            await prisma.$transaction([
+                prisma.shift.update({
+                    where: { id: trade.shiftId },
+                    data: { userId: trade.recipientId }
+                }),
+                prisma.shiftTrade.update({
+                    where: { id: tradeId },
+                    data: { status: 'APPROVED' } // Final state
+                })
+            ]);
+
+            // Notify users? (Omitted for brevity, but good to have)
+
+            return NextResponse.json({ success: true, message: 'Takas onaylandı ve vardiya güncellendi.' });
+        }
+
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
     } catch (e) {
         return NextResponse.json({ error: 'Failed' }, { status: 500 });

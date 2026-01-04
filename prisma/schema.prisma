@@ -75,6 +75,9 @@ model User {
   posts       Post[]
   likes       Like[]
   comments    Comment[]
+  kudosReceived Post[] @relation("KudosReceived")
+  signatures  DocSignature[]
+  goals       Goal[]
 
   // Org Chart
   managerId   String?  @db.ObjectId
@@ -104,6 +107,13 @@ model User {
 
   // LMS
   lmsCompletions LmsCompletion[]
+
+  // Safety
+  safetyStatus String   @default("UNKNOWN") // SAFE, DANGER, UNKNOWN
+  lastSafetyUpdate DateTime?
+
+  // Visitors
+  invitedVisitors Visitor[] @relation("VisitorInviter")
 }
 
 model Department {
@@ -179,6 +189,7 @@ model Asset {
   notes        String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  logs         AssetLog[]
 }
 
 model Document {
@@ -190,6 +201,12 @@ model Document {
   fileUrl     String
   expiryDate  DateTime? // ⚠️ Belge Son Kullanma Uyarısı için
   uploadedAt  DateTime @default(now())
+  
+  // Signing
+  requiresSigning Boolean @default(false)
+  isSigned        Boolean @default(false)
+  signedAt        DateTime?
+  signature       String? // Base64 or text signature
 }
 
 model PerformanceReview {
@@ -428,7 +445,9 @@ model Visitor {
   qrCode       String
   entryTime    DateTime   @default(now())
   exitTime     DateTime?
-  status       String     // ACTIVE, COMPLETED
+  status       String     // ACTIVE, COMPLETED, PENDING (for invited)
+  invitedById  String?    @db.ObjectId
+  invitedBy    User?      @relation("VisitorInviter", fields: [invitedById], references: [id])
 }
 
 model Training {
@@ -472,6 +491,7 @@ model Booking {
   createdAt  DateTime @default(now())
   status     String   @default("CONFIRMED") // CONFIRMED, CANCELLED
   cancellationReason String?
+  notes       MeetingNote?
 }
 
 model Survey {
@@ -511,6 +531,17 @@ model Post {
   likes     Like[]
   comments  Comment[]
   createdAt DateTime  @default(now())
+
+  type        PostType  @default(STANDARD)
+  kudosTargetId String? @db.ObjectId
+  kudosTarget   User?   @relation("KudosReceived", fields: [kudosTargetId], references: [id])
+  kudosCategory String? // TEAMWORK, LEADERSHIP, HELP, SPEED
+}
+
+enum PostType {
+  STANDARD
+  KUDOS
+  ANNOUNCEMENT
 }
 
 model Like {
@@ -617,12 +648,93 @@ model LmsCompletion {
 // --- MODULE: COMPANY MEMORY (KNOWLEDGE BASE) ---
 
 model KnowledgeBaseDoc {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  title        String
-  content      String   // Extracted text content
-  fileUrl      String
-  type         String   // POLICY, MANUAL, GUIDELINE
-  tags         String[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  title           String
+  content         String   // Extracted text content
+  fileUrl         String?
+  type            String   @default("GUIDELINE") // POLICY, MANUAL, GUIDELINE
+  tags            String[]
+  requiresSigning Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  signatures      DocSignature[]
+}
+
+model DocSignature {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  docId     String   @db.ObjectId
+  doc       KnowledgeBaseDoc @relation(fields: [docId], references: [id])
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  signature String?
+  signedAt  DateTime @default(now())
+  
+  @@unique([docId, userId])
+}
+
+// --- SAFETY & EMERGENCY ---
+
+enum SafetyStatus {
+  SAFE
+  DANGER
+  UNKNOWN
+}
+
+// Add to User model: safetyStatus SafetyStatus @default(UNKNOWN)
+// We will modify the User model separately to add this field.
+
+model MeetingNote {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  bookingId   String   @unique @db.ObjectId
+  booking     Booking  @relation(fields: [bookingId], references: [id])
+  content     String
+  summary     String?  // AI generated summary
+  actionItems String[] // AI generated tasks
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AssetLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  assetId     String   @db.ObjectId
+  asset       Asset    @relation(fields: [assetId], references: [id])
+  type        String   // MAINTENANCE, REPAIR, ASSIGNMENT, RETURN, RETIRE
+  description String
+  cost        Float    @default(0)
+  date        DateTime @default(now())
+  performedBy String?
+}
+
+model Goal {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  title       String
+  description String?
+  status      String   @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED, CANCELLED
+  progress    Int      @default(0) // 0-100
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AiAutomationConfig {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  autoScheduleEnabled Boolean  @default(false)
+  minStaffPerShift    Int      @default(3)
+  operatingHoursStart String   @default("09:00")
+  operatingHoursEnd   String   @default("18:00")
+  
+  autoTaskAssignment  Boolean  @default(false)
+  taskAssignmentMode  String   @default("BALANCED") // BALANCED, SKILL, SPEED
+  
+  updatedAt           DateTime @updatedAt
+}
+
+model SystemLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  level     String   @default("INFO") // INFO, WARN, ERROR, AI_ACTION
+  message   String
+  metadata  Json?
+  createdAt DateTime @default(now())
 }

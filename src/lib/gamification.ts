@@ -8,6 +8,7 @@ export async function checkAndAwardBadges(userId: string, action: 'TASK_COMPLETE
             include: {
                 achievements: true,
                 tasksReceived: { where: { status: 'COMPLETED' } },
+                fieldTasks: { where: { status: 'COMPLETED' } },
                 attendance: { orderBy: { timestamp: 'desc' }, take: 30 }
             }
         });
@@ -19,7 +20,7 @@ export async function checkAndAwardBadges(userId: string, action: 'TASK_COMPLETE
 
         // 1. Task Badges
         if (action === 'TASK_COMPLETE') {
-            const completedCount = user.tasksReceived.length; // This includes the one just completed if transaction committed, or +1
+            const completedCount = user.tasksReceived.length + user.fieldTasks.length;
 
             if (completedCount >= 10 && !existingBadgeTitles.has("Görev Ustası")) {
                 newBadges.push({

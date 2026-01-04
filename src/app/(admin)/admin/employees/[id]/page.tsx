@@ -18,7 +18,11 @@ export default async function EmployeeDetailPage({
             attendance: { orderBy: { timestamp: 'desc' }, take: 50 },
             leaves: { orderBy: { createdAt: 'desc' } },
             achievements: { orderBy: { date: 'desc' } },
-            workSchedules: true
+            workSchedules: true,
+            shifts: {
+                where: { start: { gte: new Date() } },
+                orderBy: { start: 'asc' }
+            }
         }
     });
 

@@ -29,7 +29,7 @@ export async function createEmployee(prevState: any, formData: FormData) {
             if (existingEmail) return { error: "Email already registered" };
         }
 
-        await prisma.user.create({
+        const newUser = await prisma.user.create({
             data: {
                 name,
                 phone,
@@ -40,6 +40,22 @@ export async function createEmployee(prevState: any, formData: FormData) {
                 role
             }
         });
+
+        // Auto-assign Onboarding Checklist
+        const onboardingChecklist = await prisma.checklist.findFirst({
+            where: { type: 'ONBOARDING' }
+        });
+
+        if (onboardingChecklist) {
+            await prisma.checklistAssignment.create({
+                data: {
+                    userId: newUser.id,
+                    checklistId: onboardingChecklist.id,
+                    progress: {},
+                    status: 'IN_PROGRESS'
+                }
+            });
+        }
 
         revalidatePath("/admin/employees");
         return { success: true };
@@ -54,11 +70,47 @@ export async function deleteEmployee(id: string) {
     if (!session || session.role !== 'ADMIN') return { error: "Unauthorized" };
 
     try {
-        await prisma.user.delete({ where: { id } });
+        await prisma.$transaction(async (tx) => {
+            // 1. Operational Data
+            await tx.attendanceRecord.deleteMany({ where: { userId: id } });
+            await tx.workSchedule.deleteMany({ where: { userId: id } });
+            await tx.shift.deleteMany({ where: { userId: id } });
+            await tx.leaveRequest.deleteMany({ where: { userId: id } });
+
+            // 2. Performance & Financials
+            await tx.payroll.deleteMany({ where: { userId: id } });
+            await tx.advanceRequest.deleteMany({ where: { userId: id } });
+            await tx.performanceReview.deleteMany({ where: { OR: [{ revieweeId: id }, { reviewerId: id }] } });
+            await tx.achievement.deleteMany({ where: { userId: id } });
+            await tx.employeeOfTheMonth.deleteMany({ where: { userId: id } });
+            await tx.goal.deleteMany({ where: { userId: id } });
+
+            // 3. Tasks & Workflow
+            await tx.checklistAssignment.deleteMany({ where: { userId: id } });
+            await tx.task.deleteMany({ where: { assignedToId: id } }); // Delete tasks assigned TO them
+            // Tasks assigned BY them: Keep, but maybe set assignedBy to null? Prisma might complain. 
+            // For now, let's leave assignedBy tasks as they are historical records of work definitions. 
+            // But if assignedBy relation is strict, it might error. MongoDB relations are usually optional references unless enforced.
+
+            // 4. Social & Messages
+            await tx.post.deleteMany({ where: { userId: id } });
+            await tx.comment.deleteMany({ where: { userId: id } });
+            await tx.like.deleteMany({ where: { userId: id } });
+            await tx.message.deleteMany({ where: { OR: [{ senderId: id }, { receiverId: id }] } });
+
+            // 5. Assets & Docs
+            await tx.asset.updateMany({ where: { assignedToId: id }, data: { assignedToId: null, status: 'AVAILABLE' } });
+            await tx.document.deleteMany({ where: { userId: id } });
+
+            // Finally delete user
+            await tx.user.delete({ where: { id } });
+        });
+
         revalidatePath("/admin/employees");
         return { success: true };
     } catch (error) {
-        return { error: "Failed to delete employee" };
+        console.error("Delete Employee Error:", error);
+        return { error: "Failed to delete employee. Check logs." };
     }
 }
 

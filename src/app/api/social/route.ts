@@ -10,6 +10,7 @@ export async function GET(req: Request) {
         const posts = await prisma.post.findMany({
             include: {
                 user: { select: { name: true, profilePicture: true } },
+                kudosTarget: { select: { name: true } },
                 likes: true,
                 comments: {
                     include: { user: { select: { name: true, profilePicture: true } } },
@@ -29,23 +30,34 @@ export async function POST(req: Request) {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { content, imageUrl } = await req.json();
-
     try {
+        const { content, imageUrl, type, kudosTargetId, kudosCategory } = await req.json();
+
         const post = await prisma.post.create({
             data: {
                 content,
                 imageUrl,
-                userId: session.id as string
+                userId: session.id as string,
+                type: type || 'STANDARD',
+                kudosTargetId,
+                kudosCategory
             },
             include: {
                 user: { select: { name: true, profilePicture: true } },
+                kudosTarget: { select: { name: true } },
                 likes: true,
                 comments: true
             }
         });
+
+        // Award points if Kudo
+        if (type === 'KUDOS' && kudosTargetId) {
+            // Future: Add points via gamification service
+        }
+
         return NextResponse.json(post);
     } catch (e) {
+        console.error(e);
         return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
     }
 }

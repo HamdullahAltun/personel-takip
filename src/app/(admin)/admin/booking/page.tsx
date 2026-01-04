@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CalendarDays, Plus, Clock, Car, Monitor, Armchair, AlertCircle, Trash, Edit, XCircle, Info, Pencil, CheckCircle } from "lucide-react";
+import { CalendarDays, Plus, Clock, Car, Monitor, Armchair, AlertCircle, Trash, Edit, XCircle, Info, Pencil, CheckCircle, FileText, Sparkles } from "lucide-react";
 import { format, addHours, isSameDay } from "date-fns";
 import { tr } from "date-fns/locale";
 
@@ -182,6 +182,53 @@ export default function BookingPage() {
         return <Armchair className="h-5 w-5" />;
     };
 
+    // Meeting Notes
+    const [noteModalBook, setNoteModalBook] = useState<Booking | null>(null);
+    const [noteContent, setNoteContent] = useState("");
+    const [noteAnalysis, setNoteAnalysis] = useState<any>(null); // summary, actionItems
+    const [analyzing, setAnalyzing] = useState(false);
+
+    useEffect(() => {
+        if (noteModalBook) {
+            // Fetch existing note
+            fetch(`/api/booking/${noteModalBook.id}/notes`)
+                .then(r => r.json())
+                .then(data => {
+                    setNoteContent(data.content || "");
+                    if (data.summary) {
+                        setNoteAnalysis({ summary: data.summary, actionItems: data.actionItems });
+                    } else {
+                        setNoteAnalysis(null);
+                    }
+                });
+        }
+    }, [noteModalBook]);
+
+    const handleSaveNote = async (analyze = false) => {
+        if (!noteModalBook) return;
+        setAnalyzing(analyze);
+
+        try {
+            const res = await fetch(`/api/booking/${noteModalBook.id}/notes`, {
+                method: 'POST',
+                body: JSON.stringify({ content: noteContent, analyze }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+
+            if (analyze && data.summary) {
+                setNoteAnalysis({ summary: data.summary, actionItems: data.actionItems });
+            }
+            if (!analyze) {
+                setNoteModalBook(null); // Close if just saving
+            }
+        } catch (e) {
+            alert("Not kaydedilemedi");
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -270,7 +317,16 @@ export default function BookingPage() {
                                             </div>
 
                                             {book.status !== 'CANCELLED' && (
-                                                <div className="flex items-center">
+                                                <div className="flex items-center gap-2">
+                                                    {/* NOTE BUTTON */}
+                                                    <button
+                                                        onClick={() => setNoteModalBook(book)}
+                                                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                                        title="Toplantı Notları"
+                                                    >
+                                                        <FileText className="h-4 w-4" />
+                                                    </button>
+
                                                     {cancellingId === book.id ? (
                                                         <div className="flex items-center gap-2 animate-in slide-in-from-right">
                                                             <input
@@ -369,6 +425,69 @@ export default function BookingPage() {
                                 <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Kaydet</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* NOTE MODAL */}
+            {noteModalBook && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-2xl p-6 animate-in zoom-in-95 flex flex-col h-[600px]">
+                        <div className="flex justify-between items-center mb-4">
+                            <div>
+                                <h2 className="text-xl font-bold flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-indigo-600" />
+                                    Toplantı Notları
+                                </h2>
+                                <p className="text-xs text-slate-500">{noteModalBook.purpose} - {format(new Date(noteModalBook.startTime), 'd MMMM', { locale: tr })}</p>
+                            </div>
+                            <button onClick={() => setNoteModalBook(null)} className="p-2 hover:bg-slate-100 rounded-full"><XCircle className="h-6 w-6 text-slate-400" /></button>
+                        </div>
+
+                        <div className="flex gap-4 flex-1 overflow-hidden">
+                            <div className="flex-1 flex flex-col">
+                                <textarea
+                                    className="flex-1 border border-slate-200 rounded-xl p-4 text-sm resize-none focus:ring-2 ring-indigo-500 outline-none"
+                                    placeholder="Toplantı notlarını buraya giriniz..."
+                                    value={noteContent}
+                                    onChange={e => setNoteContent(e.target.value)}
+                                />
+                                <div className="pt-4 flex justify-between items-center">
+                                    <button
+                                        onClick={() => handleSaveNote(true)}
+                                        disabled={analyzing}
+                                        className="flex items-center gap-2 text-purple-600 font-bold text-sm bg-purple-50 px-3 py-2 rounded-lg hover:bg-purple-100 disabled:opacity-50"
+                                    >
+                                        <Sparkles className={`h-4 w-4 ${analyzing ? 'animate-spin' : ''}`} />
+                                        {analyzing ? 'AI Analiz Ediyor...' : 'AI ile Analiz Et'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleSaveNote(false)}
+                                        className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700"
+                                    >
+                                        Kaydet
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* AI RESULTS */}
+                            {noteAnalysis && (
+                                <div className="w-1/3 bg-slate-50 border-l border-slate-200 p-4 overflow-y-auto rounded-xl">
+                                    <h3 className="text-xs font-black uppercase text-slate-400 mb-2">AI Özeti</h3>
+                                    <p className="text-sm text-slate-700 mb-6 leading-relaxed">{noteAnalysis.summary}</p>
+
+                                    <h3 className="text-xs font-black uppercase text-slate-400 mb-2">Aksiyonlar</h3>
+                                    <ul className="space-y-2">
+                                        {noteAnalysis.actionItems.map((item: string, i: number) => (
+                                            <li key={i} className="text-xs font-medium flex items-start gap-2 bg-white p-2 rounded border border-slate-100">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1 shrink-0" />
+                                                {item}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

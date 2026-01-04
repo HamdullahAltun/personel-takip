@@ -40,6 +40,31 @@ export default function ShiftsPage() {
         fetchUsers();
     }, [currentDate]);
 
+    const [trades, setTrades] = useState<any[]>([]);
+
+    useEffect(() => {
+        fetchShifts();
+        fetchUsers();
+        fetchTrades();
+    }, [currentDate]);
+
+    const fetchTrades = async () => {
+        const res = await fetch('/api/shifts/trade');
+        if (res.ok) setTrades(await res.json());
+    };
+
+    const handleTradeAction = async (tradeId: string, action: 'APPROVE' | 'REJECT') => {
+        const res = await fetch('/api/shifts/trade', {
+            method: 'PATCH',
+            body: JSON.stringify({ tradeId, action }),
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (res.ok) {
+            fetchTrades();
+            fetchShifts(); // Refresh grid
+        }
+    };
+
     const fetchShifts = async () => {
         const start = startOfWeek(startOfMonth(currentDate)).toISOString();
         const end = endOfWeek(endOfMonth(currentDate)).toISOString();
@@ -139,6 +164,45 @@ export default function ShiftsPage() {
                 </div>
             </div>
 
+
+            {/* Shift Trades Alert */}
+            {
+                trades.length > 0 && (
+                    <div className="bg-amber-50 border-b border-amber-100 p-4">
+                        <h3 className="text-sm font-bold text-amber-800 mb-3 flex items-center gap-2">
+                            <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                            Onay Bekleyen Vardiya Takasları ({trades.length})
+                        </h3>
+                        <div className="flex gap-4 overflow-x-auto pb-2">
+                            {trades.map((trade: any) => (
+                                <div key={trade.id} className="min-w-[300px] bg-white p-3 rounded-xl border border-amber-200 shadow-sm flex flex-col gap-2">
+                                    <div className="text-xs text-slate-500">
+                                        <span className="font-bold text-slate-900">{trade.requester.name}</span> ➡️ <span className="font-bold text-slate-900">{trade.recipient.name}</span>
+                                    </div>
+                                    <div className="text-xs bg-slate-50 p-2 rounded border border-slate-100">
+                                        {format(new Date(trade.shift.start), 'd MMM HH:mm')} - {format(new Date(trade.shift.end), 'HH:mm')}
+                                    </div>
+                                    <div className="flex gap-2 mt-1">
+                                        <button
+                                            onClick={() => handleTradeAction(trade.id, 'APPROVE')}
+                                            className="flex-1 bg-green-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-green-700 transition"
+                                        >
+                                            Onayla
+                                        </button>
+                                        <button
+                                            onClick={() => handleTradeAction(trade.id, 'REJECT')}
+                                            className="flex-1 bg-slate-200 text-slate-700 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-300 transition"
+                                        >
+                                            Reddet
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )
+            }
+
             {/* Calendar Grid */}
             <div className="flex-1 overflow-auto">
                 <div className="min-w-[800px]">
@@ -192,66 +256,68 @@ export default function ShiftsPage() {
             </div>
 
             {/* Modal */}
-            {showModal && selectedDate && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-bold">Vardiya Ekle: {format(selectedDate, 'd MMMM yyyy', { locale: tr })}</h2>
-                            <button onClick={() => setShowModal(false)} className="bg-slate-100 p-1.5 rounded-full hover:bg-slate-200"><X className="h-5 w-5" /></button>
+            {
+                showModal && selectedDate && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-lg font-bold">Vardiya Ekle: {format(selectedDate, 'd MMMM yyyy', { locale: tr })}</h2>
+                                <button onClick={() => setShowModal(false)} className="bg-slate-100 p-1.5 rounded-full hover:bg-slate-200"><X className="h-5 w-5" /></button>
+                            </div>
+                            <form onSubmit={handleCreate} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Personel</label>
+                                    <select
+                                        className="w-full border p-2 rounded-lg"
+                                        required
+                                        value={userId}
+                                        onChange={e => setUserId(e.target.value)}
+                                    >
+                                        <option value="">Seçiniz</option>
+                                        {users.map(u => (
+                                            <option key={u.id} value={u.id}>{u.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç</label>
+                                        <input type="time" className="w-full border p-2 rounded-lg" value={startTime} onChange={e => setStartTime(e.target.value)} required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Bitiş</label>
+                                        <input type="time" className="w-full border p-2 rounded-lg" value={endTime} onChange={e => setEndTime(e.target.value)} required />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Etiket (Opsiyonel)</label>
+                                    <input type="text" className="w-full border p-2 rounded-lg" placeholder="Örn: Sabah Vardiyası" value={title} onChange={e => setTitle(e.target.value)} />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Renk</label>
+                                    <div className="flex gap-2">
+                                        {['blue', 'red', 'green', 'orange', 'purple'].map(c => (
+                                            <button
+                                                key={c} type="button"
+                                                onClick={() => setColor(c)}
+                                                className={`w-8 h-8 rounded-full border-2 ${color === c ? 'border-black scale-110' : 'border-transparent'} bg-${c}-500`}
+                                                style={{ backgroundColor: c === 'blue' ? '#3b82f6' : c === 'red' ? '#ef4444' : c === 'green' ? '#22c55e' : c === 'orange' ? '#f97316' : '#a855f7' }}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 mt-2">
+                                    Oluştur
+                                </button>
+                            </form>
                         </div>
-                        <form onSubmit={handleCreate} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Personel</label>
-                                <select
-                                    className="w-full border p-2 rounded-lg"
-                                    required
-                                    value={userId}
-                                    onChange={e => setUserId(e.target.value)}
-                                >
-                                    <option value="">Seçiniz</option>
-                                    {users.map(u => (
-                                        <option key={u.id} value={u.id}>{u.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç</label>
-                                    <input type="time" className="w-full border p-2 rounded-lg" value={startTime} onChange={e => setStartTime(e.target.value)} required />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Bitiş</label>
-                                    <input type="time" className="w-full border p-2 rounded-lg" value={endTime} onChange={e => setEndTime(e.target.value)} required />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Etiket (Opsiyonel)</label>
-                                <input type="text" className="w-full border p-2 rounded-lg" placeholder="Örn: Sabah Vardiyası" value={title} onChange={e => setTitle(e.target.value)} />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Renk</label>
-                                <div className="flex gap-2">
-                                    {['blue', 'red', 'green', 'orange', 'purple'].map(c => (
-                                        <button
-                                            key={c} type="button"
-                                            onClick={() => setColor(c)}
-                                            className={`w-8 h-8 rounded-full border-2 ${color === c ? 'border-black scale-110' : 'border-transparent'} bg-${c}-500`}
-                                            style={{ backgroundColor: c === 'blue' ? '#3b82f6' : c === 'red' ? '#ef4444' : c === 'green' ? '#22c55e' : c === 'orange' ? '#f97316' : '#a855f7' }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-
-                            <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 mt-2">
-                                Oluştur
-                            </button>
-                        </form>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

@@ -39,7 +39,7 @@ export async function POST(req: Request) {
         // Update user points
         const user = await prisma.user.update({
             where: { id: userId },
-            data: { points: { increment: amount } }
+            data: { points: { increment: Math.floor(amount) } }
             // Note: We could log this in a 'PointTransaction' table if we wanted history
         });
 

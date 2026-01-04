@@ -23,20 +23,39 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     const session = await getAuth() as AppJWTPayload | null;
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session || (session.role !== 'ADMIN' && session.role !== 'MANAGER' && session.role !== 'EXECUTIVE')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const body = await req.json();
-    const { revieweeId, period, score, feedback } = body as { revieweeId: string, period: string, score: string, feedback: string };
+    const { revieweeId, period, score: scoreStr, feedback } = body as { revieweeId: string, period: string, score: string, feedback: string };
+    const score = parseInt(scoreStr);
+
+    // Simple AI Insight Generation (Heuristic)
+    let aiInsight = "";
+    if (score >= 90) aiInsight = "Mükemmel performans! Terfi veya ödül için değerlendirilmeli. Liderlik potansiyeli yüksek.";
+    else if (score >= 80) aiInsight = "Çok iyi performans. İstikrarlı çalışıyor, sorumluluk bilinci yüksek.";
+    else if (score >= 60) aiInsight = "Gelişime açık. Bazı konularda desteğe ihtiyacı olabilir, eğitim planlanmalı.";
+    else aiInsight = "Düşük performans. Acil durum değerlendirmesi ve performans iyileştirme planı (PIP) gerektirir.";
 
     const review = await prisma.performanceReview.create({
         data: {
             reviewerId: session.id as string,
             revieweeId: revieweeId,
             period,
-            score: parseInt(score),
-            feedback
+            score,
+            feedback,
+            aiInsight
         }
     });
+
+    // Send Notification
+    try {
+        const { sendPushNotification } = await import('@/lib/notifications');
+        await sendPushNotification(revieweeId, "Yeni Performans Değerlendirmesi", `Yönetici değerlendirmeniz sisteme girildi: ${score}/100`);
+    } catch (e) {
+        console.error("Notification failed", e);
+    }
 
     return NextResponse.json(review);
 }

@@ -40,14 +40,24 @@ export default function LeaderboardPage() {
 
     const handleGivePoints = async (e: React.FormEvent) => {
         e.preventDefault();
-        await fetch("/api/leaderboard", {
+        if (!selectedUser) {
+            alert("Lütfen bir personel seçiniz.");
+            return;
+        }
+
+        const res = await fetch("/api/leaderboard", {
             method: "POST",
             body: JSON.stringify({ userId: selectedUser, amount: Number(amount), reason }),
             headers: { "Content-Type": "application/json" }
         });
-        setShowModal(false);
-        await fetchData();
-        setReason("");
+
+        if (res.ok) {
+            setShowModal(false);
+            setReason("");
+            await fetchData();
+        } else {
+            alert("Puan eklenirken bir hata oluştu.");
+        }
     };
 
     const top3 = users.slice(0, 3);

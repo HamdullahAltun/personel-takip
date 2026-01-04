@@ -7,7 +7,7 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const where = session.role === 'ADMIN' ? {} : { userId: session.id as string };
-    const tasks = await (prisma.fieldTask as any).findMany({
+    const tasks = await prisma.fieldTask.findMany({
         where,
         include: { user: { select: { name: true } } },
         orderBy: { createdAt: 'desc' }
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
     const { title, description, clientName, location, lat, lng, userId } = await req.json();
 
-    const task = await (prisma.fieldTask as any).create({
+    const task = await prisma.fieldTask.create({
         data: {
             title,
             description,
@@ -33,6 +33,16 @@ export async function POST(req: Request) {
             userId: userId || session.id
         }
     });
+
+    // Send Notification if assigned to someone else
+    if (userId && userId !== session.id) {
+        try {
+            const { sendPushNotification } = await import('@/lib/notifications');
+            await sendPushNotification(userId, "Yeni Saha Görevi 📍", `Göreviniz: ${title} - ${clientName || 'Müşteri'}`);
+        } catch (e) {
+            console.error("Notification failed", e);
+        }
+    }
 
     return NextResponse.json(task);
 }
@@ -50,14 +60,14 @@ export async function PATCH(req: Request) {
     if (checkInLng) data.checkInLng = checkInLng;
     if (notes) data.notes = notes;
 
-    const task = await (prisma.fieldTask as any).update({
+    const task = await prisma.fieldTask.update({
         where: { id: taskId },
         data
     });
 
     // Update User's last known location globally
     if (checkInLat && checkInLng) {
-        await (prisma.user as any).update({
+        await prisma.user.update({
             where: { id: task.userId },
             data: {
                 lastLat: checkInLat,
@@ -65,6 +75,12 @@ export async function PATCH(req: Request) {
                 lastLocationUpdate: new Date()
             }
         });
+    }
+
+    if (status === 'COMPLETED') {
+        // Gamification Trigger
+        const { checkAndAwardBadges } = await import('@/lib/gamification');
+        await checkAndAwardBadges(task.userId, 'TASK_COMPLETE');
     }
 
     return NextResponse.json(task);

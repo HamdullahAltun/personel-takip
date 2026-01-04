@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Laptop, Phone, Car, Key, Plus, Search, User, CheckCircle2, RefreshCw } from "lucide-react";
+import { Laptop, Phone, Car, Key, Plus, Search, User, CheckCircle2, RefreshCw, ClipboardList, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
@@ -12,6 +12,37 @@ export default function AdminAssetsPage() {
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({ name: "", serialNumber: "", type: "LAPTOP", status: "AVAILABLE", notes: "" });
     const [assignModal, setAssignModal] = useState<any>(null);
+
+    // Logs
+    const [logsModal, setLogsModal] = useState<any>(null);
+    const [logs, setLogs] = useState<any[]>([]);
+    const [logForm, setLogForm] = useState({ type: 'MAINTENANCE', description: '', cost: '' });
+
+    useEffect(() => {
+        if (logsModal) {
+            fetch(`/api/assets/${logsModal.id}/logs`)
+                .then(r => r.json())
+                .then(data => setLogs(data));
+        }
+    }, [logsModal]);
+
+    const handleAddLog = async () => {
+        if (!logsModal) return;
+        try {
+            await fetch(`/api/assets/${logsModal.id}/logs`, {
+                method: 'POST',
+                body: JSON.stringify({ ...logForm, date: new Date() }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            // Refresh logs
+            const res = await fetch(`/api/assets/${logsModal.id}/logs`);
+            const data = await res.json();
+            setLogs(data);
+            setLogForm({ type: 'MAINTENANCE', description: '', cost: '' });
+        } catch (e) {
+            alert("Log eklenemedi");
+        }
+    };
 
     useEffect(() => {
         fetchData();
@@ -181,6 +212,13 @@ export default function AdminAssetsPage() {
                                                 Zimmetle
                                             </button>
                                         )}
+                                        <button
+                                            onClick={() => setLogsModal(asset)}
+                                            className="ml-2 text-slate-400 hover:text-slate-600 p-1.5 rounded hover:bg-slate-100 transition"
+                                            title="Geçmiş Kayıtlar"
+                                        >
+                                            <ClipboardList className="h-4 w-4" />
+                                        </button>
                                     </td>
                                 </tr>
                             ))
@@ -261,6 +299,55 @@ export default function AdminAssetsPage() {
                                 ))}
                             </div>
                             <button onClick={() => setAssignModal(null)} className="w-full py-2 text-slate-500 hover:bg-slate-100 rounded-lg">İptal</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* LOGS MODAL */}
+            {logsModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+                    <div className="bg-white p-6 rounded-2xl w-full max-w-lg animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-lg font-bold">Demirbaş Geçmişi: {logsModal.name}</h2>
+                            <button onClick={() => setLogsModal(null)} className="p-2 hover:bg-slate-100 rounded-full"><XCircle className="h-5 w-5 text-slate-400" /></button>
+                        </div>
+
+                        {/* ADD LOG FORM */}
+                        <div className="bg-slate-50 p-4 rounded-xl mb-6 border border-slate-100">
+                            <h3 className="text-xs font-bold text-slate-500 uppercase mb-2">Yeni Kayıt Ekle</h3>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                                <select className="border rounded-lg p-2 text-sm" value={logForm.type} onChange={e => setLogForm({ ...logForm, type: e.target.value })}>
+                                    <option value="MAINTENANCE">Bakım</option>
+                                    <option value="REPAIR">Tamir</option>
+                                    <option value="OTHER">Diğer</option>
+                                </select>
+                                <input type="number" className="border rounded-lg p-2 text-sm" placeholder="Maliyet (TL)" value={logForm.cost} onChange={e => setLogForm({ ...logForm, cost: e.target.value })} />
+                            </div>
+                            <input className="w-full border rounded-lg p-2 text-sm mb-2" placeholder="Açıklama (Örn: Ekran değişimi yapıldı)" value={logForm.description} onChange={e => setLogForm({ ...logForm, description: e.target.value })} />
+
+                            <button onClick={handleAddLog} className="w-full bg-slate-900 text-white text-xs font-bold py-2 rounded-lg hover:bg-slate-800">
+                                Kayıt Ekle
+                            </button>
+                        </div>
+
+                        {/* LIST */}
+                        <div className="max-h-60 overflow-y-auto space-y-3">
+                            {logs.length === 0 ? <p className="text-center text-slate-400 text-sm">Kayıt yok.</p> : logs.map((log: any) => (
+                                <div key={log.id} className="flex gap-3 text-sm border-b pb-2 last:border-0 border-slate-50">
+                                    <div className="bg-white border text-center min-w-[50px] rounded p-1 h-fit">
+                                        <div className="text-xs font-bold text-slate-900">{format(new Date(log.date), 'd MMM', { locale: tr })}</div>
+                                        <div className="text-[10px] text-slate-400">{format(new Date(log.date), 'yyyy')}</div>
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-slate-800">{log.type === 'MAINTENANCE' ? 'Bakım' : log.type === 'REPAIR' ? 'Tamir' : 'İşlem'}</span>
+                                            {log.cost > 0 && <span className="text-xs bg-green-50 text-green-700 px-1.5 rounded font-medium">{log.cost} TL</span>}
+                                        </div>
+                                        <p className="text-slate-600">{log.description}</p>
+                                        <p className="text-[10px] text-slate-400 mt-1">İşlem Yapan: {log.performedBy || 'Sistem'}</p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>

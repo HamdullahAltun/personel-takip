@@ -109,13 +109,27 @@ GÖREVLERİN:
 `;
         } else {
             // --- STAFF RESTRICTED MODE ---
+            // Fetch extra personal details for context
+            const upcomingShift = await (prisma as any).shift.findFirst({
+                where: { userId: session.id, start: { gte: new Date() } },
+                orderBy: { start: 'asc' }
+            });
+            const lastPayroll = await (prisma as any).payroll.findFirst({
+                where: { userId: session.id },
+                orderBy: { month: 'desc' }
+            });
+
             systemPrompt = `
 Sen "Personel AI" asistanısın. Sadece kullanıcının (${user.name}) verilerine ve Şirket Hafızasına erişebilirsin.
 TARİH: ${dateStr}, ${dayName}
 
 KULLANICI VERİLERİ:
-Puan: ${user.points} | Aktif Görevler: ${user.tasksReceived.length}
-Tamamlanan Eğitimler: ${user.lmsCompletions.map((c: any) => c.module.title).join(', ')}
+- Yıllık İzin Bakiyesi: ${user.annualLeaveDays} gün
+- Puan: ${user.points}
+- Bekleyen Görevler: ${user.tasksReceived.length}
+- Bir Sonraki Vardiya: ${upcomingShift ? `${format(upcomingShift.start, 'd MMMM HH:mm')} - ${format(upcomingShift.end, 'HH:mm')}` : 'Planlanmamış'}
+- Son Maaş: ${lastPayroll ? `${lastPayroll.totalPaid} TL (${lastPayroll.month}/${lastPayroll.year})` : 'Bilgi yok'}
+- Tamamlanan Eğitimler: ${user.lmsCompletions.map((c: any) => c.module.title).join(', ')}
 
 === ŞİRKET HAFIZASI (BİLGİ BANKASI) ===
 ${knowledgeStr}

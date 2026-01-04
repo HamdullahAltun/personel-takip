@@ -24,20 +24,22 @@ export async function GET(req: Request) {
         ];
     }
 
-    // Use prisma.knowledgeBaseDoc via any cast if types aren't generated yet or standard way
-    const docs = await (prisma as any).knowledgeBaseDoc.findMany({
+    // Use standard prisma access now that types are regenerated
+    const docs = await prisma.knowledgeBaseDoc.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        select: {
-            id: true,
-            title: true,
-            content: true,
-            type: true,
-            tags: true,
-            fileUrl: true,
-            updatedAt: true
+        include: {
+            signatures: {
+                where: { userId: session.id as string },
+                select: { id: true, signedAt: true }
+            }
         }
     });
 
-    return NextResponse.json(docs);
+    const formattedDocs = docs.map(d => ({
+        ...d,
+        isSigned: d.signatures.length > 0
+    }));
+
+    return NextResponse.json(formattedDocs);
 }

@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { verifyJWT } from "@/lib/auth";
+import { verifyJWT, getAuth } from "@/lib/auth";
 import { cookies } from "next/headers";
 
 export async function requestLeave(prevState: any, formData: FormData) {
@@ -38,14 +38,7 @@ export async function requestLeave(prevState: any, formData: FormData) {
 }
 
 export async function updateLeaveStatus(id: string, status: "APPROVED" | "REJECTED") {
-    // SECURITY CHECK: Verify Admin
-    const token = (await cookies()).get("personel_token")?.value;
-    if (!token) return { error: "Unauthorized" };
-    const user = await verifyJWT(token);
-
-    // Check role - assuming verifyJWT returns role or we need to check DB. 
-    // verifyJWT(token) returns payload. If payload doesn't have role, we assume Staff?
-    // Good practice: Check strictly.
+    const user = await getAuth();
     if (!user) return { error: "Unauthorized" };
 
     // In many JWT setups, role is in payload. If not, we might need a DB check.
@@ -53,6 +46,32 @@ export async function updateLeaveStatus(id: string, status: "APPROVED" | "REJECT
     // Let's safe check: 
     if (user.role !== 'ADMIN' && user.role !== 'admin') {
         return { error: "Forbidden: Only admins can manage leaves." };
+    }
+
+    const currentLeave = await prisma.leaveRequest.findUnique({ where: { id } });
+    if (!currentLeave) return { error: "Leave not found" };
+    if (currentLeave.status === status) return { success: true }; // No change
+
+    // If we are approving, deduct days
+    if (status === "APPROVED" && currentLeave.status !== "APPROVED") {
+        const diffTime = Math.abs(currentLeave.endDate.getTime() - currentLeave.startDate.getTime());
+        const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Inclusive
+
+        await prisma.user.update({
+            where: { id: currentLeave.userId },
+            data: { annualLeaveDays: { decrement: days } }
+        });
+    }
+
+    // If we are cancelling approval, refund days
+    if (status === "REJECTED" && currentLeave.status === "APPROVED") {
+        const diffTime = Math.abs(currentLeave.endDate.getTime() - currentLeave.startDate.getTime());
+        const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        await prisma.user.update({
+            where: { id: currentLeave.userId },
+            data: { annualLeaveDays: { increment: days } }
+        });
     }
 
     const leave = await prisma.leaveRequest.update({

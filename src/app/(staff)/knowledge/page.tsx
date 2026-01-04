@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { Search, Book, FileText, Bookmark, X, ChevronRight, File } from "lucide-react";
+import { Search, Book, FileText, Bookmark, X, ChevronRight, File, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -15,6 +15,8 @@ interface Doc {
     tags: string[];
     fileUrl?: string;
     updatedAt: string;
+    requiresSigning?: boolean;
+    isSigned?: boolean;
 }
 
 export default function KnowledgePage() {
@@ -190,6 +192,54 @@ export default function KnowledgePage() {
                                             >
                                                 Aç
                                             </a>
+                                        </div>
+                                    )}
+
+                                    {/* Signing UI */}
+                                    {selectedDoc.requiresSigning && (
+                                        <div className={`mt-6 p-5 rounded-xl border-2 ${selectedDoc.isSigned ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
+                                            <div className="flex items-start gap-4">
+                                                <div className={`p-2 rounded-full ${selectedDoc.isSigned ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                    <ShieldCheck className="h-6 w-6" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h3 className={`font-bold ${selectedDoc.isSigned ? 'text-green-900' : 'text-amber-900'}`}>
+                                                        {selectedDoc.isSigned ? 'Belge İmzalandı' : 'İmza Gerektiriyor'}
+                                                    </h3>
+                                                    <p className={`text-xs mt-1 ${selectedDoc.isSigned ? 'text-green-700' : 'text-amber-700'}`}>
+                                                        {selectedDoc.isSigned
+                                                            ? `Bu belgeyi dijital olarak onayladınız.`
+                                                            : 'Bu belgeyi okuyup anladığınızı dijital olarak onaylamanız gerekmektedir.'}
+                                                    </p>
+
+                                                    {!selectedDoc.isSigned && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!confirm("Bu belgeyi okuyup anladığınızı onaylıyor musunuz?")) return;
+
+                                                                // Call API
+                                                                try {
+                                                                    const res = await fetch(`/api/knowledge/${selectedDoc.id}/sign`, {
+                                                                        method: 'POST',
+                                                                        body: JSON.stringify({ signature: 'DIGITAL_CONSENT' }), // Simple consent for now
+                                                                        headers: { 'Content-Type': 'application/json' }
+                                                                    });
+
+                                                                    if (res.ok) {
+                                                                        setSelectedDoc({ ...selectedDoc, isSigned: true });
+                                                                        // Refresh list logic needed or SWR revalidate
+                                                                    }
+                                                                } catch (e) {
+                                                                    alert("İmzalama başarısız.");
+                                                                }
+                                                            }}
+                                                            className="mt-3 bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-amber-200 hover:bg-amber-700 transition w-full sm:w-auto"
+                                                        >
+                                                            Okudum, Onaylıyorum
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

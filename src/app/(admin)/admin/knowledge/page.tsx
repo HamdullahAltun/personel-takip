@@ -15,7 +15,8 @@ export default function KnowledgeBasePage() {
         title: "",
         content: "",
         type: "POLICY",
-        tags: ""
+        tags: "",
+        requiresSigning: false
     });
 
     useEffect(() => {
@@ -45,7 +46,7 @@ export default function KnowledgeBasePage() {
             });
             if (res.ok) {
                 setIsAdding(false);
-                setNewDoc({ title: "", content: "", type: "POLICY", tags: "" });
+                setNewDoc({ title: "", content: "", type: "POLICY", tags: "", requiresSigning: false });
                 fetchDocs();
             }
         } catch (e) {
@@ -85,6 +86,13 @@ export default function KnowledgeBasePage() {
                     <Plus className="h-5 w-5" />
                     Yeni Doküman Ekle
                 </button>
+                <a
+                    href="/admin/knowledge/signatures"
+                    className="bg-white text-slate-700 px-6 py-2.5 rounded-xl font-bold border border-slate-200 hover:bg-slate-50 flex items-center gap-2 shadow-sm"
+                >
+                    <ShieldCheck className="h-5 w-5" />
+                    İmza Raporları
+                </a>
             </div>
 
             {isAdding && (
@@ -114,6 +122,16 @@ export default function KnowledgeBasePage() {
                                     <option value="GUIDELINE">Genel Bilgi</option>
                                 </select>
                             </div>
+                        </div>
+                        <div className="flex items-center gap-2 pb-2">
+                            <input
+                                type="checkbox"
+                                id="requiresSigning"
+                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                checked={newDoc.requiresSigning}
+                                onChange={e => setNewDoc({ ...newDoc, requiresSigning: e.target.checked })}
+                            />
+                            <label htmlFor="requiresSigning" className="text-sm font-bold text-slate-700">Bu belge imzalanmalı (Zorunlu Okuma)</label>
                         </div>
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-slate-500 uppercase">İçerik (AI burayı okuyacak)</label>

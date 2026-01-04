@@ -4,9 +4,16 @@ import { useState, useEffect } from "react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { Star, TrendingUp } from "lucide-react";
 
+import { PerformanceReview, User } from "@prisma/client";
+
+type ReviewWithRelations = PerformanceReview & {
+    reviewer: { name: string };
+    reviewee: { name: string };
+};
+
 export default function PerformancePage() {
-    const [reviews, setReviews] = useState<any[]>([]);
-    const [users, setUsers] = useState<any[]>([]);
+    const [reviews, setReviews] = useState<ReviewWithRelations[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({ revieweeId: "", period: "2024-Q1", score: 80, feedback: "" });
 
@@ -70,7 +77,21 @@ export default function PerformancePage() {
                 </div>
 
                 {/* Reviews List */}
-                <div className="lg:col-span-2 space-y-4">
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Goals Section */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-slate-800">Hedefler (OKRs)</h3>
+                            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">Bu Çeyrek</span>
+                        </div>
+                        {/* Placeholder for Goals List - Typically fetched per user, here maybe show recent goals across company or allow filtering */}
+                        <div className="text-center py-8 text-slate-400 border border-dashed rounded-lg">
+                            <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">Bireysel hedefler çalışan profillerinde yönetilir.</p>
+                        </div>
+                    </div>
+
+                    <h3 className="font-bold text-slate-800">Son Değerlendirmeler</h3>
                     {reviews.map(review => (
                         <div key={review.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex justify-between items-start">
                             <div>
