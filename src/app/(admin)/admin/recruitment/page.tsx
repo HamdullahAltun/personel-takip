@@ -95,12 +95,12 @@ export default function RecruitmentPage() {
     const KanbanColumn = ({ status, title, color }: { status: string, title: string, color: string }) => {
         const items = candidates.filter(c => c.status === status);
         return (
-            <div className="flex-1 min-w-[280px]">
-                <div className={`p-3 rounded-t-xl border-b-2 font-bold flex justify-between items-center ${color}`}>
+            <div className="w-[85vw] sm:w-[320px] flex flex-col shrink-0 snap-center h-full max-h-full">
+                <div className={`p-3 rounded-t-xl border-b-2 font-bold flex justify-between items-center ${color} sticky top-0 z-10`}>
                     <h3>{title}</h3>
                     <span className="text-xs bg-white/50 px-2 py-0.5 rounded-full">{items.length}</span>
                 </div>
-                <div className="bg-slate-50/50 p-2 min-h-[500px] border-x border-b border-slate-200 rounded-b-xl space-y-3">
+                <div className="bg-slate-50/50 p-2 border-x border-b border-slate-200 rounded-b-xl space-y-3 flex-1 overflow-y-auto custom-scrollbar min-h-[200px]">
                     {items.map(c => (
                         <div key={c.id} className="bg-white p-3 rounded-lg shadow-sm border border-slate-100 hover:shadow-md transition text-sm">
                             <div className="flex justify-between items-start mb-2">
@@ -160,7 +160,7 @@ export default function RecruitmentPage() {
     };
 
     return (
-        <div className="space-y-6 h-full flex flex-col">
+        <div className="space-y-6 h-[calc(100vh-8rem)] flex flex-col">
             <div className="flex justify-between items-center shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">İşe Alım Portalı</h1>
@@ -182,12 +182,14 @@ export default function RecruitmentPage() {
             </div>
 
             {view === 'BOARD' ? (
-                <div className="flex gap-4 overflow-x-auto pb-4 h-full items-start">
-                    <KanbanColumn status="NEW" title="Yeni Başvuru" color="bg-blue-50 border-blue-200 text-blue-700" />
-                    <KanbanColumn status="INTERVIEW" title="Mülakat" color="bg-yellow-50 border-yellow-200 text-yellow-700" />
-                    <KanbanColumn status="OFFER" title="Teklif" color="bg-purple-50 border-purple-200 text-purple-700" />
-                    <KanbanColumn status="HIRED" title="İşe Alındı" color="bg-green-50 border-green-200 text-green-700" />
-                    <KanbanColumn status="REJECTED" title="Reddedildi" color="bg-red-50 border-red-200 text-red-700" />
+                <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0 snap-x snap-mandatory">
+                    <div className="flex h-full gap-4 w-max min-w-full items-start">
+                        <KanbanColumn status="NEW" title="Yeni Başvuru" color="bg-blue-50 border-blue-200 text-blue-700" />
+                        <KanbanColumn status="INTERVIEW" title="Mülakat" color="bg-yellow-50 border-yellow-200 text-yellow-700" />
+                        <KanbanColumn status="OFFER" title="Teklif" color="bg-purple-50 border-purple-200 text-purple-700" />
+                        <KanbanColumn status="HIRED" title="İşe Alındı" color="bg-green-50 border-green-200 text-green-700" />
+                        <KanbanColumn status="REJECTED" title="Reddedildi" color="bg-red-50 border-red-200 text-red-700" />
+                    </div>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -122,7 +122,7 @@ export default function TasksPage() {
     };
 
     return (
-        <div className="h-[calc(100vh-6rem)] flex flex-col">
+        <div className="h-[calc(100vh-8rem)] flex flex-col">
             <div className="flex justify-between items-center mb-6 px-4 md:px-0">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Görev Panosu</h1>
@@ -139,7 +139,7 @@ export default function TasksPage() {
             </div>
 
             {/* Mobile-First Scalable Board Container */}
-            <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar px-4 lg:px-0 snap-x snap-mandatory">
+            <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0 snap-x snap-mandatory">
                 <div className="flex h-full gap-4 lg:gap-6 w-max lg:w-full min-w-full">
                     {COLUMNS.map(col => (
                         <div
