@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { MapPin, Plus, CheckCircle2, Clock, Calendar, User, Search, Map as MapIcon, Navigation } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import Link from "next/link";
 
 export default function FieldTasksAdmin() {
     const [tasks, setTasks] = useState<any[]>([]);
@@ -55,13 +56,22 @@ export default function FieldTasksAdmin() {
                     <h1 className="text-2xl font-bold text-slate-900">Saha Görevleri (GPS Destekli)</h1>
                     <p className="text-slate-500">Personellerin dış görevlerini ve konum bazlı girişlerini takip edin.</p>
                 </div>
-                <button
-                    onClick={() => setShowAddModal(true)}
-                    className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition shadow-sm"
-                >
-                    <Plus className="w-4 h-4" />
-                    Yeni Görev Ata
-                </button>
+                <div className="flex gap-2">
+                    <Link
+                        href="/admin/field-tasks/live"
+                        className="flex items-center justify-center gap-2 bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg hover:bg-indigo-50 transition shadow-sm font-medium"
+                    >
+                        <MapIcon className="w-4 h-4" />
+                        Canlı Harita
+                    </Link>
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition shadow-sm"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Yeni Görev Ata
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -77,8 +87,8 @@ export default function FieldTasksAdmin() {
                                     </div>
                                 </div>
                                 <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase ${task.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                                        task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
-                                            'bg-amber-100 text-amber-700'
+                                    task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
+                                        'bg-amber-100 text-amber-700'
                                     }`}>
                                     {task.status === 'PENDING' ? 'Bekliyor' :
                                         task.status === 'IN_PROGRESS' ? 'Süreçte' : 'Tamamlandı'}

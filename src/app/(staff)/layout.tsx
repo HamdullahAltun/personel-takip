@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import VoiceAssistant from "@/components/VoiceAssistant";
 import StatusPoller from "@/components/StatusPoller";
+import LocationTracker from "@/components/LocationTracker";
 
 export default function StaffLayout({
     children,
@@ -109,6 +110,7 @@ export default function StaffLayout({
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col">
             <StatusPoller onUnreadChange={setUnreadCount} />
+            <LocationTracker />
 
             <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/50 fixed top-0 left-0 right-0 z-50 pt-safe pb-4 px-4 shadow-sm lg:hidden transition-all duration-300 flex items-center justify-between">
                 <div>
