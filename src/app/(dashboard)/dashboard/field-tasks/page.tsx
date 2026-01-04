@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, Navigation, CheckCircle2, Clock, Calendar, AlertCircle, Camera } from "lucide-react";
+import { MapPin, Navigation, CheckCircle2, Clock, Calendar, AlertCircle, Camera, RefreshCcw } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { toast } from "sonner";
 
 export default function StaffFieldTasks() {
     const [tasks, setTasks] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [updatingLocation, setUpdatingLocation] = useState(false);
 
     useEffect(() => {
         fetchTasks();
@@ -19,18 +21,60 @@ export default function StaffFieldTasks() {
         setLoading(false);
     };
 
+    const handleManualLocationUpdate = async () => {
+        setUpdatingLocation(true);
+        try {
+            if (!('geolocation' in navigator)) {
+                throw new Error("Tarayıcı konum özelliğini desteklemiyor.");
+            }
+
+            const pos: any = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                });
+            });
+
+            const res = await fetch('/api/staff/locations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude
+                })
+            });
+
+            if (res.ok) {
+                toast.success("Konumunuz başarıyla güncellendi. Yönetici panelinde görülebilir.");
+            } else {
+                throw new Error("Sunucu hatası");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Konum alınamadı. Lütfen GPS iznini kontrol edip tekrar deneyin.");
+        } finally {
+            setUpdatingLocation(false);
+        }
+    };
+
     const handleAction = async (taskId: string, status: string) => {
         // Enforce GPS for Check-ins
         let checkInLat = null;
         let checkInLng = null;
 
         if (status === 'IN_PROGRESS' || status === 'COMPLETED') {
-            const pos: any = await new Promise((resolve) => {
-                navigator.geolocation.getCurrentPosition(resolve, () => resolve(null));
-            });
-            if (pos) {
-                checkInLat = pos.coords.latitude;
-                checkInLng = pos.coords.longitude;
+            try {
+                const pos: any = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject);
+                });
+                if (pos) {
+                    checkInLat = pos.coords.latitude;
+                    checkInLng = pos.coords.longitude;
+                }
+            } catch (e) {
+                toast.error("Konum alınamadı. İşlem için konum izni gereklidir.");
+                return;
             }
         }
 
@@ -40,14 +84,39 @@ export default function StaffFieldTasks() {
             body: JSON.stringify({ taskId, status, checkInLat, checkInLng })
         });
 
-        if (res.ok) fetchTasks();
+        if (res.ok) {
+            fetchTasks();
+            toast.success("Görev durumu güncellendi.");
+        }
     };
 
     return (
         <div className="space-y-6 pb-20">
-            <div className="bg-indigo-600 -m-4 p-8 text-white rounded-b-[3rem] shadow-lg mb-8">
-                <h1 className="text-2xl font-bold">Saha Görevlerim</h1>
-                <p className="text-indigo-100 text-sm">Dış mekan görevlerinizi buradan yönetin ve konum doğrulayın.</p>
+            <div className="bg-indigo-600 -m-4 p-8 text-white rounded-b-[3rem] shadow-lg mb-8 relative overflow-hidden">
+                <div className="relative z-10">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <h1 className="text-2xl font-bold">Saha Görevleri</h1>
+                            <p className="text-indigo-100 text-sm">Dış mekan görevlerinizi buradan yönetin.</p>
+                        </div>
+                        <button
+                            onClick={handleManualLocationUpdate}
+                            disabled={updatingLocation}
+                            className="bg-white/20 backdrop-blur-md p-2 rounded-xl active:scale-95 transition disabled:opacity-50"
+                        >
+                            <RefreshCcw className={`w-6 h-6 text-white ${updatingLocation ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+
+                    <button
+                        onClick={handleManualLocationUpdate}
+                        disabled={updatingLocation}
+                        className="w-full bg-indigo-500/50 backdrop-blur-sm border border-indigo-400/30 rounded-xl p-3 flex items-center justify-center gap-2 text-sm font-medium active:bg-indigo-500/70 transition"
+                    >
+                        <Navigation className="w-4 h-4" />
+                        {updatingLocation ? 'Konum Alınıyor...' : 'Konumumu Şimdi Güncelle'}
+                    </button>
+                </div>
             </div>
 
             <div className="space-y-4">
