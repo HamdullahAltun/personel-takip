@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, Navigation, CheckCircle2, Clock, Calendar, AlertCircle, Camera, RefreshCcw } from "lucide-react";
+import { MapPin, Navigation, CheckCircle2, Clock, Calendar, AlertCircle, Camera, RefreshCcw, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -92,19 +93,24 @@ export default function StaffFieldTasks() {
 
     return (
         <div className="space-y-6 pb-20">
-            <div className="bg-indigo-600 -m-4 p-8 text-white rounded-b-[3rem] shadow-lg mb-8 relative overflow-hidden">
+            {/* Header with Back Button */}
+            <div className="bg-indigo-600 -mx-4 -mt-4 p-6 pt-safe pb-10 text-white rounded-b-[2.5rem] shadow-lg mb-6 relative overflow-hidden">
                 <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-4">
-                        <div>
-                            <h1 className="text-2xl font-bold">Saha Görevleri</h1>
-                            <p className="text-indigo-100 text-sm">Dış mekan görevlerinizi buradan yönetin.</p>
-                        </div>
+                    <div className="flex items-center gap-3 mb-4">
+                        <Link href="/dashboard" className="bg-white/20 backdrop-blur-md p-2 rounded-xl active:scale-95 transition hover:bg-white/30">
+                            <ArrowLeft className="w-5 h-5 text-white" />
+                        </Link>
+                        <h1 className="text-xl font-bold">Saha Görevleri</h1>
+                    </div>
+
+                    <div className="flex justify-between items-end mb-4 px-1">
+                        <p className="text-indigo-100 text-xs max-w-[70%]">Dış mekan görevlerinizi buradan yönetin.</p>
                         <button
                             onClick={handleManualLocationUpdate}
                             disabled={updatingLocation}
                             className="bg-white/20 backdrop-blur-md p-2 rounded-xl active:scale-95 transition disabled:opacity-50"
                         >
-                            <RefreshCcw className={`w-6 h-6 text-white ${updatingLocation ? 'animate-spin' : ''}`} />
+                            <RefreshCcw className={`w-5 h-5 text-white ${updatingLocation ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
 
