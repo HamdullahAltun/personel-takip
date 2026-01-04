@@ -162,6 +162,13 @@ export async function POST(req: Request) {
 
         const isLateMessage = isLate ? " (Geç Kaldınız!)" : "";
 
+        // Gamification Trigger
+        if (newType === 'CHECK_IN') {
+            const { checkAndAwardBadges } = await import('@/lib/gamification');
+            // Fire and forget to not block response
+            checkAndAwardBadges(targetUserId, 'ATTENDANCE_CHECKIN').catch(console.error);
+        }
+
         return NextResponse.json({
             success: true,
             type: newType,

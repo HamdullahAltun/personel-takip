@@ -17,12 +17,17 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         });
 
         // If completed, maybe notify admin?
-        if (status === 'COMPLETED' && (session.id as string) === task.assignedToId) {
-            const admin = await prisma.user.findUnique({ where: { id: task.assignedById } });
-            if (admin?.fcmToken) {
-                const { sendPushNotification } = await import('@/lib/notifications');
-                await sendPushNotification(admin.fcmToken, "Görev Tamamlandı", `${session.id} görevi tamamladı: ${task.title}`);
+        if (status === 'COMPLETED') {
+            if ((session.id as string) === task.assignedToId) {
+                const admin = await prisma.user.findUnique({ where: { id: task.assignedById } });
+                if (admin?.fcmToken) {
+                    const { sendPushNotification } = await import('@/lib/notifications');
+                    await sendPushNotification(admin.fcmToken, "Görev Tamamlandı", `${session.id} görevi tamamladı: ${task.title}`);
+                }
             }
+            // Gamification Trigger
+            const { checkAndAwardBadges } = await import('@/lib/gamification');
+            await checkAndAwardBadges(task.assignedToId, 'TASK_COMPLETE');
         }
 
         return NextResponse.json(task);
