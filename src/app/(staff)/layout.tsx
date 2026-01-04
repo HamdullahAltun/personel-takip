@@ -7,10 +7,11 @@ import {
     Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText,
     LogOut, ChevronDown, Menu as MenuIcon, ClipboardList, Receipt, BrainCircuit,
     Calendar, MessageSquare, BookOpen, CalendarClock, LayoutGrid, X, UserCog,
-    Share2, CalendarRange, Crown, Network, Bot, Gift, Banknote, MapPin
+    Share2, CalendarRange, Crown, Network, Bot, Gift, Banknote, MapPin, Database
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import VoiceAssistant from "@/components/VoiceAssistant";
+import StatusPoller from "@/components/StatusPoller";
 
 export default function StaffLayout({
     children,
@@ -55,22 +56,6 @@ export default function StaffLayout({
     const [userRole, setUserRole] = useState<string>("");
     const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
-    // Fetch Unread Count
-    useEffect(() => {
-        const fetchUnread = () => {
-            fetch('/api/messages/unread')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.count !== undefined) setUnreadCount(data.count);
-                })
-                .catch(() => { });
-        };
-
-        fetchUnread();
-        const interval = setInterval(fetchUnread, 10000); // Check every 10 seconds
-        return () => clearInterval(interval);
-    }, []);
-
     useEffect(() => {
         fetch('/api/auth/me').then(res => res.json()).then(data => {
             if (data.user) {
@@ -95,6 +80,7 @@ export default function StaffLayout({
         { href: "/shifts", label: "Vardiyalar", icon: CalendarRange, priority: 6 },
         { href: "/leaderboard", label: "Liderlik", icon: Crown, priority: 7 },
         { href: "/organization", label: "Organizasyon", icon: Network, priority: 8 },
+        { href: "/knowledge", label: "Bilgi Bankası", icon: Database, priority: 8 },
         { href: "/ai-assistant", label: "AI Asistan", icon: Bot, priority: 8 },
         { href: "/payroll", label: "Maaşım", icon: Banknote, priority: 8 },
         { href: "/rewards", label: "Ödül Mağazası", icon: Gift, priority: 8 },
@@ -122,6 +108,8 @@ export default function StaffLayout({
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col">
+            <StatusPoller onUnreadChange={setUnreadCount} />
+
             <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/50 fixed top-0 left-0 right-0 z-50 pt-safe pb-4 px-4 shadow-sm lg:hidden transition-all duration-300 flex items-center justify-between">
                 <div>
                     <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-0.5">Personel Paneli</p>

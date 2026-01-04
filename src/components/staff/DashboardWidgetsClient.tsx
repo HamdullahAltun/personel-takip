@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import AnnouncementWidget from "@/components/staff/AnnouncementWidget";
 import EOMWidget from "@/components/staff/EOMWidget";
+import useSWR from "swr";
 
 interface DashboardStats {
     announcement: {
@@ -19,27 +19,15 @@ interface DashboardStats {
     } | null;
 }
 
+const fetcher = (url: string) => fetch(url).then(res => res.json());
+
 export default function DashboardWidgets() {
-    const [data, setData] = useState<DashboardStats>({ announcement: null, eom: null });
+    const { data } = useSWR<DashboardStats>('/api/dashboard/stats', fetcher, {
+        refreshInterval: 10000,
+        revalidateOnFocus: true
+    });
 
-    const fetchData = async () => {
-        try {
-            const res = await fetch('/api/dashboard/stats');
-            if (res.ok) {
-                const json = await res.json();
-                setData(json);
-            }
-        } catch { }
-    };
-
-    useEffect(() => {
-        const init = async () => {
-            await fetchData();
-        };
-        init();
-        const interval = setInterval(fetchData, 10000); // Poll every 10s
-        return () => clearInterval(interval);
-    }, []);
+    if (!data) return <div className="animate-pulse bg-slate-200 h-32 rounded-xl"></div>;
 
     return (
         <div className="grid grid-cols-1 gap-4">

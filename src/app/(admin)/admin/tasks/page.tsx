@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Plus, CheckCircle, Clock, AlertTriangle, Trash2, Calendar, GripVertical, User } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, CheckCircle, Clock, AlertTriangle, Trash2, Calendar, User, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import useSWR, { mutate } from 'swr';
 
 type Task = {
     id: string;
@@ -21,10 +22,12 @@ const COLUMNS = [
     { id: 'COMPLETED', title: 'Tamamlananlar', color: 'bg-green-50', dot: 'bg-green-500' },
 ] as const;
 
+const fetcher = (url: string) => fetch(url).then(res => res.json());
+
 export default function TasksPage() {
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [employees, setEmployees] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data: tasks = [], isLoading: loadingTasks } = useSWR<Task[]>('/api/tasks', fetcher, { refreshInterval: 5000 });
+    const { data: employees = [] } = useSWR<any[]>('/api/users', fetcher);
+
     const [showModal, setShowModal] = useState(false);
 
     // Form
@@ -36,22 +39,6 @@ export default function TasksPage() {
 
     // Drag State
     const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
-
-    const fetchTasks = async () => {
-        const res = await fetch('/api/tasks');
-        if (res.ok) setTasks(await res.json());
-        setLoading(false);
-    };
-
-    const fetchEmployees = async () => {
-        const res = await fetch('/api/users');
-        if (res.ok) setEmployees(await res.json());
-    };
-
-    useEffect(() => {
-        fetchTasks();
-        fetchEmployees();
-    }, []);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -69,16 +56,19 @@ export default function TasksPage() {
 
         if (res.ok) {
             setShowModal(false);
-            fetchTasks();
+            mutate('/api/tasks');
             setTitle(""); setDesc(""); setAssignee("");
         }
     };
 
     const handleDelete = async (id: string) => {
         if (!confirm("Görevi silmek istiyor musunuz?")) return;
-        setTasks(prev => prev.filter(t => t.id !== id)); // Optimistic
+
+        // Optimistic update
+        mutate('/api/tasks', tasks.filter(t => t.id !== id), false);
+
         await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-        fetchTasks(); // Sync
+        mutate('/api/tasks');
     };
 
     const handleDragStart = (e: React.DragEvent, taskId: string) => {
@@ -100,10 +90,12 @@ export default function TasksPage() {
     };
 
     const updateTaskStatus = async (taskId: string, newStatus: string) => {
-        // Optimistic update
-        setTasks(prev => prev.map(t =>
+        const updatedTasks = tasks.map(t =>
             t.id === taskId ? { ...t, status: newStatus as Task['status'] } : t
-        ));
+        );
+
+        // Optimistic update
+        mutate('/api/tasks', updatedTasks, false);
         setDraggingTaskId(null);
 
         // API Update
@@ -112,6 +104,8 @@ export default function TasksPage() {
             body: JSON.stringify({ status: newStatus }),
             headers: { 'Content-Type': 'application/json' }
         });
+
+        mutate('/api/tasks');
     };
 
     const getPriorityBadge = (p: string) => {
@@ -129,31 +123,34 @@ export default function TasksPage() {
 
     return (
         <div className="h-[calc(100vh-6rem)] flex flex-col">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-6 px-4 md:px-0">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Görev Panosu</h1>
-                    <p className="text-slate-500">Projeleri ve görevleri sürükleyerek yönetin</p>
+                    <p className="text-slate-500 hidden md:block">Projeleri ve görevleri sürükleyerek yönetin</p>
                 </div>
                 <button
                     onClick={() => setShowModal(true)}
                     className="bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-lg shadow-indigo-200 flex items-center gap-2 hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95"
                 >
                     <Plus className="h-5 w-5" />
-                    Yeni Görev
+                    <span className="hidden md:inline">Yeni Görev</span>
+                    <span className="md:hidden">Ekle</span>
                 </button>
             </div>
 
-            <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar px-4 lg:px-0">
-                <div className="flex h-full gap-4 lg:gap-6 w-max lg:w-full min-w-[320px]">
+            {/* Mobile-First Scalable Board Container */}
+            <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar px-4 lg:px-0 snap-x snap-mandatory">
+                <div className="flex h-full gap-4 lg:gap-6 w-max lg:w-full min-w-full">
                     {COLUMNS.map(col => (
                         <div
                             key={col.id}
-                            className={`flex-col rounded-2xl ${col.color} border border-slate-200/50 backdrop-blur-sm w-[85vw] md:w-[350px] lg:flex-1 flex max-h-full`}
+                            className={`flex flex-col rounded-2xl ${col.color} border border-slate-200/50 backdrop-blur-sm 
+                                w-[85vw] sm:w-[350px] lg:flex-1 max-h-full snap-center shrink-0`}
                             onDragOver={handleDragOver}
                             onDrop={(e) => handleDrop(e, col.id)}
                         >
                             {/* Column Header */}
-                            <div className="p-4 flex items-center justify-between border-b border-slate-200/50">
+                            <div className="p-4 flex items-center justify-between border-b border-slate-200/50 sticky top-0 bg-inherit z-10 rounded-t-2xl">
                                 <div className="flex items-center gap-2">
                                     <div className={`w-3 h-3 rounded-full ${col.dot} shadow-sm`} />
                                     <h2 className="font-bold text-slate-700">{col.title}</h2>
@@ -179,21 +176,23 @@ export default function TasksPage() {
                                                 exit={{ opacity: 0, scale: 0.95 }}
                                                 className={`bg-white p-4 rounded-xl shadow-sm border border-slate-100 cursor-grab active:cursor-grabbing group relative hover:shadow-md transition-all ${draggingTaskId === task.id ? 'opacity-50 rotate-3' : ''}`}
                                             >
-                                                <div className="flex justify-between items-start mb-2">
+                                                <div className="flex justify-between items-start mb-2 gap-2">
                                                     {getPriorityBadge(task.priority)}
-                                                    <div className="flex items-center">
-                                                        {/* Mobile Status Changer */}
+
+                                                    {/* Mobile Dropdown for moving between columns */}
+                                                    <div className="flex items-center gap-1">
                                                         <select
-                                                            className="lg:hidden text-[10px] bg-slate-50 border border-slate-200 rounded py-0.5 px-1 mr-2 text-slate-600 outline-none"
+                                                            className="lg:hidden text-[10px] bg-slate-50 border border-slate-200 rounded py-1 px-1 text-slate-600 outline-none max-w-[80px]"
                                                             value={task.status}
                                                             onChange={(e) => updateTaskStatus(task.id, e.target.value)}
+                                                            onClick={(e) => e.stopPropagation()}
                                                         >
                                                             {COLUMNS.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                                                         </select>
 
                                                         <button
-                                                            onClick={() => handleDelete(task.id)}
-                                                            className="text-slate-300 hover:text-red-500 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }}
+                                                            className="text-slate-300 hover:text-red-500 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity p-1"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </button>
@@ -204,9 +203,9 @@ export default function TasksPage() {
                                                 <p className="text-xs text-slate-500 line-clamp-2 mb-3">{task.description}</p>
 
                                                 <div className="flex items-center justify-between border-t border-slate-50 pt-3 mt-2">
-                                                    <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-50 px-2 py-1 rounded">
-                                                        <User className="h-3 w-3" />
-                                                        {task.assignedTo?.name || "Atanmadı"}
+                                                    <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-50 px-2 py-1 rounded max-w-[60%] truncate">
+                                                        <User className="h-3 w-3 shrink-0" />
+                                                        <span className="truncate">{task.assignedTo?.name || "Atanmadı"}</span>
                                                     </div>
 
                                                     {task.dueDate && (
@@ -219,7 +218,7 @@ export default function TasksPage() {
                                             </motion.div>
                                         ))}
                                 </AnimatePresence>
-                                {tasks.filter(t => t.status === col.id).length === 0 && (
+                                {!loadingTasks && tasks.filter(t => t.status === col.id).length === 0 && (
                                     <div className="h-full flex items-center justify-center text-slate-400 text-sm italic border-2 border-dashed border-slate-200 rounded-lg min-h-[100px]">
                                         Görev yok
                                     </div>
@@ -236,7 +235,7 @@ export default function TasksPage() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl"
+                        className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl overflow-y-auto max-h-[90vh]"
                     >
                         <h2 className="text-xl font-bold mb-6 text-slate-800">Yeni Görev Oluştur</h2>
                         <form onSubmit={handleCreate} className="space-y-4">
