@@ -4,15 +4,18 @@ import { useState, useEffect } from "react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { Star, TrendingUp } from "lucide-react";
 
-import { PerformanceReview, User } from "@prisma/client";
+import { PerformanceReview, User, Goal } from "@prisma/client";
 
 type ReviewWithRelations = PerformanceReview & {
     reviewer: { name: string };
     reviewee: { name: string };
 };
 
+type GoalWithUser = Goal & { user?: { name: string } };
+
 export default function PerformancePage() {
     const [reviews, setReviews] = useState<ReviewWithRelations[]>([]);
+    const [goals, setGoals] = useState<GoalWithUser[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({ revieweeId: "", period: "2024-Q1", score: 80, feedback: "" });
@@ -20,6 +23,7 @@ export default function PerformancePage() {
     useEffect(() => {
         fetchReviews();
         fetch('/api/users').then(r => r.json()).then(setUsers);
+        fetch('/api/goals').then(r => r.json()).then(setGoals);
     }, []);
 
     const fetchReviews = async () => {
@@ -85,9 +89,38 @@ export default function PerformancePage() {
                             <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">Bu Çeyrek</span>
                         </div>
                         {/* Placeholder for Goals List - Typically fetched per user, here maybe show recent goals across company or allow filtering */}
-                        <div className="text-center py-8 text-slate-400 border border-dashed rounded-lg">
-                            <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm">Bireysel hedefler çalışan profillerinde yönetilir.</p>
+                        <div className="space-y-4">
+                            {goals.slice(0, 5).map(goal => (
+                                <div key={goal.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-800">{goal.title}</p>
+                                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                                            <span className="font-semibold text-indigo-600">{goal.user?.name}</span>
+                                            <span>•</span>
+                                            <span>%{goal.progress}</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-slate-200 rounded-full mt-1.5 w-32">
+                                            <div
+                                                className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                                                style={{ width: `${goal.progress}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className={`text-xs font-bold px-2 py-1 rounded ${goal.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                                            goal.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
+                                                'bg-slate-100 text-slate-700'
+                                        }`}>
+                                        {goal.status === 'COMPLETED' ? 'Tamamlandı' :
+                                            goal.status === 'IN_PROGRESS' ? 'Sürüyor' : 'Beklemede'}
+                                    </div>
+                                </div>
+                            ))}
+                            {goals.length === 0 && (
+                                <div className="text-center py-8 text-slate-400 border border-dashed rounded-lg">
+                                    <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm">Henüz hedef bulunmuyor.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 

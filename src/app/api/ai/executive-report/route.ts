@@ -62,9 +62,9 @@ export async function POST() {
         });
 
         const [departments, fieldTasks, checklistProgress] = await Promise.all([
-            (prisma as any).department.findMany(),
-            (prisma as any).fieldTask.findMany({ take: 20, orderBy: { createdAt: 'desc' } }),
-            (prisma as any).checklistAssignment.findMany({ take: 10, include: { checklist: true, user: { select: { name: true } } } })
+            prisma.department.findMany(),
+            prisma.fieldTask.findMany({ take: 20, orderBy: { createdAt: 'desc' } }),
+            prisma.checklistAssignment.findMany({ take: 10, include: { checklist: true, user: { select: { name: true } } } })
         ]);
 
         // 2. Prepare Context for AI

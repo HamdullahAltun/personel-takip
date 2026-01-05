@@ -42,6 +42,7 @@ interface WebkitSpeechRecognition extends EventTarget {
 }
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Mic, Loader2, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +51,7 @@ import { cn } from "@/lib/utils";
  * Supports: Check-in, What is my next task?
  */
 export default function VoiceAssistant() {
+    const router = useRouter();
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState("");
     const [response, setResponse] = useState("");
@@ -83,9 +85,14 @@ export default function VoiceAssistant() {
             if (data.action === 'CHECK_IN_OUT') {
                 // You can emit an event or call a function to refresh UI
                 window.dispatchEvent(new CustomEvent('attendanceUpdate'));
+                router.push('/scan');
             }
         } catch {
-            setResponse("İşlem sırasında hata oluştu.");
+            const errorMsg = "Bağlantı hatası, lütfen tekrar deneyin.";
+            setResponse(errorMsg);
+            const utterance = new SpeechSynthesisUtterance(errorMsg);
+            utterance.lang = 'tr-TR';
+            window.speechSynthesis.speak(utterance);
         }
         setLoading(false);
     }, []);

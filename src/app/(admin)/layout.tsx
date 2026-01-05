@@ -39,6 +39,7 @@ import {
     ShoppingBag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import VoiceCommand from "@/components/VoiceCommand";
 
 export default function AdminLayout({
     children,
@@ -67,8 +68,8 @@ export default function AdminLayout({
 
         { href: "/admin/qr", label: "QR Kod", icon: QrCode },
         { href: "/admin/employees", label: "Personeller", icon: Users },
-        { href: "/admin/attendance", label: "Katılım", icon: CalendarCheck },
-        { href: "/admin/shifts", label: "Vardiyalar", icon: CalendarRange }, // New
+        // { href: "/admin/attendance", label: "Katılım", icon: CalendarCheck }, // REMOVED
+        { href: "/admin/shifts", label: "Vardiya & Mesai", icon: CalendarRange }, // Merged
         { href: "/admin/organization", label: "Organizasyon", icon: Network }, // New
         { href: "/admin/social", label: "Sosyal Akış", icon: Share2 }, // New
         { href: "/admin/messages", label: "Mesajlar", icon: MessageSquareText },
@@ -93,6 +94,8 @@ export default function AdminLayout({
         { href: "/admin/onboarding", label: "Onboarding", icon: ClipboardList },
         { href: "/admin/departments", label: "Departmanlar & Bütçe", icon: LayoutDashboard }, // Factory or Building
         { href: "/admin/announcements", label: "Duyurular", icon: Megaphone },
+        { href: "/admin/notifications", label: "Bildirimler", icon: Bell },
+        { href: "/admin/logs", label: "Sistem Logları", icon: FileText },
         // Admin also gets access to Executive Dashboard
         { href: "/executive/dashboard", label: "Şirket Raporu", icon: BrainCircuit },
         { href: "/admin/ai-manager", label: "AI Yönetici", icon: BrainCircuit },
@@ -187,6 +190,7 @@ export default function AdminLayout({
 
                 <div className="p-4 lg:p-8 flex-1 overflow-auto">
                     {children}
+                    <VoiceCommand />
                 </div>
             </main>
         </div>

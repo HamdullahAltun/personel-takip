@@ -19,8 +19,10 @@ interface AnalysisReport {
 export default function DetailedExecutiveReport() {
     const [loading, setLoading] = useState(true);
     const [analysis, setAnalysis] = useState<AnalysisReport | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
+    const fetchReport = () => {
+        setLoading(true);
         fetch('/api/ai/executive-report')
             .then(res => res.json())
             .then(data => {
@@ -31,6 +33,24 @@ export default function DetailedExecutiveReport() {
                 console.error(err);
                 setLoading(false);
             });
+    };
+
+    const generateNewReport = () => {
+        setRefreshing(true);
+        fetch('/api/ai/executive-report', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.report) setAnalysis(data.report);
+                setRefreshing(false);
+            })
+            .catch(err => {
+                alert("Rapor oluşturulamadı");
+                setRefreshing(false);
+            });
+    }
+
+    useEffect(() => {
+        fetchReport();
     }, []);
 
     if (loading) {
@@ -47,21 +67,40 @@ export default function DetailedExecutiveReport() {
     }
 
     if (!analysis) return (
-        <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center text-red-500">
-            Analiz oluşturulamadı veya yetki sorunu.
+        <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center flex flex-col items-center gap-4">
+            <p className="text-slate-500">Henüz bir analiz raporu oluşturulmamış.</p>
+            <button
+                onClick={generateNewReport}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
+            >
+                {refreshing ? <Loader2 className="h-5 w-5 animate-spin" /> : <BrainCircuit className="h-5 w-5" />}
+                {refreshing ? "Analiz Ediliyor..." : "İlk Analizi Başlat"}
+            </button>
         </div>
     );
 
     return (
         <div className="space-y-8">
-            <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 text-amber-600 rounded-lg">
-                    <BrainCircuit className="h-6 w-6" />
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-100 text-amber-600 rounded-lg">
+                        <BrainCircuit className="h-6 w-6" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-900">AI Şirket Raporu</h2>
+                        <p className="text-sm text-slate-500">Tüm veriler analiz edilerek oluşturulan yönetici özeti</p>
+                    </div>
                 </div>
-                <div>
-                    <h2 className="text-xl font-bold text-slate-900">AI Şirket Raporu</h2>
-                    <p className="text-sm text-slate-500">Tüm veriler analiz edilerek oluşturulan yönetici özeti</p>
-                </div>
+
+                <button
+                    onClick={generateNewReport}
+                    disabled={refreshing}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-bold text-sm transition-colors"
+                >
+                    {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <BrainCircuit className="h-4 w-4" />}
+                    {refreshing ? "Analiz Ediliyor..." : "Yeni Analiz Başlat"}
+                </button>
             </div>
 
             {/* Top Score Card */}
@@ -166,7 +205,7 @@ export default function DetailedExecutiveReport() {
                     </ul>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 

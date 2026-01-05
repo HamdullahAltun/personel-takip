@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { tr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, MapPin, Clock, List, History } from "lucide-react";
 
 type Shift = {
     id: string;
@@ -14,16 +14,26 @@ type Shift = {
     color?: string;
 };
 
+type AttendanceRecord = {
+    id: string;
+    type: 'CHECK_IN' | 'CHECK_OUT';
+    timestamp: string;
+    method: string;
+    isLate: boolean;
+};
+
 export default function StaffShiftsPage() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'MY_SHIFTS' | 'MARKET'>('MY_SHIFTS');
+    const [activeTab, setActiveTab] = useState<'MY_SHIFTS' | 'MARKET' | 'HISTORY'>('MY_SHIFTS');
     const [marketTrades, setMarketTrades] = useState<any[]>([]);
+    const [history, setHistory] = useState<AttendanceRecord[]>([]);
 
     useEffect(() => {
-        fetchShifts();
+        if (activeTab === 'MY_SHIFTS') fetchShifts();
         if (activeTab === 'MARKET') fetchMarket();
+        if (activeTab === 'HISTORY') fetchHistory();
     }, [currentDate, activeTab]);
 
     const fetchShifts = async () => {
@@ -37,6 +47,11 @@ export default function StaffShiftsPage() {
     const fetchMarket = async () => {
         const res = await fetch('/api/shifts/market');
         if (res.ok) setMarketTrades(await res.json());
+    };
+
+    const fetchHistory = async () => {
+        const res = await fetch('/api/attendance');
+        if (res.ok) setHistory(await res.json());
     };
 
     const handleTradePost = async (shiftId: string) => {
@@ -98,15 +113,16 @@ export default function StaffShiftsPage() {
                         <Calendar className="h-6 w-6" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Vardiyalar</h1>
-                        <p className="text-xs text-slate-500">Planlama ve Takas</p>
+                        <h1 className="text-2xl font-bold text-slate-900">Vardiya & Mesai</h1>
+                        <p className="text-xs text-slate-500">Planlama, Takas ve Kayıtlar</p>
                     </div>
                 </div>
             </div>
 
             <div className="flex gap-2 mb-4 px-2">
-                <button onClick={() => setActiveTab('MY_SHIFTS')} className={`flex-1 py-2 font-bold text-sm rounded-xl transition-colors ${activeTab === 'MY_SHIFTS' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200'}`}>Takvim</button>
-                <button onClick={() => setActiveTab('MARKET')} className={`flex-1 py-2 font-bold text-sm rounded-xl transition-colors ${activeTab === 'MARKET' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200'}`}>Pazar Yeri</button>
+                <button onClick={() => setActiveTab('MY_SHIFTS')} className={`flex-1 py-2 font-bold text-xs rounded-xl transition-colors ${activeTab === 'MY_SHIFTS' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200'}`}>Takvim</button>
+                <button onClick={() => setActiveTab('HISTORY')} className={`flex-1 py-2 font-bold text-xs rounded-xl transition-colors ${activeTab === 'HISTORY' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200'}`}>Geçmiş</button>
+                <button onClick={() => setActiveTab('MARKET')} className={`flex-1 py-2 font-bold text-xs rounded-xl transition-colors ${activeTab === 'MARKET' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200'}`}>Pazar</button>
             </div>
 
             {activeTab === 'MY_SHIFTS' ? (
@@ -157,6 +173,44 @@ export default function StaffShiftsPage() {
                             );
                         })}
                         {shifts.length === 0 && !loading && <div className="text-center py-10 text-slate-400">Bu ay için vardiya bulunamadı.</div>}
+                    </div>
+                </div>
+            ) : activeTab === 'HISTORY' ? (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-1">
+                    <div className="flex-1 overflow-y-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold sticky top-0">
+                                <tr>
+                                    <th className="p-3">Tarih</th>
+                                    <th className="p-3">İşlem</th>
+                                    <th className="p-3 text-right">Durum</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {history.length === 0 ? (
+                                    <tr><td colSpan={3} className="p-6 text-center text-slate-400">Kayıt bulunamadı.</td></tr>
+                                ) : history.map(rec => (
+                                    <tr key={rec.id}>
+                                        <td className="p-3">
+                                            <div className="font-bold text-slate-900">{format(new Date(rec.timestamp), 'd MMM', { locale: tr })}</div>
+                                            <div className="text-xs text-slate-500">{format(new Date(rec.timestamp), 'HH:mm')}</div>
+                                        </td>
+                                        <td className="p-3">
+                                            <span className={`px-2 py-1 rounded-md text-xs font-bold ${rec.type === 'CHECK_IN' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                {rec.type === 'CHECK_IN' ? 'Giriş' : 'Çıkış'}
+                                            </span>
+                                        </td>
+                                        <td className="p-3 text-right">
+                                            {rec.isLate ? (
+                                                <span className="text-red-600 text-xs font-bold">GEÇ</span>
+                                            ) : (
+                                                <span className="text-green-600 text-xs font-bold">-</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             ) : (

@@ -13,9 +13,20 @@ export default function OnboardingAdmin() {
         items: [{ task: "", category: "HR" }]
     });
 
+    const [users, setUsers] = useState<any[]>([]);
+    const [showAssignModal, setShowAssignModal] = useState(false);
+    const [selectedChecklist, setSelectedChecklist] = useState<any>(null);
+    const [selectedUser, setSelectedUser] = useState("");
+
     useEffect(() => {
         fetchChecklists();
+        fetchUsers();
     }, []);
+
+    const fetchUsers = async () => {
+        const res = await fetch("/api/users");
+        if (res.ok) setUsers(await res.json());
+    };
 
     const fetchChecklists = async () => {
         const res = await fetch("/api/admin/checklists");
@@ -42,6 +53,21 @@ export default function OnboardingAdmin() {
             fetchChecklists();
             setNewChecklist({ title: "", type: "ONBOARDING", items: [{ task: "", category: "HR" }] });
         }
+    };
+
+    const handleAssign = async () => {
+        if (!selectedUser || !selectedChecklist) return;
+
+        await fetch("/api/admin/checklists/assign", {
+            method: "POST",
+            body: JSON.stringify({ userId: selectedUser, checklistId: selectedChecklist.id }),
+            headers: { "Content-Type": "application/json" }
+        });
+
+        alert("Görev listesi başarıyla atandı!");
+        setShowAssignModal(false);
+        setSelectedUser("");
+        setSelectedChecklist(null);
     };
 
     return (
@@ -75,7 +101,7 @@ export default function OnboardingAdmin() {
                             </span>
                         </div>
                         <div className="p-5 flex-1 bg-white">
-                            <ul className="space-y-3">
+                            <ul className="space-y-3 mb-4">
                                 {list.items.map((item: any, idx: number) => (
                                     <li key={idx} className="flex items-start gap-3">
                                         <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400 mt-0.5">
@@ -88,6 +114,18 @@ export default function OnboardingAdmin() {
                                     </li>
                                 ))}
                             </ul>
+                            <div className="pt-4 border-t border-slate-50">
+                                <button
+                                    onClick={() => {
+                                        setSelectedChecklist(list);
+                                        setShowAssignModal(true);
+                                    }}
+                                    className="w-full py-2 bg-slate-50 text-indigo-600 rounded-xl text-sm font-bold hover:bg-indigo-50 transition border border-slate-100 hover:border-indigo-100 flex items-center justify-center gap-2"
+                                >
+                                    <Target className="w-4 h-4" />
+                                    Personel Ata
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}
@@ -187,6 +225,50 @@ export default function OnboardingAdmin() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Assign Modal */}
+            {showAssignModal && selectedChecklist && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <h2 className="text-xl font-bold mb-4">Görevi Ata</h2>
+                        <p className="text-sm text-slate-500 mb-4">"{selectedChecklist.title}" listesini hangi personele atamak istiyorsunuz?</p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Personel Seçin</label>
+                                <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-xl">
+                                    {users.map(u => (
+                                        <button
+                                            key={u.id}
+                                            onClick={() => setSelectedUser(u.id)}
+                                            className={`w-full text-left px-4 py-3 text-sm border-b border-slate-50 last:border-0 hover:bg-indigo-50 transition flex justify-between items-center ${selectedUser === u.id ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-700'}`}
+                                        >
+                                            {u.name}
+                                            {selectedUser === u.id && <CheckSquare className="w-4 h-4" />}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setShowAssignModal(false)}
+                                    className="flex-1 py-2.5 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50"
+                                >
+                                    İptal
+                                </button>
+                                <button
+                                    disabled={!selectedUser}
+                                    onClick={handleAssign}
+                                    className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50"
+                                >
+                                    Ata ve Bildir
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

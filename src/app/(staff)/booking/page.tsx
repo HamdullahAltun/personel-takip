@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Plus, Car, Monitor, Armchair, AlertCircle, Info, XCircle } from "lucide-react";
+import { Clock, Plus, Car, Monitor, Armchair, AlertCircle, Info, XCircle, FileText, Sparkles, Wand2, Loader2, StickyNote } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
@@ -128,6 +128,50 @@ export default function StaffBookingPage() {
         if (res.ok) fetchMyBookings();
     };
 
+    const [showNoteModal, setShowNoteModal] = useState(false);
+    const [activeBooking, setActiveBooking] = useState<any>(null);
+    const [noteContent, setNoteContent] = useState("");
+    const [summary, setSummary] = useState<any>(null);
+    const [loadingNote, setLoadingNote] = useState(false);
+
+    const openNoteModal = async (booking: any) => {
+        setActiveBooking(booking);
+        setNoteContent("");
+        setSummary(null);
+        setShowNoteModal(true);
+        // Fetch existing note
+        const res = await fetch(`/api/bookings/notes?bookingId=${booking.id}`);
+        const data = await res.json();
+        if (data.content) {
+            setNoteContent(data.content);
+            setSummary(data.summary ? { summary: data.summary, actionItems: data.actionItems } : null);
+        }
+    };
+
+    const handleSaveNote = async (action = 'SAVE') => {
+        setLoadingNote(true);
+        try {
+            const res = await fetch('/api/bookings/notes', {
+                method: 'POST',
+                body: JSON.stringify({
+                    bookingId: activeBooking.id,
+                    content: noteContent,
+                    action
+                }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (action === 'SUMMARIZE') {
+                setSummary(data);
+            }
+            alert(action === 'SAVE' ? "Not kaydedildi." : "AI Özeti oluşturuldu.");
+        } catch (e) {
+            alert("Hata oluştu.");
+        } finally {
+            setLoadingNote(false);
+        }
+    };
+
     const getIcon = (type: string) => {
         if (type === 'CAR') return <Car className="h-5 w-5" />;
         if (type === 'DEVICE') return <Monitor className="h-5 w-5" />;
@@ -194,13 +238,92 @@ export default function StaffBookingPage() {
                                     </div>
 
                                     {booking.status !== 'CANCELLED' && (
-                                        <button onClick={() => handleCancel(booking.id)} className="text-slate-400 hover:text-red-500 p-1 rounded-lg transition">
-                                            <XCircle className="h-5 w-5" />
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => openNoteModal(booking)} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-2 rounded-lg transition flex items-center gap-1 text-xs font-bold" title="Notlar & AI Özet">
+                                                <StickyNote className="h-4 w-4" />
+                                                Notlar
+                                            </button>
+                                            <button onClick={() => handleCancel(booking.id)} className="text-slate-400 hover:text-red-500 p-2 rounded-lg transition" title="İptal Et">
+                                                <XCircle className="h-5 w-5" />
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* NOTE MODAL */}
+            {showNoteModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-2xl p-6 animate-in zoom-in-95 h-[80vh] flex flex-col">
+                        <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
+                            <div>
+                                <h2 className="text-xl font-bold flex items-center gap-2">
+                                    <StickyNote className="h-6 w-6 text-indigo-600" />
+                                    Toplantı Notları
+                                </h2>
+                                <p className="text-xs text-slate-500">{activeBooking?.purpose}</p>
+                            </div>
+                            <button onClick={() => setShowNoteModal(false)} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200"><XCircle className="h-5 w-5" /></button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Notlar (Kararlar, Konuşulanlar)</label>
+                                <textarea
+                                    className="w-full border border-slate-300 rounded-xl p-4 h-48 focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+                                    placeholder="Toplantı notlarını buraya girin..."
+                                    value={noteContent}
+                                    onChange={(e) => setNoteContent(e.target.value)}
+                                />
+                            </div>
+
+                            {summary && (
+                                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-bottom-4">
+                                    <div className="flex items-center gap-2 text-indigo-800 font-bold border-b border-indigo-100 pb-2">
+                                        <Sparkles className="h-4 w-4" /> AI Özeti
+                                    </div>
+                                    <div>
+                                        <h4 className="text-xs font-black uppercase text-indigo-400 mb-1">Özet</h4>
+                                        <p className="text-sm text-slate-700">{summary.summary}</p>
+                                    </div>
+                                    {summary.actionItems?.length > 0 && (
+                                        <div>
+                                            <h4 className="text-xs font-black uppercase text-indigo-400 mb-1">Aksiyonlar (Görevler)</h4>
+                                            <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">
+                                                {summary.actionItems.map((item: string, i: number) => (
+                                                    <li key={i}>{item}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-between items-center pt-4 border-t border-slate-100 mt-4">
+                            <span className="text-xs text-slate-400 italic">Notlar otomatik kaydedilmez.</span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => handleSaveNote('SAVE')}
+                                    disabled={loadingNote}
+                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 transition"
+                                >
+                                    Kaydet
+                                </button>
+                                <button
+                                    onClick={() => handleSaveNote('SUMMARIZE')}
+                                    disabled={loadingNote || !noteContent.trim()}
+                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition flex items-center gap-2 shadow-lg shadow-indigo-200 disabled:opacity-50"
+                                >
+                                    {loadingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                                    AI ile Özetle
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

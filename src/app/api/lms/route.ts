@@ -7,7 +7,7 @@ export async function GET() {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const modules = await (prisma as any).lmsModule.findMany({
+    const modules = await prisma.lmsModule.findMany({
         include: { completions: { where: { userId: session.id as string } } },
         orderBy: { createdAt: 'desc' }
     });
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     if (session.role === 'ADMIN' || session.role === 'EXECUTIVE') {
         if (action === 'CREATE') {
             const { title, description, contentUrl, type, category, points } = body;
-            const module = await (prisma as any).lmsModule.create({
+            const module = await prisma.lmsModule.create({
                 data: { title, description, contentUrl, type, category, points: parseInt(points) || 10 }
             });
             return NextResponse.json(module);
@@ -39,10 +39,11 @@ export async function POST(req: Request) {
             const prompt = `
                 Sana bir eğitim başlığı ve açıklaması vereceğim. Bu eğitime uygun 3 soruluk bir test hazırla.
                 Format kesinlikle şu JSON yapısında olmalı:
-                [
-                    { "question": "Soru metni", "options": ["A", "B", "C", "D"], "answer": 0 },
-                    ...
-                ]
+                {
+                    "questions": [
+                        { "question": "Soru metni", "options": ["A", "B", "C", "D"], "answer": 0 }
+                    ]
+                }
                 Sadece JSON döndür.
                 Başlık: ${title}
                 Açıklama: ${description}
@@ -55,11 +56,12 @@ export async function POST(req: Request) {
                 response_format: { type: "json_object" }
             });
 
-            const text = completion.choices[0]?.message?.content || "[]";
+            const text = completion.choices[0]?.message?.content || "{}";
             try {
                 // Handle potential array wrapper or extra text
-                const quiz = JSON.parse(text);
-                return NextResponse.json({ quiz: quiz.questions || quiz });
+                const parsed = JSON.parse(text);
+                const questions = Array.isArray(parsed) ? parsed : (parsed.questions || []);
+                return NextResponse.json({ quiz: questions });
             } catch (e) {
                 return NextResponse.json({ error: "AI Error" }, { status: 500 });
             }
@@ -67,7 +69,7 @@ export async function POST(req: Request) {
 
         if (action === 'UPDATE_QUIZ') {
             const { moduleId, quizData } = body;
-            const updated = await (prisma as any).lmsModule.update({
+            const updated = await prisma.lmsModule.update({
                 where: { id: moduleId },
                 data: { quizData }
             });
@@ -78,7 +80,7 @@ export async function POST(req: Request) {
     // STAFF ACTIONS
     if (action === 'COMPLETE') {
         const { moduleId, score } = body;
-        const completion = await (prisma as any).lmsCompletion.create({
+        const completion = await prisma.lmsCompletion.create({
             data: {
                 userId: session.id as string,
                 moduleId,
@@ -88,8 +90,8 @@ export async function POST(req: Request) {
         });
 
         // Add points to user
-        const module = await (prisma as any).lmsModule.findUnique({ where: { id: moduleId } });
-        await (prisma as any).user.update({
+        const module = await prisma.lmsModule.findUnique({ where: { id: moduleId } });
+        await prisma.user.update({
             where: { id: session.id as string },
             data: { points: { increment: module?.points || 10 } }
         });

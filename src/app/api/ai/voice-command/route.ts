@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
     // Execute logic based on action
     if (result.action === 'TASK_QUERY') {
-        const tasks = await (prisma.task as any).findMany({
+        const tasks = await prisma.task.findMany({
             where: { assignedToId: session.id as string, status: 'PENDING' },
             take: 1,
             orderBy: { dueDate: 'asc' }
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     }
 
     if (result.action === 'SHIFT_QUERY') {
-        const nextShift = await (prisma as any).shift.findFirst({
+        const nextShift = await prisma.shift.findFirst({
             where: { userId: session.id as string, start: { gte: new Date() } },
             orderBy: { start: 'asc' }
         });

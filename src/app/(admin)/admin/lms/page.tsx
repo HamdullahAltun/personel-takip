@@ -177,74 +177,93 @@ export default function AdminLMSPage() {
                 </div>
             )}
 
-            {/* Quiz Editor Modal */}
+            {/* Quiz Editor Full Screen Overlay */}
             {editingQuiz && (
-                <div className="fixed inset-0 bg-indigo-900/40 backdrop-blur-md flex items-center justify-center z-[60] p-4">
-                    <div className="bg-white rounded-3xl w-full max-w-2xl p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-5">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl">
-                                <BrainCircuit className="h-6 w-6" />
+                <div className="fixed inset-0 bg-white z-[100] overflow-hidden flex flex-col animate-in fade-in duration-200">
+                    {/* Header */}
+                    <div className="h-16 border-b border-slate-100 flex items-center justify-between px-6 bg-slate-50/50">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                                <BrainCircuit className="h-5 w-5" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-slate-900">AI Quiz Editörü</h2>
-                                <p className="text-sm text-slate-500">Hazırlanan soruları onaylayın veya düzenleyin</p>
+                                <h2 className="font-bold text-slate-900">AI Quiz Editörü</h2>
+                                <p className="text-xs text-slate-500">Soruları düzenle ve yayınla</p>
                             </div>
                         </div>
+                        <button onClick={() => setEditingQuiz(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                            <X className="h-5 w-5 text-slate-500" />
+                        </button>
+                    </div>
 
-                        <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                            {editingQuiz.questions.map((q: any, i: number) => (
-                                <div key={i} className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
+                        <div className="max-w-3xl mx-auto space-y-6">
+                            {(editingQuiz?.questions && Array.isArray(editingQuiz.questions) ? editingQuiz.questions : []).map((q: any, i: number) => (
+                                <div key={i} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative group">
+                                    <div className="absolute top-4 right-4 text-slate-200 font-black text-4xl opacity-20 pointer-events-none">
+                                        {i + 1}
+                                    </div>
                                     <div className="flex gap-4">
-                                        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">{i + 1}</span>
-                                        <div className="flex-1 space-y-4">
-                                            <input
-                                                className="w-full bg-transparent font-bold text-slate-800 border-b border-slate-200 pb-2 focus:border-indigo-500 outline-none"
-                                                value={q.question}
-                                                onChange={(e) => {
-                                                    const newQ = [...editingQuiz.questions];
-                                                    newQ[i].question = e.target.value;
-                                                    setEditingQuiz({ ...editingQuiz, questions: newQ });
-                                                }}
-                                            />
-                                            <div className="grid grid-cols-2 gap-3">
-                                                {q.options.map((opt: string, oi: number) => (
-                                                    <div key={oi} className={cn(
-                                                        "flex items-center gap-2 p-2 rounded-lg border transition-all",
-                                                        q.answer === oi ? "bg-green-50 border-green-200" : "bg-white border-slate-100"
-                                                    )}>
-                                                        <input
-                                                            type="radio"
-                                                            checked={q.answer === oi}
-                                                            onChange={() => {
-                                                                const newQ = [...editingQuiz.questions];
-                                                                newQ[i].answer = oi;
-                                                                setEditingQuiz({ ...editingQuiz, questions: newQ });
-                                                            }}
-                                                        />
-                                                        <input
-                                                            className="flex-1 bg-transparent text-sm outline-none"
-                                                            value={opt}
-                                                            onChange={(e) => {
-                                                                const newQ = [...editingQuiz.questions];
-                                                                newQ[i].options[oi] = e.target.value;
-                                                                setEditingQuiz({ ...editingQuiz, questions: newQ });
-                                                            }}
-                                                        />
-                                                    </div>
-                                                ))}
+                                        <div className="flex-1 space-y-6">
+                                            <div>
+                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Soru</label>
+                                                <input
+                                                    className="w-full bg-slate-50 font-bold text-slate-900 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
+                                                    value={q.question}
+                                                    onChange={(e) => {
+                                                        const newQ = [...editingQuiz.questions];
+                                                        newQ[i].question = e.target.value;
+                                                        setEditingQuiz({ ...editingQuiz, questions: newQ });
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Seçenekler</label>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    {q.options.map((opt: string, oi: number) => (
+                                                        <div key={oi} className={cn(
+                                                            "flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer hover:border-indigo-100",
+                                                            q.answer === oi ? "bg-green-50/50 border-green-500/50" : "bg-white border-slate-100"
+                                                        )}>
+                                                            <input
+                                                                type="radio"
+                                                                name={`question-${i}`}
+                                                                checked={q.answer === oi}
+                                                                onChange={() => {
+                                                                    const newQ = [...editingQuiz.questions];
+                                                                    newQ[i].answer = oi;
+                                                                    setEditingQuiz({ ...editingQuiz, questions: newQ });
+                                                                }}
+                                                                className="w-4 h-4 text-green-600 focus:ring-green-500"
+                                                            />
+                                                            <input
+                                                                className="flex-1 bg-transparent text-sm font-medium outline-none"
+                                                                value={opt}
+                                                                onChange={(e) => {
+                                                                    const newQ = [...editingQuiz.questions];
+                                                                    newQ[i].options[oi] = e.target.value;
+                                                                    setEditingQuiz({ ...editingQuiz, questions: newQ });
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
+                    </div>
 
-                        <div className="flex gap-3 pt-8 mt-4 border-t border-slate-100">
-                            <button onClick={() => setEditingQuiz(null)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-colors">İptal</button>
-                            <button onClick={saveQuiz} className="flex-2 px-12 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 transition-all active:scale-95">
-                                <Save className="h-5 w-5" /> Quiz'i Kaydet ve Yayınla
-                            </button>
-                        </div>
+                    {/* Footer */}
+                    <div className="p-4 border-t border-slate-200 bg-white flex justify-center gap-4">
+                        <button onClick={() => setEditingQuiz(null)} className="px-8 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors">İptal</button>
+                        <button onClick={saveQuiz} className="px-12 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 transition-all active:scale-95">
+                            <Save className="h-5 w-5" /> Kaydet ve Yayınla
+                        </button>
                     </div>
                 </div>
             )}

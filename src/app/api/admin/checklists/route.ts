@@ -7,7 +7,7 @@ export async function GET() {
     if (!session || (session.role !== 'ADMIN' && session.role !== 'EXECUTIVE')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const checklists = await (prisma.checklist as any).findMany({ include: { items: true } });
+    const checklists = await prisma.checklist.findMany({ include: { items: true } });
     return NextResponse.json(checklists);
 }
 
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 
     const { title, type, items } = await req.json();
 
-    const checklist = await (prisma.checklist as any).create({
+    const checklist = await prisma.checklist.create({
         data: {
             title,
             type,

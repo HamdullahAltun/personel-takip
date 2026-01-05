@@ -34,14 +34,14 @@ export async function POST(req: Request) {
                 include: { module: true }
             }
         }
-    }) as any[];
+    });
 
     const payrollDrafts: any[] = [];
 
     for (const user of staff) {
         // 1. Calculate Base Salary based on attendance hours (Simulated)
         // In a real app, we'd sum durations between CHECK_IN and CHECK_OUT
-        const totalHours = user.attendance.filter((a: any) => a.type === 'CHECK_IN').length * 8; // Mock 8h per check-in
+        const totalHours = user.attendance.filter(a => a.type === 'CHECK_IN').length * 8; // Mock 8h per check-in
         const baseSalaryAmount = totalHours * (user.hourlyRate || 50);
 
         // 2. AI/Metric Bonus Logic
@@ -55,17 +55,17 @@ export async function POST(req: Request) {
         if (perfScore > 80) bonusAmount += baseSalaryAmount * 0.1;
 
         // LMS Bonus: Points earned from modules
-        const lmsPoints = user.lmsCompletions.reduce((acc: number, c: any) => acc + (c.module?.points || 0), 0);
+        const lmsPoints = user.lmsCompletions.reduce((acc, c) => acc + (c.module?.points || 0), 0);
         bonusAmount += lmsPoints * 5; // 5 TL per point
 
         // 3. Deduction Logic: -100 TL per late check-in
-        const lateCount = user.attendance.filter((a: any) => a.isLate).length;
+        const lateCount = user.attendance.filter(a => a.isLate).length;
         const deductions = lateCount * 100;
 
         const totalPaid = Math.max(0, baseSalaryAmount + bonusAmount - deductions);
 
         // Create or Update Payroll Record
-        const payroll = await (prisma.payroll as any).upsert({
+        const payroll = await prisma.payroll.upsert({
             where: {
                 userId_month_year: {
                     userId: user.id,

@@ -1,11 +1,11 @@
 {
     "name": "Personel Takip",
     "short_name": "Personel",
-    "description": "QR Tabanlı Personel Takip Sistemi",
-    "start_url": "/dashboard",
-    "display": "standalone",
+    "theme_color": "#4f46e5",
     "background_color": "#ffffff",
-    "theme_color": "#2563eb",
+    "display": "standalone",
+    "orientation": "portrait",
+    "start_url": "/",
     "icons": [
         {
             "src": "/icons/icon-192.png",

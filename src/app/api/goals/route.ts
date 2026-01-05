@@ -7,16 +7,33 @@ export async function GET(req: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId') || session.id;
+    const userId = searchParams.get('userId');
 
-    // Staff can only see their own goals
-    if (session.role !== 'ADMIN' && userId !== session.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    // Define filter
+    let where: any = {};
+
+    if (userId) {
+        // Requesting specific user's goals
+        if (session.role !== 'ADMIN' && userId !== session.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
+        where.userId = userId;
+    } else {
+        // No specific user requested
+        if (session.role === 'ADMIN') {
+            // Admin sees all (limit to recent maybe?)
+            // No strict filter on userId
+        } else {
+            // Staff only sees their own
+            where.userId = session.id;
+        }
     }
 
     const goals = await prisma.goal.findMany({
-        where: { userId: userId as string },
-        orderBy: { dueDate: 'asc' }
+        where,
+        include: { user: { select: { name: true } } }, // Include user name for context
+        orderBy: { dueDate: 'asc' },
+        take: 50 // Limit results regarding performance
     });
 
     return NextResponse.json(goals);

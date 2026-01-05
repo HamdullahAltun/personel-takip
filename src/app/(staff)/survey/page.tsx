@@ -67,6 +67,14 @@ export default function StaffSurveyPage() {
                                 <p className="text-sm font-medium text-slate-700 mb-2">{q.text}</p>
                                 {submitted.includes(survey.id) ? (
                                     <div className="text-green-600 font-bold text-sm">Yanıtlandı ✓</div>
+                                ) : q.type === 'TEXT' ? (
+                                    <textarea
+                                        rows={3}
+                                        placeholder="Yorumunuzu yazın..."
+                                        className="w-full border rounded-lg p-2 text-sm"
+                                        onChange={(e) => setAnswers({ ...answers, [survey.id]: { ...answers[survey.id], [q.id]: e.target.value } })}
+                                        value={answers[survey.id]?.[q.id] || ""}
+                                    />
                                 ) : (
                                     <div className="flex gap-2">
                                         {[1, 2, 3, 4, 5].map(score => (

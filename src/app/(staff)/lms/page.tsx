@@ -224,92 +224,99 @@ export default function StaffLMSPage() {
                 </div>
             )}
 
-            {/* Quiz View Modal */}
+            {/* Quiz View Full Screen Overlay */}
             {selectedModule && showQuiz && (
-                <div className="fixed inset-0 bg-indigo-900/90 backdrop-blur-xl flex items-center justify-center z-[60] p-4 animate-in zoom-in-95">
-                    <div className="bg-white rounded-[40px] w-full max-w-xl p-10 shadow-2xl relative overflow-hidden">
-
-                        {quizResult === null ? (
-                            <>
-                                <div className="flex items-center gap-4 mb-10">
-                                    <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
-                                        <BrainCircuit className="h-6 w-6" />
-                                    </div>
-                                    <h2 className="text-2xl font-black text-slate-900">Eğitim Testi</h2>
-                                </div>
-
-                                <div className="space-y-8">
-                                    {selectedModule.quizData.map((q: any, i: number) => (
-                                        <div key={i} className="space-y-4">
-                                            <p className="font-bold text-slate-800 text-lg leading-snug">
-                                                <span className="text-indigo-600 mr-2">{i + 1}.</span> {q.question}
-                                            </p>
-                                            <div className="grid gap-3">
-                                                {q.options.map((opt: string, oi: number) => (
-                                                    <button
-                                                        key={oi}
-                                                        onClick={() => {
-                                                            const newA = [...quizAnswers];
-                                                            newA[i] = oi;
-                                                            setQuizAnswers(newA);
-                                                        }}
-                                                        className={cn(
-                                                            "text-left p-4 rounded-2xl border-2 transition-all font-bold text-sm",
-                                                            quizAnswers[i] === oi
-                                                                ? "bg-indigo-600 border-indigo-600 text-white shadow-lg"
-                                                                : "bg-slate-50 border-slate-50 text-slate-600 hover:border-slate-200"
-                                                        )}
-                                                    >
-                                                        {opt}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="mt-12 flex gap-4">
-                                    <button onClick={() => setShowQuiz(false)} className="flex-1 py-4 text-slate-400 font-black hover:bg-slate-50 rounded-2xl">Vazgeç</button>
-                                    <button
-                                        disabled={quizAnswers.includes(-1)}
-                                        onClick={submitQuiz}
-                                        className="flex-[2] bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-indigo-100 disabled:opacity-30 disabled:shadow-none hover:bg-indigo-700 transition-all active:scale-95"
-                                    >
-                                        Testi Bitir
-                                    </button>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="text-center py-10 space-y-6">
-                                <div className={cn(
-                                    "w-32 h-32 rounded-full mx-auto flex items-center justify-center animate-bounce shadow-2xl",
-                                    quizResult >= 60 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
-                                )}>
-                                    {quizResult >= 60 ? <CheckCircle2 className="h-16 w-16" /> : <X className="h-16 w-16" />}
-                                </div>
-
-                                <h2 className="text-4xl font-black text-slate-900">%{quizResult} Skoru</h2>
-                                <p className="text-slate-500 font-medium px-10">
-                                    {quizResult >= 60
-                                        ? "Harika! Testi başarıyla geçtin ve ödül puanlarını kazandın. Gelişime devam et!"
-                                        : "Maalesef yeterli skoru alamadın. Eğitim içeriğini tekrar inceleyip yeniden deneyebilirsin."}
-                                </p>
-
-                                <div className="pt-6">
-                                    <button
-                                        onClick={() => {
-                                            setSelectedModule(null);
-                                            setShowQuiz(false);
-                                            setQuizResult(null);
-                                        }}
-                                        className="bg-slate-900 text-white px-12 py-4 rounded-2xl font-black shadow-xl hover:bg-slate-800 transition-all active:scale-95"
-                                    >
-                                        Kapat
-                                    </button>
-                                </div>
+                <div className="fixed inset-0 bg-white z-[100] flex flex-col animate-in slide-in-from-bottom-5 duration-300">
+                    <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between shadow-sm z-10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                                <BrainCircuit className="h-5 w-5" />
                             </div>
-                        )}
+                            <div>
+                                <h2 className="font-black text-slate-900 leading-none">Eğitim Testi</h2>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{selectedModule.title}</span>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowQuiz(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                            <X className="h-6 w-6 text-slate-400" />
+                        </button>
                     </div>
+
+                    <div className="flex-1 overflow-y-auto p-4 content-start">
+                        {quizResult === null ? (
+                            <div className="space-y-8 pb-20 max-w-2xl mx-auto pt-2">
+                                {selectedModule.quizData.map((q: any, i: number) => (
+                                    <div key={i} className="space-y-3">
+                                        <p className="font-bold text-slate-800 text-base leading-snug">
+                                            <span className="text-indigo-600 mr-2 text-lg">{i + 1}.</span> {q.question}
+                                        </p>
+                                        <div className="grid gap-2">
+                                            {q.options.map((opt: string, oi: number) => (
+                                                <button
+                                                    key={oi}
+                                                    onClick={() => {
+                                                        const newA = [...quizAnswers];
+                                                        newA[i] = oi;
+                                                        setQuizAnswers(newA);
+                                                    }}
+                                                    className={cn(
+                                                        "text-left px-4 py-3 rounded-xl border-2 transition-all font-semibold text-sm leading-snug active:scale-[0.98]",
+                                                        quizAnswers[i] === oi
+                                                            ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
+                                                            : "bg-white border-slate-100 text-slate-600 hover:border-slate-200"
+                                                    )}
+                                                >
+                                                    {opt}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
+                    </div>
+
+                    {quizResult === null && (
+                        <div className="p-4 bg-white border-t border-slate-200 safe-area-bottom">
+                            <button
+                                disabled={quizAnswers.includes(-1)}
+                                onClick={submitQuiz}
+                                className="w-full bg-indigo-600 text-white py-4 rounded-xl font-black shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none hover:bg-indigo-700 transition-all active:scale-95"
+                            >
+                                Testi Bitir & Puanı Kap
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Result View (conditionally rendered inside same overlay if needed, or keeping existing result view but styled better) */}
+                    {quizResult !== null && (
+                        <div className="absolute inset-0 bg-white z-20 flex flex-col items-center justify-center p-8 animate-in zoom-in-95">
+                            <div className={cn(
+                                "w-24 h-24 rounded-full mx-auto flex items-center justify-center shadow-xl mb-6",
+                                quizResult >= 60 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                            )}>
+                                {quizResult >= 60 ? <CheckCircle2 className="h-12 w-12" /> : <X className="h-12 w-12" />}
+                            </div>
+
+                            <h2 className="text-3xl font-black text-slate-900 mb-2">%{quizResult} Skoru</h2>
+                            <p className="text-slate-500 font-medium text-center max-w-xs mb-8">
+                                {quizResult >= 60
+                                    ? "Harika! Testi başarıyla geçtin ve ödül puanlarını kazandın."
+                                    : "Maalesef yeterli skoru alamadın. Tekrar deneyebilirsin."}
+                            </p>
+
+                            <button
+                                onClick={() => {
+                                    setSelectedModule(null);
+                                    setShowQuiz(false);
+                                    setQuizResult(null);
+                                }}
+                                className="bg-slate-900 text-white px-10 py-3 rounded-xl font-bold shadow-xl hover:bg-slate-800 transition-all active:scale-95"
+                            >
+                                Kapat
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

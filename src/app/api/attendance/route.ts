@@ -202,12 +202,20 @@ function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: num
 export async function GET(req: Request) {
     try {
         const session = await getAuth();
-        if (!session || session.role !== 'ADMIN') {
+        if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { searchParams } = new URL(req.url);
-        const userId = searchParams.get('userId');
+        let userId = searchParams.get('userId');
+
+        // Security Check: If not admin, can only view own records
+        if (session.role !== 'ADMIN' && session.role !== 'EXECUTIVE') {
+            if (userId && userId !== session.id) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+            }
+            userId = session.id as string;
+        }
         const dateStr = searchParams.get('date');
 
         // Date handling

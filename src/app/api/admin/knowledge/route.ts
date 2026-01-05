@@ -6,7 +6,7 @@ export async function GET() {
     const session = await getAuth();
     if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const docs = await (prisma.knowledgeBaseDoc as any).findMany({
+    const docs = await prisma.knowledgeBaseDoc.findMany({
         orderBy: { createdAt: 'desc' }
     });
 
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 
     const { title, content, type, tags } = await req.json();
 
-    const doc = await (prisma.knowledgeBaseDoc as any).create({
+    const doc = await prisma.knowledgeBaseDoc.create({
         data: {
             title,
             content,
@@ -36,7 +36,7 @@ export async function DELETE(req: Request) {
     if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id } = await req.json();
-    await (prisma.knowledgeBaseDoc as any).delete({ where: { id } });
+    await prisma.knowledgeBaseDoc.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
 }

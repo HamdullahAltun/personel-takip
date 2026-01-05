@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Book, Plus, Trash2, Search, FileText, ShieldCheck, HelpCircle, Loader2 } from "lucide-react";
+import { Book, Plus, Trash2, Search, FileText, ShieldCheck, HelpCircle, Loader2, Star, Zap, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function KnowledgeBasePage() {
@@ -160,6 +160,68 @@ export default function KnowledgeBasePage() {
                     placeholder="Şirket hafızasında ara..."
                     className="flex-1 bg-transparent border-none outline-none font-medium text-slate-700"
                 />
+            </div>
+
+            {/* AI Search Section */}
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-5">
+                    <Star className="w-40 h-40" />
+                </div>
+                <h3 className="text-sm font-bold text-indigo-800 mb-3 flex items-center gap-2">
+                    <Zap className="w-4 h-4" /> AI Asistan'a Sor
+                </h3>
+                <div className="flex gap-2 relative z-10">
+                    <input
+                        className="flex-1 p-3 rounded-xl border border-indigo-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium bg-white/80 backdrop-blur-sm"
+                        placeholder="Örn: Yemek ücreti ne kadar? veya İzin politikası nedir?"
+                        onKeyDown={async (e) => {
+                            if (e.key === 'Enter') {
+                                const input = e.target as HTMLInputElement;
+                                if (!input.value.trim()) return;
+                                const btn = document.getElementById('ai-ask-btn');
+                                btn?.click();
+                            }
+                        }}
+                        id="ai-question-input"
+                    />
+                    <button
+                        id="ai-ask-btn"
+                        onClick={async () => {
+                            const input = document.getElementById('ai-question-input') as HTMLInputElement;
+                            const question = input.value;
+                            if (!question.trim()) return;
+
+                            const answerBox = document.getElementById('ai-answer-box');
+                            if (answerBox) {
+                                answerBox.classList.remove('hidden');
+                                answerBox.innerHTML = '<div class="flex items-center gap-2 text-indigo-600"><div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div> Düşünüyor...</div>';
+                            }
+
+                            try {
+                                const res = await fetch('/api/knowledge/ai-search', {
+                                    method: 'POST',
+                                    body: JSON.stringify({ query: question }),
+                                    headers: { 'Content-Type': 'application/json' }
+                                });
+                                const data = await res.json();
+                                if (answerBox) {
+                                    answerBox.innerHTML = `
+                                        <div class="space-y-2">
+                                            <p class="text-sm text-slate-700 leading-relaxed font-medium">${data.answer}</p>
+                                        </div>
+                                    `;
+                                }
+                            } catch (e) {
+                                if (answerBox) answerBox.innerText = "Bir hata oluştu.";
+                            }
+                        }}
+                        className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center gap-2 shadow-lg shadow-indigo-200"
+                    >
+                        <Sparkles className="w-5 h-5" />
+                        Sor
+                    </button>
+                </div>
+                <div id="ai-answer-box" className="hidden mt-4 p-4 bg-white/60 backdrop-blur rounded-xl border border-indigo-100 animate-in fade-in slide-in-from-top-2"></div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

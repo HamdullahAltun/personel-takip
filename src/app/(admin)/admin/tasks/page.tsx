@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Plus, CheckCircle, Clock, AlertTriangle, Trash2, Calendar, User, RefreshCw } from 'lucide-react';
+import { Plus, CheckCircle, Clock, AlertTriangle, Trash2, Calendar, User, RefreshCw, Sparkles, Wand2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useSWR, { mutate } from 'swr';
 
@@ -121,6 +121,39 @@ export default function TasksPage() {
         return <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${styles}`}>{labels}</span>;
     };
 
+    const [showAiModal, setShowAiModal] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState("");
+    const [generating, setGenerating] = useState(false);
+
+    const handleAiGenerate = async () => {
+        if (!aiPrompt) return;
+        setGenerating(true);
+        try {
+            const res = await fetch('/api/tasks/ai-create', {
+                method: 'POST',
+                body: JSON.stringify({ text: aiPrompt }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+
+            if (data.error) throw new Error(data.error);
+
+            // Assuming `newTask` and `setIsModalOpen` are states that need to be defined or replaced with existing ones
+            // For this context, we'll map to the existing `setTitle`, `setDesc`, `setPriority` and then open the main modal.
+            setTitle(data.title || "");
+            setDesc(data.description + "\n\n" + (data.subtasks?.map((s: string) => "- " + s).join("\n") || ""));
+            setPriority(data.priority || 'MEDIUM');
+
+            setShowAiModal(false);
+            setAiPrompt("");
+            setShowModal(true); // Open the main create modal to review
+        } catch (e: any) {
+            alert("AI Hata: " + e.message);
+        } finally {
+            setGenerating(false);
+        }
+    };
+
     return (
         <div className="h-[calc(100vh-8rem)] flex flex-col">
             <div className="flex justify-between items-center mb-6 px-4 md:px-0">
@@ -128,14 +161,23 @@ export default function TasksPage() {
                     <h1 className="text-2xl font-bold text-slate-900">Görev Panosu</h1>
                     <p className="text-slate-500 hidden md:block">Projeleri ve görevleri sürükleyerek yönetin</p>
                 </div>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-lg shadow-indigo-200 flex items-center gap-2 hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95"
-                >
-                    <Plus className="h-5 w-5" />
-                    <span className="hidden md:inline">Yeni Görev</span>
-                    <span className="md:hidden">Ekle</span>
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowAiModal(true)}
+                        className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-2 border border-indigo-100 shadow-lg shadow-indigo-50"
+                    >
+                        <Sparkles className="h-4 w-4" />
+                        AI ile Oluştur
+                    </button>
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-lg shadow-indigo-200 flex items-center gap-2 hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95"
+                    >
+                        <Plus className="h-5 w-5" />
+                        <span className="hidden md:inline">Yeni Görev</span>
+                        <span className="md:hidden">Ekle</span>
+                    </button>
+                </div>
             </div>
 
             {/* Mobile-First Scalable Board Container */}
@@ -228,6 +270,43 @@ export default function TasksPage() {
                     ))}
                 </div>
             </div>
+
+            {/* AI MODAL */}
+            {showAiModal && (
+                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in zoom-in-95">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                                <Sparkles className="h-5 w-5 text-indigo-600" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-900">AI Görev Asistanı</h2>
+                                <p className="text-xs text-slate-500">Kısaca ne yapılması gerektiğini söyleyin, detayları ben halledeyim.</p>
+                            </div>
+                        </div>
+
+                        <textarea
+                            className="w-full border border-slate-200 rounded-xl p-4 text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none resize-none h-32"
+                            placeholder="Örn: Pazarlama ekibiyle haftalık toplantı ayarla, gündemde yeni kampanya ve bütçe olsun."
+                            value={aiPrompt}
+                            onChange={(e) => setAiPrompt(e.target.value)}
+                            autoFocus
+                        />
+
+                        <div className="flex justify-end gap-3 mt-4">
+                            <button onClick={() => setShowAiModal(false)} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-50 rounded-lg">İptal</button>
+                            <button
+                                onClick={handleAiGenerate}
+                                disabled={generating || !aiPrompt.trim()}
+                                className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-100"
+                            >
+                                {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                                {generating ? 'Oluşturuluyor...' : 'Sihirli Olarak Oluştur'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal */}
             {showModal && (

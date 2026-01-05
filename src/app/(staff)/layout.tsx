@@ -76,10 +76,10 @@ export default function StaffLayout({
         { href: "/messages", label: "Mesajlar", icon: MessageSquareText, priority: 4 },
 
         // New Features (In Menu)
-        { href: "/dashboard/field-tasks", label: "Saha Görevleri", icon: MapPin, priority: 5 },
-        { href: "/dashboard/onboarding", label: "Onboarding", icon: ClipboardList, priority: 5 },
+        { href: "/field-tasks", label: "Saha Görevleri", icon: MapPin, priority: 5 },
+        { href: "/onboarding", label: "Onboarding", icon: ClipboardList, priority: 5 },
         { href: "/social", label: "Sosyal Akış", icon: Share2, priority: 5 },
-        { href: "/shifts", label: "Vardiyalar", icon: CalendarRange, priority: 6 },
+        { href: "/shifts", label: "Vardiya & Mesai", icon: CalendarRange, priority: 6 },
         { href: "/leaderboard", label: "Liderlik", icon: Crown, priority: 7 },
         { href: "/organization", label: "Organizasyon", icon: Network, priority: 8 },
         { href: "/knowledge", label: "Bilgi Bankası", icon: Database, priority: 8 },

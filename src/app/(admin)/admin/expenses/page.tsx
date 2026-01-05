@@ -29,6 +29,34 @@ export default function AdminExpensesPage() {
     // Edit State
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
     const [editForm, setEditForm] = useState({ description: "", amount: "", date: "", category: "" });
+    const [scanning, setScanning] = useState(false);
+
+    const handleScanReceipt = async () => {
+        if (!editingExpense?.receiptImage) return;
+        setScanning(true);
+        try {
+            const res = await fetch('/api/expenses/ocr', {
+                method: 'POST',
+                body: JSON.stringify({ imageUrl: editingExpense.receiptImage }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+
+            setEditForm(prev => ({
+                ...prev,
+                description: data.description || prev.description,
+                amount: data.amount?.toString() || prev.amount,
+                date: data.date || prev.date,
+                category: data.category || prev.category
+            }));
+            toast.success("Fiş başarıyla tarandı!");
+        } catch (e) {
+            toast.error("Fiş okunamadı.");
+        } finally {
+            setScanning(false);
+        }
+    };
 
     const fetchExpenses = async () => {
         try {
@@ -275,6 +303,24 @@ export default function AdminExpensesPage() {
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
+
+                        {editingExpense.receiptImage && (
+                            <div className="bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200 flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                                    <Receipt className="h-4 w-4" />
+                                    FİŞ GÖRÜNTÜSÜ MEVCUT
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleScanReceipt}
+                                    disabled={scanning}
+                                    className="bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-200 transition flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {scanning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Maximize2 className="h-3 w-3" />}
+                                    AI ile Doldur
+                                </button>
+                            </div>
+                        )}
                         <form onSubmit={handleUpdateExpense} className="space-y-4">
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Açıklama</label>

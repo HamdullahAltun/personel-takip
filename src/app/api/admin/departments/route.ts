@@ -7,7 +7,7 @@ export async function GET() {
     if (!session || (session.role !== 'ADMIN' && session.role !== 'EXECUTIVE')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const departments = await (prisma.department as any).findMany({ include: { _count: { select: { users: true } } } });
+    const departments = await prisma.department.findMany({ include: { _count: { select: { users: true } } } });
     return NextResponse.json(departments);
 }
 
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 
     const { name, budgetLimit, managerName } = await req.json();
 
-    const department = await (prisma.department as any).create({
+    const department = await prisma.department.create({
         data: { name, budgetLimit, managerName }
     });
 

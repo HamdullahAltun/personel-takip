@@ -18,12 +18,27 @@ export const metadata: Metadata = {
     default: 'Personel Yönetim Sistemi',
   },
   description: 'Personel Takip ve Yönetim Sistemi',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Personel Takip',
+  },
+};
+
+export const viewport = {
+  themeColor: '#4f46e5',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 import PushNotificationListener from "@/components/PushNotificationListener";
 import AppUrlListener from "@/components/AppUrlListener";
+import MobilePolish from "@/components/MobilePolish";
+import OfflineIndicator from "@/components/OfflineIndicator";
 import { Toaster } from "sonner";
-
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 export default function RootLayout({
@@ -39,6 +54,8 @@ export default function RootLayout({
         <ThemeProvider>
           <PushNotificationListener />
           <AppUrlListener />
+          <MobilePolish />
+          <OfflineIndicator />
           <Toaster position="top-right" richColors />
           {children}
         </ThemeProvider>

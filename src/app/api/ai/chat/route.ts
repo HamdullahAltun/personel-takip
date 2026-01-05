@@ -27,7 +27,7 @@ export async function POST(req: Request) {
                 leaves: { where: { status: 'APPROVED', endDate: { gte: new Date() } } },
                 lmsCompletions: { include: { module: true } }
             }
-        }) as any;
+        });
 
         if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
         // --- SHARED DATA (Available to AI regardless of role if relevant) ---
         // Fetch Knowledge Docs for RAG
-        const knowledgeDocs = await (prisma as any).knowledgeBaseDoc.findMany();
+        const knowledgeDocs = await prisma.knowledgeBaseDoc.findMany();
         const knowledgeStr = knowledgeDocs.map((d: any) =>
             `--- DOKÜMAN: ${d.title} (${d.type}) ---\n${d.content}`
         ).join('\n\n') || "Kayıtlı şirket bilgisi yok.";
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
                 upcomingEvents, activeSurveys, companySettings, assets, advanceRequests,
                 upcomingShifts, fieldTasks, departments, checklists, lmsModules
             ] = await Promise.all([
-                (prisma.user as any).findMany({
+                prisma.user.findMany({
                     select: {
                         name: true, role: true, hourlyRate: true, points: true, annualLeaveDays: true,
                         attendance: { take: 5, orderBy: { timestamp: 'desc' }, select: { type: true, timestamp: true, isLate: true } },
@@ -65,17 +65,17 @@ export async function POST(req: Request) {
                 prisma.jobPosting.findMany({ where: { status: 'ACTIVE' }, include: { _count: { select: { candidates: true } } } }),
                 prisma.event.findMany({ where: { date: { gte: today } }, take: 5, orderBy: { date: 'asc' } }),
                 prisma.survey.findMany({ where: { isActive: true }, select: { title: true } }),
-                (prisma as any).companySettings.findFirst(),
-                (prisma as any).asset.findMany({ include: { assignedTo: { select: { name: true } } } }),
-                (prisma as any).advanceRequest.findMany({ where: { status: 'PENDING' }, include: { user: { select: { name: true } } } }),
-                (prisma as any).shift.findMany({ where: { start: { gte: today } }, take: 10, include: { user: { select: { name: true } } } }),
-                (prisma as any).fieldTask.findMany({ where: { status: { not: 'COMPLETED' } }, include: { user: { select: { name: true } } } }),
-                (prisma as any).department.findMany({ include: { _count: { select: { users: true } } } }),
-                (prisma as any).checklistAssignment.findMany({
+                prisma.companySettings.findFirst(),
+                prisma.asset.findMany({ include: { assignedTo: { select: { name: true } } } }),
+                prisma.advanceRequest.findMany({ where: { status: 'PENDING' }, include: { user: { select: { name: true } } } }),
+                prisma.shift.findMany({ where: { start: { gte: today } }, take: 10, include: { user: { select: { name: true } } } }),
+                prisma.fieldTask.findMany({ where: { status: { not: 'COMPLETED' } }, include: { user: { select: { name: true } } } }),
+                prisma.department.findMany({ include: { _count: { select: { users: true } } } }),
+                prisma.checklistAssignment.findMany({
                     where: { status: { not: 'COMPLETED' } },
                     include: { user: { select: { name: true } }, checklist: { select: { title: true, items: true } } }
                 }),
-                (prisma as any).lmsModule.findMany()
+                prisma.lmsModule.findMany()
             ]);
 
             const staffSummary = allStaff.map((s: any) => {
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
                 return `- ${s.name} (${s.role}): Puan:${s.points}, Maaş:${s.hourlyRate}, İzin:${s.annualLeaveDays}. Son:${lastSeen}`;
             }).join('\n');
 
-            const fieldStr = (fieldTasks as any[]).map((f: any) => `- ${f.user?.name}: ${f.title}`).join('\n') || "Yok";
+            const fieldStr = fieldTasks.map((f: any) => `- ${f.user?.name}: ${f.title}`).join('\n') || "Yok";
 
             systemPrompt = `
 Sen Şirket "Executive AI" Asistanısın. GOD MODE yetkisine sahipsin.
@@ -110,11 +110,11 @@ GÖREVLERİN:
         } else {
             // --- STAFF RESTRICTED MODE ---
             // Fetch extra personal details for context
-            const upcomingShift = await (prisma as any).shift.findFirst({
+            const upcomingShift = await prisma.shift.findFirst({
                 where: { userId: session.id, start: { gte: new Date() } },
                 orderBy: { start: 'asc' }
             });
-            const lastPayroll = await (prisma as any).payroll.findFirst({
+            const lastPayroll = await prisma.payroll.findFirst({
                 where: { userId: session.id },
                 orderBy: { month: 'desc' }
             });

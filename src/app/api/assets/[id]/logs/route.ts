@@ -36,10 +36,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 where: { id },
                 data: { status: 'MAINTENANCE' }
             });
+        } else if (type === 'RETURN') {
+            await prisma.asset.update({
+                where: { id },
+                data: {
+                    status: 'AVAILABLE',
+                    assignedToId: null,
+                    returnDate: new Date()
+                }
+            });
+        } else if (type === 'RETIRE' || type === 'BROKEN') {
+            // Handle broken or retired
+            await prisma.asset.update({
+                where: { id },
+                data: { status: 'BROKEN' } // Or RETIRED if enum supported
+            });
         }
-
-        // If repair finished or return from maintenance, assume available? 
-        // Logic can be complex, let's just log it for now.
 
         return NextResponse.json(log);
     } catch (e) {
