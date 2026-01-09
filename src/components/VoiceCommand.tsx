@@ -18,7 +18,6 @@ export default function VoiceCommand() {
 
         recognition.onresult = (event: any) => {
             const command = event.results[0][0].transcript.toLowerCase();
-            console.log("Sesli Komut:", command);
             processCommand(command);
             setIsListening(false);
         };

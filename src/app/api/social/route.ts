@@ -15,6 +15,9 @@ export async function GET(req: Request) {
                 comments: {
                     include: { user: { select: { name: true, profilePicture: true } } },
                     orderBy: { createdAt: 'desc' }
+                },
+                pollOptions: {
+                    include: { votes: true }
                 }
             },
             orderBy: { createdAt: 'desc' },
@@ -31,7 +34,7 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     try {
-        const { content, imageUrl, type, kudosTargetId, kudosCategory } = await req.json();
+        const { content, imageUrl, type, kudosTargetId, kudosCategory, pollOptions } = await req.json();
 
         const post = await prisma.post.create({
             data: {
@@ -40,13 +43,17 @@ export async function POST(req: Request) {
                 userId: session.id as string,
                 type: type || 'STANDARD',
                 kudosTargetId,
-                kudosCategory
+                kudosCategory,
+                pollOptions: (type === 'POLL' && Array.isArray(pollOptions)) ? {
+                    create: pollOptions.map((opt: string) => ({ text: opt }))
+                } : undefined
             },
             include: {
                 user: { select: { name: true, profilePicture: true } },
                 kudosTarget: { select: { name: true } },
                 likes: true,
-                comments: true
+                comments: true,
+                pollOptions: { include: { votes: true } }
             }
         });
 

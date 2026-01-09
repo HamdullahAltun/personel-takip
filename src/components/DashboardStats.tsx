@@ -38,7 +38,7 @@ export default function DashboardStats() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* 1. Total Personnel */}
-            <div className="bg-blue-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-blue-100">
+            <div className="bg-blue-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-blue-100 animate-slide-up delay-100">
                 <div className="flex justify-between items-start mb-4">
                     <div className="bg-white p-3 rounded-full shadow-sm text-blue-600">
                         <Users className="h-6 w-6" />
@@ -55,7 +55,7 @@ export default function DashboardStats() {
             </div>
 
             {/* 2. Active in Office */}
-            <div className="bg-green-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-green-100">
+            <div className="bg-green-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-green-100 animate-slide-up delay-200">
                 <div className="flex justify-between items-start mb-4">
                     <div className="bg-white p-3 rounded-full shadow-sm text-green-600">
                         <UserCheck className="h-6 w-6" />
@@ -74,7 +74,7 @@ export default function DashboardStats() {
             </div>
 
             {/* 3. Late Arrivals */}
-            <div className="bg-amber-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-amber-100">
+            <div className="bg-amber-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-amber-100 animate-slide-up delay-300">
                 <div className="flex justify-between items-start mb-4">
                     <div className="bg-white p-3 rounded-full shadow-sm text-amber-600">
                         <Clock className="h-6 w-6" />
@@ -91,7 +91,7 @@ export default function DashboardStats() {
             </div>
 
             {/* 4. Pending Actions */}
-            <div className="bg-indigo-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-indigo-100">
+            <div className="bg-indigo-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-indigo-100 animate-slide-up delay-500">
                 <div className="flex justify-between items-start mb-4">
                     <div className="bg-white p-3 rounded-full shadow-sm text-indigo-600">
                         <Info className="h-6 w-6" />
@@ -108,7 +108,7 @@ export default function DashboardStats() {
             </div>
 
             {/* 5. Instant Visitors */}
-            <div className="bg-pink-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-pink-100">
+            <div className="bg-pink-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-pink-100 animate-slide-up delay-100">
                 <div className="flex justify-between items-start mb-4">
                     <div className="bg-white p-3 rounded-full shadow-sm text-pink-600">
                         <Users className="h-6 w-6" />
@@ -125,7 +125,7 @@ export default function DashboardStats() {
             </div>
 
             {/* 6. Job Applications */}
-            <div className="bg-cyan-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-cyan-100">
+            <div className="bg-cyan-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-cyan-100 animate-slide-up delay-200">
                 <div className="flex justify-between items-start mb-4">
                     <div className="bg-white p-3 rounded-full shadow-sm text-cyan-600">
                         <Briefcase className="h-6 w-6" />
@@ -142,7 +142,7 @@ export default function DashboardStats() {
             </div>
 
             {/* 7. Today Reservations */}
-            <div className="bg-violet-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-violet-100 md:col-span-2">
+            <div className="bg-violet-50/50 p-6 rounded-[2rem] relative overflow-hidden group hover:shadow-lg transition-all border border-violet-100 md:col-span-2 animate-slide-up delay-300">
                 <div className="flex justify-between items-start mb-4">
                     <div className="bg-white p-3 rounded-full shadow-sm text-violet-600">
                         <Calendar className="h-6 w-6" />

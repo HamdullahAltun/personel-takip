@@ -30,36 +30,47 @@ export async function POST(req: Request) {
             include: {
                 tasksReceived: {
                     where: { status: 'IN_PROGRESS' }
+                },
+                fieldTasks: {
+                    where: { status: 'IN_PROGRESS' }
                 }
             }
         });
 
         let assignedCount = 0;
 
+        // Import helper only if needed, or define here if importing fails due to path issues in some envs
+        const { calculateMatchScore } = await import('@/lib/ai');
+
         for (const task of pendingTasks) {
-            // Logic: Find staff with LEAST "IN_PROGRESS" tasks
-            // Better logic: Skills matching (future)
+            // Calculate scores for all staff
+            const candidates = staff.map(u => ({
+                user: u,
+                score: calculateMatchScore(u as any, task as any)
+            }));
 
-            // Sort staff by workload (ascending)
-            staff.sort((a, b) => a.tasksReceived.length - b.tasksReceived.length);
+            // Sort by score desc
+            candidates.sort((a, b) => b.score - a.score);
 
-            const bestCandidate = staff[0];
+            const bestCandidate = candidates[0];
 
-            if (bestCandidate) {
+            // Threshold: If score is too low (e.g. 0), maybe don't assign? 
+            // For now, always assign if score > 0 logic, or just best one.
+            if (bestCandidate && bestCandidate.score >= 0) {
                 await prisma.task.update({
                     where: { id: task.id },
-                    data: { assignedToId: bestCandidate.id }
+                    data: { assignedToId: bestCandidate.user.id }
                 });
 
                 await prisma.systemLog.create({
                     data: {
                         level: 'AI_ACTION',
-                        message: `Görev Otomasyonu: "${task.title}" görevi ${bestCandidate.name} personeline atandı (Mevcut yükü: ${bestCandidate.tasksReceived.length}).`,
+                        message: `Görev Dağıtımı: "${task.title}" -> ${bestCandidate.user.name} (Skor: ${bestCandidate.score}, Etiketler: ${task.tags.join(',')})`,
                     }
                 });
 
-                // Update local counting to reflect assignment in this batch
-                bestCandidate.tasksReceived.push({} as any);
+                // Update local counting
+                bestCandidate.user.tasksReceived.push({} as any);
                 assignedCount++;
             }
         }

@@ -47,7 +47,6 @@ export default function StaffLayout({
                             }
                         }
                     } catch (err) {
-                        console.log('Notification permission ignored or error', err);
                     }
                 }
             }

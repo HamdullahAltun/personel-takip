@@ -19,7 +19,6 @@ export default function PushNotificationListener() {
                 }
 
                 if (permStatus.receive !== 'granted') {
-                    console.log('User denied push permissions');
                     return;
                 }
 
@@ -28,7 +27,6 @@ export default function PushNotificationListener() {
 
                 // Listeners
                 PushNotifications.addListener('registration', async (token) => {
-                    console.log('Push Registration Token:', token.value);
                     // Send to backend
                     await fetch('/api/notifications/register', {
                         method: 'POST',
@@ -42,12 +40,10 @@ export default function PushNotificationListener() {
                 });
 
                 PushNotifications.addListener('pushNotificationReceived', (notification) => {
-                    console.log('Push Recv:', notification);
                     // Optional: Show toast or local notification if app is open
                 });
 
                 PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-                    console.log('Push Action:', notification);
                     // Navigate to specific page if needed
                     // const data = notification.notification.data;
                     // if (data.url) router.push(data.url);

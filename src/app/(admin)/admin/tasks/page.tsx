@@ -340,7 +340,42 @@ export default function TasksPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-sm font-medium text-slate-700 mb-1 block">Kime</label>
+                                    <label className="text-sm font-medium text-slate-700 mb-1 flex justify-between items-center">
+                                        Kime
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                if (!title) { alert("Lütfen önce görev başlığını girin."); return; }
+
+                                                const btn = document.getElementById('suggest-btn');
+                                                if (btn) btn.innerText = "Analyziing...";
+
+                                                try {
+                                                    const res = await fetch('/api/tasks/ai-suggest-candidate', {
+                                                        method: 'POST',
+                                                        body: JSON.stringify({ title, description: desc }),
+                                                        headers: { 'Content-Type': 'application/json' }
+                                                    });
+                                                    const data = await res.json();
+                                                    if (data.candidates && data.candidates.length > 0) {
+                                                        const best = data.candidates[0];
+                                                        setAssignee(best.user.id);
+                                                        alert(`Önerilen: ${best.user.name}\nSkor: ${best.score}\nNeden: ${best.explanation}`);
+                                                    } else {
+                                                        alert("Uygun aday bulunamadı.");
+                                                    }
+                                                } catch (e) {
+                                                    console.error(e);
+                                                } finally {
+                                                    if (btn) btn.innerText = "✨ Öner";
+                                                }
+                                            }}
+                                            id="suggest-btn"
+                                            className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded hover:bg-indigo-100 transition"
+                                        >
+                                            ✨ Öner
+                                        </button>
+                                    </label>
                                     <select
                                         className="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                                         value={assignee}

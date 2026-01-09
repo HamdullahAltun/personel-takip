@@ -52,10 +52,6 @@ export function createFirebaseAdminApp() {
     }
 
     // Debug Key (Safe log - don't log full key)
-    console.log(`[Firebase Admin] Init Project: ${projectId}`);
-    console.log(`[Firebase Admin] Key Length: ${privateKey.length}`);
-    console.log(`[Firebase Admin] Key Start: ${privateKey.substring(0, 20)}...`);
-    console.log(`[Firebase Admin] Key End: ...${privateKey.substring(privateKey.length - 20)}`);
 
     try {
         return admin.initializeApp({

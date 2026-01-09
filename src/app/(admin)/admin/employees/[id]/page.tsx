@@ -10,7 +10,6 @@ export default async function EmployeeDetailPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
-    console.log("Fetching employee details for:", id);
 
     const user = await prisma.user.findUnique({
         where: { id },

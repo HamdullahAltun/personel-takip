@@ -114,6 +114,12 @@ model User {
 
   // Visitors
   invitedVisitors Visitor[] @relation("VisitorInviter")
+
+  // Skills for AI matching
+  skills      String[]   @default([])
+  
+  // Votes
+  pollVotes   PollVote[]
 }
 
 model Department {
@@ -162,6 +168,7 @@ model FieldTask {
   user        User      @relation(fields: [userId], references: [id])
   title       String
   description String?
+  tags        String[]  @default([])
   clientName  String?
   location    String?   // Text address
   lat         Float?
@@ -262,7 +269,9 @@ model Task {
   description  String?
   status       TaskStatus   @default(PENDING)
   priority     TaskPriority @default(MEDIUM)
+
   dueDate      DateTime?
+  tags         String[]     @default([]) // For AI matching (e.g. "it", "repair")
   
   assignedToId String       @db.ObjectId
   assignedTo   User         @relation("AssignedTasks", fields: [assignedToId], references: [id])
@@ -536,12 +545,35 @@ model Post {
   kudosTargetId String? @db.ObjectId
   kudosTarget   User?   @relation("KudosReceived", fields: [kudosTargetId], references: [id])
   kudosCategory String? // TEAMWORK, LEADERSHIP, HELP, SPEED
+
+  // Polls
+  pollOptions PollOption[]
 }
 
 enum PostType {
   STANDARD
   KUDOS
   ANNOUNCEMENT
+  POLL
+}
+
+model PollOption {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  postId    String     @db.ObjectId
+  post      Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  text      String
+  votes     PollVote[]
+}
+
+model PollVote {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  pollOptionId String     @db.ObjectId
+  pollOption   PollOption @relation(fields: [pollOptionId], references: [id], onDelete: Cascade)
+  userId       String     @db.ObjectId
+  user         User       @relation(fields: [userId], references: [id])
+  createdAt    DateTime   @default(now())
+
+  @@unique([pollOptionId, userId]) // User can only vote once per option (logic usually enforces once per poll)
 }
 
 model Like {

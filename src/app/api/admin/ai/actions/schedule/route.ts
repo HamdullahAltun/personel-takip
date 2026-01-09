@@ -10,7 +10,6 @@ export async function POST(req: Request) {
     if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const config = await prisma.aiAutomationConfig.findFirst();
-    console.log("AI Schedule Config:", config); // Debug log
 
     if (!config || !config.autoScheduleEnabled) {
         return NextResponse.json({ message: 'Otomatik planlama devre dışı. Ayarlardan aktifleştirin.', debug_config: config });
@@ -52,7 +51,15 @@ export async function POST(req: Request) {
 
 
         const requiredStaff = config.minStaffPerShift;
-        const newShifts = [];
+        const newShifts: any[] = [];
+
+        // Map to track weekly shift count per user for fairness
+        const staffLoad = new Map<string, number>();
+
+        // Initialize load from existing shifts (if any exist for next week, though unlikely if auto-scheduling)
+        existingShifts.forEach(s => {
+            staffLoad.set(s.userId, (staffLoad.get(s.userId) || 0) + 1);
+        });
 
         // 4. Iterate Days
         for (let i = 0; i < 7; i++) {
@@ -63,12 +70,27 @@ export async function POST(req: Request) {
             const availableStaff = staff.filter(user => {
                 const preference = user.workSchedules.find(s => s.dayOfWeek === dayOfWeek);
                 if (preference && preference.isOffDay) return false;
-                // Check if already has a shift this day (in-memory check)
-                const hasShift = existingShifts.some(s =>
+
+                // Check if already has a shift this day (either existing or newly created in this loop)
+                const hasExistingShift = existingShifts.some(s =>
                     s.userId === user.id &&
                     new Date(s.start).toDateString() === currentDayDate.toDateString()
                 );
-                return !hasShift;
+                const hasNewShift = newShifts.some(s =>
+                    s.userId === user.id &&
+                    s.start.toDateString() === currentDayDate.toDateString()
+                );
+
+                return !hasExistingShift && !hasNewShift;
+            });
+
+            // Sort by current load (Ascending) -> Pick those with fewest shifts first
+            // Add a random tie-breaker to avoid alphabetical bias
+            availableStaff.sort((a, b) => {
+                const loadA = staffLoad.get(a.id) || 0;
+                const loadB = staffLoad.get(b.id) || 0;
+                if (loadA !== loadB) return loadA - loadB;
+                return Math.random() - 0.5;
             });
 
             // Select staff
@@ -83,6 +105,9 @@ export async function POST(req: Request) {
             const [endH, endM] = config.operatingHoursEnd.split(':').map(Number);
 
             for (const user of selectedStaff) {
+                // Update Load
+                staffLoad.set(user.id, (staffLoad.get(user.id) || 0) + 1);
+
                 const shiftStart = new Date(currentDayDate);
                 shiftStart.setHours(startH, startM, 0, 0);
 

@@ -46,7 +46,6 @@ export async function GET(req: Request) {
         } catch (e: any) {
             // Handle Prisma "Inconsistent query result" by cleaning orphans
             if (e.code === 'P2025' || e.message?.includes('Inconsistent query result')) {
-                console.log("Cleaning up orphaned bookings...");
 
                 // Fetch all data to verify integrity
                 const allBookings = await prisma.booking.findMany();
@@ -62,7 +61,6 @@ export async function GET(req: Request) {
                     .map(b => b.id);
 
                 if (orphans.length > 0) {
-                    console.log(`Found ${orphans.length} orphaned bookings. Deleting... IDs: ${orphans.join(', ')}`);
                     await prisma.booking.deleteMany({ where: { id: { in: orphans } } });
                 }
 

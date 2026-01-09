@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Heart, MessageCircle, Send, Image as ImageIcon, MoreHorizontal, Trash2, Trophy, Award, Star, Zap } from "lucide-react";
+import { Heart, MessageCircle, Send, Image as ImageIcon, MoreHorizontal, Trophy, Wand2, Loader2, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
+import PollCard from "@/components/social/PollCard";
 
 type User = {
     id: string;
@@ -30,9 +31,10 @@ type Post = {
     createdAt: string;
     likes: Like[];
     comments: Comment[];
-    type: 'STANDARD' | 'KUDOS';
+    type: 'STANDARD' | 'KUDOS' | 'POLL';
     kudosTarget?: { name: string };
     kudosCategory?: string;
+    pollOptions?: { id: string; text: string; votes: { userId: string }[] }[];
 };
 
 export default function StaffSocialPage() {
@@ -42,15 +44,21 @@ export default function StaffSocialPage() {
     const [newPost, setNewPost] = useState("");
     const [showImageInput, setShowImageInput] = useState(false);
     const [imageUrl, setImageUrl] = useState("");
+    const [currentUserId, setCurrentUserId] = useState("");
+    const [aiLoading, setAiLoading] = useState(false);
 
     // Kudos State
-    const [postType, setPostType] = useState<'STANDARD' | 'KUDOS'>('STANDARD');
+    const [postType, setPostType] = useState<'STANDARD' | 'KUDOS' | 'POLL'>('STANDARD');
     const [kudosTargetId, setKudosTargetId] = useState("");
     const [kudosCategory, setKudosCategory] = useState("TEAMWORK");
+
+    // Poll State
+    const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
 
     useEffect(() => {
         fetchPosts();
         fetchUsers();
+        fetch('/api/auth/me').then(res => res.json()).then(d => d.user && setCurrentUserId(d.user.id));
     }, []);
 
     const fetchPosts = async () => {
@@ -68,12 +76,14 @@ export default function StaffSocialPage() {
         e.preventDefault();
         if (!newPost.trim() && postType === 'STANDARD') return;
         if (postType === 'KUDOS' && (!kudosTargetId || !newPost.trim())) return;
+        if (postType === 'POLL' && (!newPost.trim() || pollOptions.some(o => !o.trim()))) return;
 
         const body = {
             content: newPost,
             imageUrl,
             type: postType,
-            ...(postType === 'KUDOS' && { kudosTargetId, kudosCategory })
+            ...(postType === 'KUDOS' && { kudosTargetId, kudosCategory }),
+            ...(postType === 'POLL' && { pollOptions: pollOptions.filter(o => o.trim()) })
         };
 
         const res = await fetch("/api/social", {
@@ -88,14 +98,59 @@ export default function StaffSocialPage() {
             setShowImageInput(false);
             setPostType('STANDARD');
             setKudosTargetId("");
+            setPollOptions(["", ""]);
             fetchPosts();
         }
     };
 
+    const handleAiGenerate = async () => {
+        setAiLoading(true);
+        try {
+            if (postType === 'POLL') {
+                // Generate Poll Options
+                if (!newPost.trim()) {
+                    alert("Lütfen önce bir anket sorusu yazın!");
+                    setAiLoading(false);
+                    return;
+                }
+                const res = await fetch('/api/ai/social', {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'GENERATE_POLL', prompt: newPost }),
+                });
+                const data = await res.json();
+                if (data.options) setPollOptions(data.options);
+            } else {
+                // Generate Post Content
+                const prompt = newPost || "Write a positive work update";
+                const type = postType === 'KUDOS' ? 'APPRECIATION' : 'PROFESSIONAL';
+
+                const res = await fetch('/api/ai/social', {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'GENERATE_POST', prompt, type }),
+                });
+                const data = await res.json();
+                if (data.content) setNewPost(data.content);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
     const handleLike = async (id: string) => {
-        setPosts(prev => prev.map(p => p.id === id ? { ...p, likes: [...p.likes, { userId: 'me' }] } : p));
+        // Optimistic update
+        setPosts(prev => prev.map(p => p.id === id ? {
+            ...p,
+            likes: p.likes.some(l => l.userId === currentUserId)
+                ? p.likes.filter(l => l.userId !== currentUserId)
+                : [...p.likes, { userId: currentUserId }]
+        } : p));
+
         await fetch(`/api/social/${id}/like`, { method: "POST" });
-        fetchPosts();
+        // Background refresh to ensure sync
+        const res = await fetch("/api/social");
+        if (res.ok) setPosts(await res.json());
     };
 
     const handleComment = async (id: string, content: string) => {
@@ -107,29 +162,44 @@ export default function StaffSocialPage() {
         fetchPosts();
     };
 
+    const handlePollUpdate = (postId: string, updatedOptions: any[]) => {
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, pollOptions: updatedOptions } : p));
+    };
+
     return (
         <div className="max-w-xl mx-auto space-y-6 pb-24">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center justify-between mb-2">
                 <h1 className="text-2xl font-bold text-slate-900">Sosyal Akış</h1>
+                <button onClick={fetchPosts} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-slate-100">
+                    <RefreshCw className="w-5 h-5" />
+                </button>
             </div>
 
             {/* Create Post */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 transaction-all duration-200">
-                <div className="flex gap-4 mb-4 border-b border-slate-100 pb-2">
+                <div className="flex gap-4 mb-4 border-b border-slate-100 pb-2 overflow-x-auto">
                     <button
                         onClick={() => setPostType('STANDARD')}
-                        className={`text-sm font-bold pb-2 relative ${postType === 'STANDARD' ? 'text-blue-600' : 'text-slate-400'}`}
+                        className={`text-sm font-bold pb-2 relative whitespace-nowrap ${postType === 'STANDARD' ? 'text-blue-600' : 'text-slate-400'}`}
                     >
                         Gönderi
                         {postType === 'STANDARD' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-full" />}
                     </button>
                     <button
                         onClick={() => setPostType('KUDOS')}
-                        className={`text-sm font-bold pb-2 relative flex items-center gap-1 ${postType === 'KUDOS' ? 'text-yellow-600' : 'text-slate-400'}`}
+                        className={`text-sm font-bold pb-2 relative flex items-center gap-1 whitespace-nowrap ${postType === 'KUDOS' ? 'text-yellow-600' : 'text-slate-400'}`}
                     >
                         <Trophy className="w-3.5 h-3.5" />
-                        Teşekkür Et (Kudos)
+                        Teşekkür Et
                         {postType === 'KUDOS' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-yellow-600 rounded-full" />}
+                    </button>
+                    <button
+                        onClick={() => setPostType('POLL')}
+                        className={`text-sm font-bold pb-2 relative flex items-center gap-1 whitespace-nowrap ${postType === 'POLL' ? 'text-purple-600' : 'text-slate-400'}`}
+                    >
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                        Anket
+                        {postType === 'POLL' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 rounded-full" />}
                     </button>
                 </div>
 
@@ -170,13 +240,65 @@ export default function StaffSocialPage() {
                         </div>
                     )}
 
-                    <textarea
-                        className="w-full resize-none border-none focus:ring-0 text-slate-700 placeholder:text-slate-400 text-base"
-                        placeholder={postType === 'KUDOS' ? "Neden teşekkür etmek istersin?" : "Neler oluyor?"}
-                        rows={2}
-                        value={newPost}
-                        onChange={e => setNewPost(e.target.value)}
-                    />
+                    {postType === 'POLL' && (
+                        <div className="mb-3 space-y-2 bg-purple-50 p-3 rounded-xl border border-purple-100 animate-in fade-in">
+                            <div className="flex justify-between items-center">
+                                <label className="block text-xs font-bold text-purple-700">Seçenekler</label>
+                                <button
+                                    type="button"
+                                    onClick={handleAiGenerate}
+                                    disabled={aiLoading}
+                                    className="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded-full flex items-center gap-1 hover:bg-purple-200 transition"
+                                >
+                                    {aiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                                    AI ile Seçenek Üret
+                                </button>
+                            </div>
+                            {pollOptions.map((opt, idx) => (
+                                <input
+                                    key={idx}
+                                    className="w-full text-sm border-purple-200 rounded-lg p-2 bg-white focus:ring-purple-500"
+                                    placeholder={`Seçenek ${idx + 1}`}
+                                    value={opt}
+                                    onChange={e => {
+                                        const newOpts = [...pollOptions];
+                                        newOpts[idx] = e.target.value;
+                                        setPollOptions(newOpts);
+                                    }}
+                                />
+                            ))}
+                            {pollOptions.length < 5 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setPollOptions([...pollOptions, ""])}
+                                    className="text-xs text-purple-600 font-bold hover:underline"
+                                >
+                                    + Seçenek Ekle
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="relative">
+                        <textarea
+                            className="w-full resize-none border-none focus:ring-0 text-slate-700 placeholder:text-slate-400 text-base bg-transparent"
+                            placeholder={postType === 'KUDOS' ? "Neden teşekkür etmek istersin?" : postType === 'POLL' ? "Anket sorusu nedir?" : "Neler oluyor?"}
+                            rows={3}
+                            value={newPost}
+                            onChange={e => setNewPost(e.target.value)}
+                        />
+                        {postType !== 'POLL' && (
+                            <button
+                                type="button"
+                                onClick={handleAiGenerate}
+                                disabled={aiLoading}
+                                className="absolute bottom-2 right-2 p-1.5 rounded-full bg-slate-50 text-slate-400 hover:text-purple-600 hover:bg-purple-50 border border-slate-200 transition"
+                                title="AI ile İçerik Üret"
+                            >
+                                {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                            </button>
+                        )}
+                    </div>
 
                     {postType === 'STANDARD' && showImageInput && (
                         <input
@@ -196,11 +318,11 @@ export default function StaffSocialPage() {
 
                         <button
                             type="submit"
-                            disabled={!newPost.trim() || (postType === 'KUDOS' && !kudosTargetId)}
-                            className={`${postType === 'KUDOS' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'} text-white px-5 py-1.5 rounded-full font-medium disabled:opacity-50 transition text-sm flex items-center gap-2`}
+                            disabled={!newPost.trim() || (postType === 'KUDOS' && !kudosTargetId) || (postType === 'POLL' && pollOptions.filter(o => o.trim()).length < 2)}
+                            className={`${postType === 'KUDOS' ? 'bg-yellow-500 hover:bg-yellow-600' : postType === 'POLL' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-5 py-1.5 rounded-full font-medium disabled:opacity-50 transition text-sm flex items-center gap-2`}
                         >
-                            {postType === 'KUDOS' ? <Trophy className="w-4 h-4" /> : <Send className="w-4 h-4 ml-1" />}
-                            {postType === 'KUDOS' ? 'Gönder' : 'Paylaş'}
+                            {postType === 'KUDOS' ? <Trophy className="w-4 h-4" /> : postType === 'POLL' ? <MoreHorizontal className="w-4 h-4" /> : <Send className="w-4 h-4 ml-1" />}
+                            {postType === 'KUDOS' ? 'Gönder' : postType === 'POLL' ? 'Başlat' : 'Paylaş'}
                         </button>
                     </div>
                 </form>
@@ -209,17 +331,30 @@ export default function StaffSocialPage() {
             {/* Feed */}
             <div className="space-y-4">
                 {posts.map(post => (
-                    <PostCard key={post.id} post={post} onLike={() => handleLike(post.id)} onComment={(c) => handleComment(post.id, c)} />
+                    <PostCard
+                        key={post.id}
+                        post={post}
+                        currentUserId={currentUserId}
+                        onLike={() => handleLike(post.id)}
+                        onComment={(c) => handleComment(post.id, c)}
+                        onPollUpdate={(opts) => handlePollUpdate(post.id, opts)}
+                    />
                 ))}
-                {posts.length === 0 && !loading && (
-                    <div className="text-center py-10 text-slate-400 italic">Henüz paylaşım yok.</div>
-                )}
             </div>
+            {posts.length === 0 && !loading && (
+                <div className="text-center py-10 text-slate-400 italic">Henüz paylaşım yok.</div>
+            )}
         </div>
     );
 }
 
-function PostCard({ post, onLike, onComment }: { post: Post, onLike: () => void, onComment: (c: string) => void }) {
+function PostCard({ post, onLike, onComment, currentUserId, onPollUpdate }: {
+    post: Post;
+    onLike: () => void;
+    onComment: (c: string) => void;
+    currentUserId: string;
+    onPollUpdate: (options: any[]) => void;
+}) {
     const [showComments, setShowComments] = useState(false);
     const [commentText, setCommentText] = useState("");
 
@@ -231,6 +366,8 @@ function PostCard({ post, onLike, onComment }: { post: Post, onLike: () => void,
     };
 
     const isKudos = post.type === 'KUDOS';
+    const isPoll = post.type === 'POLL';
+    const isLiked = post.likes.some(l => l.userId === currentUserId);
 
     return (
         <div className={`bg-white rounded-xl shadow-sm border overflow-hidden ${isKudos ? 'border-yellow-200' : 'border-slate-200'}`}>
@@ -267,6 +404,15 @@ function PostCard({ post, onLike, onComment }: { post: Post, onLike: () => void,
                     {post.content}
                 </p>
 
+                {isPoll && post.pollOptions && (
+                    <PollCard
+                        postId={post.id}
+                        options={post.pollOptions}
+                        currentUserId={currentUserId}
+                        onVote={onPollUpdate}
+                    />
+                )}
+
                 {post.imageUrl && (
                     <div className="mt-3 rounded-lg overflow-hidden border border-slate-100">
                         <img src={post.imageUrl} alt="Attachment" className="w-full h-auto max-h-80 object-cover" />
@@ -276,7 +422,7 @@ function PostCard({ post, onLike, onComment }: { post: Post, onLike: () => void,
 
             <div className="px-4 py-2 border-t border-slate-50 flex gap-6">
                 <button onClick={onLike} className={`flex items-center gap-2 transition group p-2 rounded -ml-2 ${isKudos ? 'text-yellow-600 hover:bg-yellow-50' : 'text-slate-500 hover:text-red-500 hover:bg-red-50'}`}>
-                    <Heart className={`w-5 h-5 group-hover:fill-current`} />
+                    <Heart className={`w-5 h-5 ${isLiked ? 'fill-red-500 text-red-500' : 'group-hover:fill-current'}`} />
                     <span className="text-sm font-medium">{post.likes.length || ""}</span>
                 </button>
                 <button onClick={() => setShowComments(!showComments)} className="flex items-center gap-2 text-slate-500 hover:text-blue-500 transition group p-2 rounded hover:bg-blue-50">

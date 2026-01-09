@@ -11,7 +11,6 @@ export default function LocationTracker() {
     useEffect(() => {
         if (!('geolocation' in navigator)) return;
 
-        console.log("Location Tracker initialized");
 
         const sendUpdate = async (lat: number, lng: number) => {
             // Check if distance changed significantly to save battery/bandwidth
@@ -28,7 +27,6 @@ export default function LocationTracker() {
                     body: JSON.stringify({ lat, lng }),
                 });
                 lastPosRef.current = { lat, lng };
-                console.log("Location updated:", lat, lng);
             } catch (err) {
                 console.error("Location update failed:", err);
             }
@@ -49,7 +47,7 @@ export default function LocationTracker() {
         // Initial update
         navigator.geolocation.getCurrentPosition(
             (pos) => sendUpdate(pos.coords.latitude, pos.coords.longitude),
-            () => console.log("Initial location fetch failed"),
+            null,
             { enableHighAccuracy: true, timeout: 5000 }
         );
 
