@@ -6,6 +6,10 @@ export async function GET(req: Request) {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const { searchParams } = new URL(req.url);
+    const cursor = searchParams.get('cursor');
+    const limit = 10;
+
     try {
         const posts = await prisma.post.findMany({
             include: {
@@ -21,7 +25,11 @@ export async function GET(req: Request) {
                 }
             },
             orderBy: { createdAt: 'desc' },
-            take: 20
+            take: limit,
+            ...(cursor ? {
+                skip: 1, // Skip cursor
+                cursor: { id: cursor }
+            } : {})
         });
         return NextResponse.json(posts);
     } catch (e) {

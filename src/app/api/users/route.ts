@@ -1,19 +1,27 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyJWT } from '@/lib/auth';
-import { cookies } from 'next/headers';
+import { getAuth } from '@/lib/auth';
 
 export async function GET() {
-    try {
-        const token = (await cookies()).get('personel_token')?.value;
-        const payload = token ? await verifyJWT(token) : null;
+    const session = await getAuth();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        if (!payload) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+    try {
+        // If Admin, return everything (or maybe still exclude some internals?)
+        // For now, let's keep it consistent: Admin sees all, Staff sees directory info.
+
+        const isManager = session.role === 'ADMIN' || session.role === 'EXECUTIVE';
 
         const users = await prisma.user.findMany({
             orderBy: { createdAt: 'desc' },
+            select: isManager ? undefined : {
+                id: true,
+                name: true,
+                phone: true, // Maybe needed for contact?
+                role: true,
+                profilePicture: true,
+                department: { select: { name: true } }
+            }
         });
 
         return NextResponse.json(users);
@@ -23,14 +31,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+    const session = await getAuth();
+    if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     try {
-        const token = (await cookies()).get('personel_token')?.value;
-        const payload = token ? await verifyJWT(token) : null;
-
-        if (!payload || payload.role !== 'ADMIN') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         const body = await req.json();
         const { name, phone, role, hourlyRate, weeklyGoal } = body;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UserPlus, QrCode, LogOut, Clock, Building, Users } from "lucide-react";
+import { UserPlus, QrCode, LogOut, Clock, Building, Users, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { QRCodeSVG } from "qrcode.react";
@@ -195,6 +195,18 @@ export default function VisitorsPage() {
                         <div className="flex gap-3">
                             <button onClick={() => window.print()} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition">
                                 Yazdır
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const phone = createdVisitor.phone.replace(/\D/g, '');
+                                    const cleanPhone = phone.startsWith('0') ? '9' + phone : phone.length === 10 ? '90' + phone : phone;
+                                    const text = encodeURIComponent(`Sayın ${createdVisitor.name}, Şirketimize hoş geldiniz! Ziyaretçi kartınız oluşturulmuştur. Giriş için bu QR kodu kullanabilirsiniz.\n\nİyi günler dileriz.`);
+                                    // ideally we would include a public link to the QR image here if we had storage
+                                    window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
+                                }}
+                                className="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition flex items-center justify-center gap-2"
+                            >
+                                <MessageCircle className="w-5 h-5" /> WhatsApp
                             </button>
                             <button onClick={() => setCreatedVisitor(null)} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition">
                                 Kapat

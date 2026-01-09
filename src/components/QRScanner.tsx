@@ -63,8 +63,9 @@ export default function QRScanner({
 
                 // Config without fixed aspect ratio for better compatibility
                 const config = {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 },
+                    fps: 15, // Increased FPS for faster scanning
+                    qrbox: undefined, // Allow full frame scanning
+                    aspectRatio: 1.0
                 };
 
                 // Start scanning

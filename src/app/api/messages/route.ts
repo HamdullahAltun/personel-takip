@@ -44,12 +44,25 @@ export async function POST(req: Request) {
 
     const { receiverId, content, attachmentUrl } = await req.json();
 
+    let sentiment = { score: 0, label: 'NEUTRAL' };
+    if (content && content.length > 5) {
+        // Only analyze meaningful messages
+        try {
+            const { analyzeSentiment } = await import('@/lib/ai');
+            sentiment = await analyzeSentiment(content);
+        } catch (e) {
+            console.error("AI Analysis Failed", e);
+        }
+    }
+
     const message = await prisma.message.create({
         data: {
             content: content || "",
             attachmentUrl,
             senderId: session.id as string,
-            receiverId
+            receiverId,
+            sentimentScore: sentiment.score,
+            sentimentLabel: sentiment.label
         }
     });
 

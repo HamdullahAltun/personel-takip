@@ -39,6 +39,7 @@ import PushNotificationListener from "@/components/PushNotificationListener";
 import AppUrlListener from "@/components/AppUrlListener";
 import MobilePolish from "@/components/MobilePolish";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -58,6 +59,7 @@ export default function RootLayout({
           <AppUrlListener />
           <MobilePolish />
           <OfflineIndicator />
+          <InstallPrompt />
           <Toaster position="top-right" richColors />
           {children}
           <SpeedInsights />

@@ -88,36 +88,49 @@ export default function StaffOnboardingPage() {
                                     <p className="text-right text-xs text-slate-500 mt-1 font-medium">{progressPercent}% Tamamlandı</p>
                                 </div>
 
-                                <div className="p-2">
-                                    {assignment.checklist.items.map((item: any) => {
-                                        const isChecked = assignment.progress?.[item.id] || false;
-                                        return (
-                                            <button
-                                                key={item.id}
-                                                onClick={() => handleCheck(assignment.id, item.id, isChecked)}
-                                                className={cn(
-                                                    "w-full flex items-center gap-4 p-4 rounded-xl transition-all text-left group",
-                                                    isChecked ? "bg-green-50/50" : "hover:bg-slate-50"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors shrink-0",
-                                                    isChecked ? "bg-green-500 border-green-500 text-white" : "border-slate-300 text-transparent group-hover:border-indigo-400"
-                                                )}>
-                                                    <CheckSquare className="w-4 h-4" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className={cn(
-                                                        "text-sm font-medium transition-colors",
-                                                        isChecked ? "text-slate-400 line-through" : "text-slate-700"
-                                                    )}>
-                                                        {item.task}
-                                                    </p>
-                                                    <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{item.category}</span>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
+                                <div className="p-4 space-y-6">
+                                    {Object.entries(
+                                        assignment.checklist.items.reduce((acc: any, item: any) => {
+                                            const cat = item.category || "Diğer";
+                                            if (!acc[cat]) acc[cat] = [];
+                                            acc[cat].push(item);
+                                            return acc;
+                                        }, {})
+                                    ).map(([category, items]: [string, any]) => (
+                                        <div key={category} className="space-y-2">
+                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1 mb-2">{category}</h4>
+                                            <div className="bg-slate-50 rounded-xl overflow-hidden divide-y divide-slate-100 border border-slate-100">
+                                                {items.map((item: any) => {
+                                                    const isChecked = assignment.progress?.[item.id] || false;
+                                                    return (
+                                                        <button
+                                                            key={item.id}
+                                                            onClick={() => handleCheck(assignment.id, item.id, isChecked)}
+                                                            className={cn(
+                                                                "w-full flex items-center gap-4 p-4 transition-all text-left group hover:bg-white",
+                                                                isChecked ? "bg-green-50/50" : ""
+                                                            )}
+                                                        >
+                                                            <div className={cn(
+                                                                "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors shrink-0",
+                                                                isChecked ? "bg-green-500 border-green-500 text-white" : "border-slate-300 bg-white group-hover:border-indigo-400"
+                                                            )}>
+                                                                {isChecked && <CheckSquare className="w-3.5 h-3.5" />}
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <p className={cn(
+                                                                    "text-sm font-medium transition-colors",
+                                                                    isChecked ? "text-slate-400 line-through" : "text-slate-700"
+                                                                )}>
+                                                                    {item.task}
+                                                                </p>
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         );

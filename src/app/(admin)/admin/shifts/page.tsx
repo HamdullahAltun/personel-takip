@@ -268,13 +268,57 @@ export default function ShiftsPage() {
                                                 key={day.toString()}
                                                 className={`min-h-[100px] border-b border-r border-slate-100 p-2 hover:bg-slate-50 transition-colors group cursor-pointer ${!isSameMonth(day, currentDate) ? 'bg-slate-50/50' : ''}`}
                                                 onClick={() => { setSelectedDate(day); setShowModal(true); }}
+                                                onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = '#f0f9ff'; }}
+                                                onDragLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+                                                onDrop={async (e) => {
+                                                    e.preventDefault();
+                                                    e.currentTarget.style.backgroundColor = '';
+                                                    const shiftId = e.dataTransfer.getData("shiftId");
+                                                    if (!shiftId) return;
+
+                                                    const shift = shifts.find(s => s.id === shiftId);
+                                                    if (!shift) return;
+
+                                                    // Calculate new start/end times preserving duration and time of day
+                                                    const oldStart = new Date(shift.start);
+                                                    const oldEnd = new Date(shift.end);
+                                                    const durationMs = oldEnd.getTime() - oldStart.getTime();
+
+                                                    const newStart = new Date(day);
+                                                    newStart.setHours(oldStart.getHours(), oldStart.getMinutes());
+
+                                                    const newEnd = new Date(newStart.getTime() + durationMs);
+
+                                                    // Optimistic UI Update
+                                                    setShifts(prev => prev.map(s => s.id === shiftId ? { ...s, start: newStart.toISOString(), end: newEnd.toISOString() } : s));
+
+                                                    // API Call
+                                                    await fetch('/api/shifts', {
+                                                        method: 'PATCH',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({
+                                                            id: shiftId,
+                                                            start: newStart.toISOString(),
+                                                            end: newEnd.toISOString()
+                                                        })
+                                                    });
+                                                }}
                                             >
                                                 <div className={`text-right mb-1 ${isSameDay(day, new Date()) ? 'bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center ml-auto shadow-sm' : 'text-slate-500'}`}>
                                                     <span className="text-sm font-medium">{format(day, 'd')}</span>
                                                 </div>
                                                 <div className="space-y-1">
                                                     {dayShifts.map(shift => (
-                                                        <div key={shift.id} className={`text-[10px] p-1.5 rounded border ${getColorClass(shift.color || 'blue')} flex justify-between items-center group/shift shadow-sm`}>
+                                                        <div
+                                                            key={shift.id}
+                                                            draggable
+                                                            onDragStart={(e) => {
+                                                                e.dataTransfer.setData("shiftId", shift.id);
+                                                                e.stopPropagation();
+                                                            }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className={`text-[10px] p-1.5 rounded border ${getColorClass(shift.color || 'blue')} flex justify-between items-center group/shift shadow-sm cursor-grab active:cursor-grabbing hover:scale-[1.02] transition-transform`}
+                                                        >
                                                             <div className="truncate">
                                                                 <span className="font-bold block">{shift.user.name}</span>
                                                                 <span className="opacity-90">{format(new Date(shift.start), 'HH:mm')} - {format(new Date(shift.end), 'HH:mm')}</span>

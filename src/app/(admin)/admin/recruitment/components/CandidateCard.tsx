@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Phone, Mail, FileText, Loader2 } from "lucide-react";
+import { Sparkles, Phone, Mail, Loader2, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Candidate {
@@ -19,9 +19,12 @@ interface Candidate {
 interface Props {
     candidate: Candidate;
     onRefresh: () => void;
+    selectable?: boolean;
+    selected?: boolean;
+    onSelect?: () => void;
 }
 
-export default function CandidateCard({ candidate, onRefresh }: Props) {
+export default function CandidateCard({ candidate, onRefresh, selectable, selected, onSelect }: Props) {
     const [analyzing, setAnalyzing] = useState(false);
 
     const handleAnalyze = async () => {
@@ -47,25 +50,42 @@ export default function CandidateCard({ candidate, onRefresh }: Props) {
     };
 
     return (
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all group">
-            <div className="flex justify-between items-start mb-2">
+        <div
+            className={cn(
+                "bg-white p-4 rounded-xl shadow-sm border transition-all group relative cursor-pointer",
+                selected ? "border-indigo-500 ring-1 ring-indigo-500 bg-indigo-50/10" : "border-slate-200 hover:shadow-md"
+            )}
+            onClick={() => selectable && onSelect && onSelect()}
+        >
+
+            {selectable && (
+                <div className={cn("absolute top-4 right-4 z-10 w-5 h-5 rounded border flex items-center justify-center transition",
+                    selected ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-300 bg-white"
+                )}>
+                    {selected && <CheckCircle2 className="w-3.5 h-3.5" />}
+                </div>
+            )}
+
+            <div className="flex justify-between items-start mb-2 pr-6">
                 <div>
                     <h3 className="font-bold text-slate-900">{candidate.name}</h3>
                     <p className="text-xs text-slate-500">{candidate.jobPosting?.title || 'Pozisyon Yok'}</p>
                 </div>
-                {candidate.aiScore ? (
-                    <div className={cn("px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1", getScoreColor(candidate.aiScore))}>
-                        <Sparkles className="h-3 w-3" /> {candidate.aiScore}
-                    </div>
-                ) : (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); handleAnalyze(); }}
-                        disabled={analyzing}
-                        className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition disabled:opacity-50"
-                        title="AI ile Analiz Et"
-                    >
-                        {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                    </button>
+                {!selectable && (
+                    candidate.aiScore ? (
+                        <div className={cn("px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1", getScoreColor(candidate.aiScore))}>
+                            <Sparkles className="h-3 w-3" /> {candidate.aiScore}
+                        </div>
+                    ) : (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleAnalyze(); }}
+                            disabled={analyzing}
+                            className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition disabled:opacity-50"
+                            title="AI ile Analiz Et"
+                        >
+                            {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                        </button>
+                    )
                 )}
             </div>
 
@@ -88,11 +108,11 @@ export default function CandidateCard({ candidate, onRefresh }: Props) {
             )}
 
             <div className="flex gap-2 mt-2 pt-2 border-t border-slate-50">
-                <a href={`tel:${candidate.phone}`} className="flex-1 py-1.5 text-center bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium text-slate-600 transition">
+                <a href={`tel:${candidate.phone}`} onClick={(e) => e.stopPropagation()} className="flex-1 py-1.5 text-center bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-medium text-slate-600 transition">
                     Ara
                 </a>
                 {candidate.resumeUrl && (
-                    <a href={candidate.resumeUrl} target="_blank" className="flex-1 py-1.5 text-center bg-blue-50 hover:bg-blue-100 rounded-lg text-xs font-medium text-blue-600 transition">
+                    <a href={candidate.resumeUrl} target="_blank" onClick={(e) => e.stopPropagation()} className="flex-1 py-1.5 text-center bg-blue-50 hover:bg-blue-100 rounded-lg text-xs font-medium text-blue-600 transition">
                         CV
                     </a>
                 )}

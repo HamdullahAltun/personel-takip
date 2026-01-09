@@ -62,6 +62,37 @@ export async function POST(req: Request) {
     }
 }
 
+export async function PATCH(req: Request) {
+    const session = await getAuth();
+    if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const body = await req.json();
+    const { id, date, startTime, endTime } = body;
+
+    try {
+        // If just moving date, we keep time but change date
+        // But we need to know previous time if not provided? 
+        // Or simpler: always provide new Start and End Date objects or strings.
+
+        // Let's assume the frontend calculates the full ISO strings
+        const { start, end } = body;
+
+        if (start && end) {
+            const shift = await prisma.shift.update({
+                where: { id },
+                data: { start, end },
+                include: { user: { select: { name: true } } }
+            });
+            return NextResponse.json(shift);
+        }
+
+        return NextResponse.json({ error: "Start and End required" }, { status: 400 });
+
+    } catch (e) {
+        return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+    }
+}
+
 export async function DELETE(req: Request) {
     const session = await getAuth();
     if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

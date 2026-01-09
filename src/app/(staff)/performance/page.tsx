@@ -3,16 +3,25 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { TrendingUp, CheckCircle, Circle, ArrowRight, Target, Plus, Calendar, MessageSquare, Award, Sparkles } from "lucide-react";
+import { tr } from "date-fns/locale";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export default function StaffGoalsPage() {
-    const [activeTab, setActiveTab] = useState<'goals' | 'reviews'>('goals');
+    const [activeTab, setActiveTab] = useState<'goals' | 'reviews' | 'peer'>('goals');
     const { data: goals = [], mutate } = useSWR('/api/goals', (url) => fetch(url).then(r => r.json()));
     const { data: reviews = [] } = useSWR('/api/performance', (url) => fetch(url).then(r => r.json()));
     const { data: kudos = [] } = useSWR('/api/social?type=kudos', (url) => fetch(url).then(r => r.json()));
+    const { data: users = [] } = useSWR('/api/users', (url) => fetch(url).then(r => r.json()));
 
     const [showModal, setShowModal] = useState(false);
     const [newGoal, setNewGoal] = useState({ title: "", description: "", dueDate: "" });
+
+    // Review Form State
+    const [reviewTarget, setReviewTarget] = useState("");
+    const [reviewScore, setReviewScore] = useState(5);
+    const [reviewFeedback, setReviewFeedback] = useState("");
+    const [submittingReview, setSubmittingReview] = useState(false);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,6 +58,27 @@ export default function StaffGoalsPage() {
         mutate();
     }
 
+    const handleSubmitReview = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!reviewTarget) return;
+        setSubmittingReview(true);
+        try {
+            await fetch('/api/performance', {
+                method: 'POST',
+                body: JSON.stringify({ revieweeId: reviewTarget, score: reviewScore, feedback: reviewFeedback }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            alert("Değerlendirme başarıyla gönderildi.");
+            setReviewTarget("");
+            setReviewScore(5);
+            setReviewFeedback("");
+            setActiveTab('reviews');
+        } catch (e) {
+            alert("Bir hata oluştu.");
+        }
+        setSubmittingReview(false);
+    }
+
     return (
         <div className="max-w-2xl mx-auto pb-24 space-y-6">
             <div className="flex items-center justify-between">
@@ -73,6 +103,13 @@ export default function StaffGoalsPage() {
                         activeTab === 'reviews' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
                 >
                     Değerlendirmeler
+                </button>
+                <button
+                    onClick={() => setActiveTab('peer')}
+                    className={cn("flex-1 py-2 rounded-xl text-sm font-bold transition-all",
+                        activeTab === 'peer' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+                >
+                    Ekip Değerlendir
                 </button>
             </div>
 
@@ -145,7 +182,7 @@ export default function StaffGoalsPage() {
                         ))}
                     </div>
                 </div>
-            ) : (
+            ) : activeTab === 'reviews' ? (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                     {/* Performance Reviews */}
                     <div className="space-y-4">
@@ -166,7 +203,7 @@ export default function StaffGoalsPage() {
                                                 {format(new Date(rev.createdAt), 'MMMM yyyy', { locale: tr })}
                                             </span>
                                             <div className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-sm font-bold border border-indigo-100">
-                                                Puan: {rev.score}/10
+                                                Puan: {rev.score}/100
                                             </div>
                                         </div>
                                         <p className="text-slate-700 text-sm leading-relaxed">{rev.feedback}</p>
@@ -214,6 +251,68 @@ export default function StaffGoalsPage() {
                                 ))}
                             </div>
                         )}
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+                    <div className="bg-white p-8 rounded-[30px] shadow-xl border border-slate-100">
+                        <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-3">
+                            <MessageSquare className="h-6 w-6 text-indigo-600" />
+                            Ekip Arkadaşını Değerlendir
+                        </h2>
+
+                        <form onSubmit={handleSubmitReview} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Değerlendirilecek Kişi</label>
+                                <select
+                                    required
+                                    value={reviewTarget}
+                                    onChange={(e) => setReviewTarget(e.target.value)}
+                                    className="w-full p-4 rounded-2xl border-slate-200 bg-slate-50 font-bold text-slate-700 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                                >
+                                    <option value="">Seçiniz...</option>
+                                    {users.map((u: any) => (
+                                        <option key={u.id} value={u.id}>{u.name} ({u.department?.name || 'Genel'})</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Puan (0-100)</label>
+                                <div className="flex items-center gap-4">
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        step="5"
+                                        value={reviewScore}
+                                        onChange={(e) => setReviewScore(Number(e.target.value))}
+                                        className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                    />
+                                    <span className="font-black text-indigo-600 text-xl w-12 text-center">{reviewScore}</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Geri Bildirim</label>
+                                <textarea
+                                    required
+                                    value={reviewFeedback}
+                                    onChange={(e) => setReviewFeedback(e.target.value)}
+                                    placeholder="Güçlü yönleri ve gelişim alanları neler?"
+                                    rows={4}
+                                    className="w-full p-4 rounded-2xl border-slate-200 bg-slate-50 text-sm focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={submittingReview}
+                                className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-1 transition-all disabled:opacity-50"
+                            >
+                                {submittingReview ? 'Gönderiliyor...' : 'Değerlendirmeyi Gönder'}
+                            </button>
+                        </form>
                     </div>
                 </div>
             )}
@@ -265,5 +364,3 @@ export default function StaffGoalsPage() {
     );
 }
 
-import { tr } from "date-fns/locale";
-import { format } from "date-fns";

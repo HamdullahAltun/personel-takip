@@ -27,12 +27,33 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(function (payload) {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
-    // Customize notification here if needed
     const notificationTitle = payload.notification?.title || 'Bildirim';
     const notificationOptions = {
         body: payload.notification?.body,
-        icon: '/icon-192x192.png'
+        icon: '/icon-192x192.png',
+        data: payload.data // Pass data to notification
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener('notificationclick', function (event) {
+    console.log('Notification clicked', event);
+    event.notification.close();
+
+    const url = event.notification.data?.url || '/';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
+            for (let i = 0; i < clientList.length; i++) {
+                const client = clientList[i];
+                if (client.url.includes(url) && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(url);
+            }
+        })
+    );
 });

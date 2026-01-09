@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Laptop, Phone, Car, Key, Plus, Search, User, CheckCircle2, RefreshCw, ClipboardList, XCircle } from "lucide-react";
+import { Laptop, Phone, Car, Key, Plus, Search, User, CheckCircle2, RefreshCw, ClipboardList, XCircle, Printer, ScanLine } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function AdminAssetsPage() {
     const [assets, setAssets] = useState<any[]>([]);
@@ -12,6 +13,7 @@ export default function AdminAssetsPage() {
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({ name: "", serialNumber: "", type: "LAPTOP", status: "AVAILABLE", notes: "" });
     const [assignModal, setAssignModal] = useState<any>(null);
+    const [qrModal, setQrModal] = useState<any>(null);
 
     // Logs
     const [logsModal, setLogsModal] = useState<any>(null);
@@ -219,6 +221,13 @@ export default function AdminAssetsPage() {
                                         >
                                             <ClipboardList className="h-4 w-4" />
                                         </button>
+                                        <button
+                                            onClick={() => setQrModal(asset)}
+                                            className="ml-1 text-indigo-400 hover:text-indigo-600 p-1.5 rounded hover:bg-indigo-50 transition"
+                                            title="QR Kod Yazdır"
+                                        >
+                                            <ScanLine className="h-4 w-4" />
+                                        </button>
                                     </td>
                                 </tr>
                             ))
@@ -348,6 +357,59 @@ export default function AdminAssetsPage() {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* QR MODAL */}
+            {qrModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+                    <div className="bg-white p-8 rounded-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 text-center relative">
+                        <button onClick={() => setQrModal(null)} className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full"><XCircle className="h-6 w-6 text-slate-400" /></button>
+
+                        <h2 className="text-xl font-bold mb-1">{qrModal.name}</h2>
+                        <p className="text-slate-500 text-xs mb-6 font-mono">{qrModal.serialNumber || qrModal.id}</p>
+
+                        <div className="flex justify-center mb-6 p-4 border rounded-xl bg-white shadow-sm" id="printable-qr">
+                            <div className="space-y-2">
+                                <QRCodeSVG value={JSON.stringify({ type: 'ASSET', id: qrModal.id })} size={180} level="H" />
+                                <p className="text-[10px] text-slate-400 font-mono mt-2 hidden print:block text-center">{qrModal.name} - {qrModal.serialNumber}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button onClick={() => setQrModal(null)} className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-200 transition">Kapat</button>
+                            <button
+                                onClick={() => {
+                                    const printContent = document.getElementById('printable-qr');
+                                    const win = window.open('', '', 'width=400,height=400');
+                                    if (win && printContent) {
+                                        win.document.write(`
+                                            <html>
+                                                <head>
+                                                    <title>Print QR - ${qrModal.name}</title>
+                                                    <style>
+                                                        body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
+                                                        .info { margin-top: 10px; font-size: 12px; font-weight: bold; }
+                                                    </style>
+                                                </head>
+                                                <body>
+                                                    ${printContent.innerHTML}
+                                                    <div class="info">${qrModal.name}</div>
+                                                    <script>
+                                                        window.onload = () => { window.print(); window.close(); }
+                                                    </script>
+                                                </body>
+                                            </html>
+                                        `);
+                                        win.document.close();
+                                    }
+                                }}
+                                className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
+                            >
+                                <Printer className="h-4 w-4" />
+                                Yazdır
+                            </button>
                         </div>
                     </div>
                 </div>

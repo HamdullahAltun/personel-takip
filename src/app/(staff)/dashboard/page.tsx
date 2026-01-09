@@ -8,6 +8,10 @@ import { tr } from "date-fns/locale";
 import { ScanLine, Clock, Trophy, Crown, Star, Calendar } from "lucide-react";
 import DashboardWidgetsClient from "@/components/staff/DashboardWidgetsClient";
 import WelcomeHeader from "@/components/WelcomeHeader";
+import DailyMotivation from "@/components/staff/DailyMotivation";
+import DashboardQuickActions from "@/components/staff/DashboardQuickActions";
+import TopPerformers from "@/components/staff/TopPerformers";
+import TeamMood from "@/components/staff/TeamMood";
 
 import { cn } from "@/lib/utils";
 import { Metadata } from "next";
@@ -99,131 +103,178 @@ export default async function StaffDashboard() {
     const progressPercent = Math.min(100, Math.round((totalMinutes / (weeklyGoal * 60)) * 100));
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-20 animate-in fade-in duration-500">
             <WelcomeHeader userName={user.name} />
 
-            <DashboardWidgetsClient />
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-            {/* Upcoming Shift Card (Full Width on Mobile) */}
-            {user.shifts[0] ? (
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-                    <div className="relative z-10 flex justify-between items-center">
+                {/* Status Card - Compact */}
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 relative overflow-hidden group hover:shadow-md transition-all">
+                    <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-indigo-100 text-sm font-medium mb-1">Sıradaki Vardiya</p>
-                            <h3 className="text-2xl font-bold">{format(new Date(user.shifts[0].start), 'd MMMM EEEE', { locale: tr })}</h3>
-                            <div className="flex items-center gap-2 mt-2 text-indigo-100">
-                                <Clock className="h-4 w-4" />
-                                <span className="font-bold">
-                                    {format(new Date(user.shifts[0].start), 'HH:mm')} - {format(new Date(user.shifts[0].end), 'HH:mm')}
+                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Durum</p>
+                            <div className="flex items-center gap-2 mt-2">
+                                <span className={`relative flex h-3 w-3`}>
+                                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isCheckedIn ? 'bg-emerald-400' : 'bg-red-400'}`}></span>
+                                    <span className={`relative inline-flex rounded-full h-3 w-3 ${isCheckedIn ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
                                 </span>
+                                <p className="text-xl font-black text-slate-900">
+                                    {isCheckedIn ? "Çalışıyor" : "Ofis Dışında"}
+                                </p>
+                            </div>
+                            {isCheckedIn && (
+                                <p className="text-emerald-600 text-xs mt-1 font-bold">
+                                    {durationText} süredir aktif
+                                </p>
+                            )}
+                        </div>
+                        <div className={`p-3 rounded-2xl ${isCheckedIn ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
+                            <ScanLine className="h-6 w-6" />
+                        </div>
+                    </div>
+                    <Link
+                        href="/scan"
+                        className="mt-6 flex items-center justify-center w-full py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors"
+                    >
+                        {isCheckedIn ? "Çıkış Yap" : "Mesai Başlat"}
+                    </Link>
+                </div>
+
+                {/* Weekly Goal - Compact */}
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Haftalık Hedef</p>
+                            <div className="mt-2 flex items-baseline gap-1">
+                                <span className="text-3xl font-black text-slate-900">{workedHours}</span>
+                                <span className="text-sm font-bold text-slate-400">/ {weeklyGoal} Saat</span>
                             </div>
                         </div>
-                        <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                            <Calendar className="h-8 w-8 text-white" />
+                        <div className="p-3 rounded-2xl bg-blue-50 text-blue-600">
+                            <Clock className="h-6 w-6" />
                         </div>
                     </div>
-                </div>
-            ) : (
-                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 flex justify-between items-center shadow-sm">
-                    <div>
-                        <p className="text-slate-500 text-sm font-medium">Yaklaşan Vardiya</p>
-                        <p className="text-slate-800 font-bold text-lg mt-1">Planlanmış vardiya yok.</p>
-                    </div>
-                    <Calendar className="h-8 w-8 text-slate-300" />
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Status Card */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <ScanLine className="h-32 w-32 text-blue-600" />
-                    </div>
-
-                    <div>
-                        <p className="text-slate-500 text-sm font-medium">Şu Anki Durum</p>
-                        <div className="flex items-center gap-3 mt-2">
-                            <span className={`relative flex h-4 w-4`}>
-                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isCheckedIn ? 'bg-green-400' : 'bg-red-400'}`}></span>
-                                <span className={`relative inline-flex rounded-full h-4 w-4 ${isCheckedIn ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                            </span>
-                            <p className="text-2xl font-bold text-slate-900">
-                                {isCheckedIn ? "Çalışıyorsunuz" : "Ofis Dışında"}
-                            </p>
+                    <div className="mt-4">
+                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                            <div
+                                className={cn("h-full rounded-full transition-all duration-1000", progressPercent >= 100 ? "bg-emerald-500" : "bg-blue-600")}
+                                style={{ width: `${progressPercent}%` }}
+                            />
                         </div>
-                        {isCheckedIn && (
-                            <p className="text-slate-400 text-xs mt-2 font-medium bg-slate-50 inline-block px-2 py-1 rounded-lg">
-                                Giriş: {format(lastRecord.timestamp, 'HH:mm')} • Süre: {durationText}
-                            </p>
+                        <p className="text-right text-xs font-bold text-slate-400 mt-2">%{progressPercent} Tamamlandı</p>
+                    </div>
+                </div>
+
+                {/* Motivation Card */}
+                <DailyMotivation />
+            </div>
+
+            <DashboardQuickActions />
+
+            {/* Main Content Split */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* Left Column: Upcoming & Tasks */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Shift Banner */}
+                    {user.shifts[0] ? (
+                        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
+
+                            <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm border border-white/10">Sıradaki Vardiya</span>
+                                    </div>
+                                    <h3 className="text-3xl font-black mb-1">{format(new Date(user.shifts[0].start), 'EEEE', { locale: tr })}</h3>
+                                    <p className="text-indigo-100 font-medium">{format(new Date(user.shifts[0].start), 'd MMMM yyyy', { locale: tr })}</p>
+
+                                    <div className="flex items-center gap-4 mt-6">
+                                        <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-md border border-white/10">
+                                            <p className="text-xs text-indigo-200 uppercase font-bold">Başlangıç</p>
+                                            <p className="text-lg font-black">{format(new Date(user.shifts[0].start), 'HH:mm')}</p>
+                                        </div>
+                                        <div className="h-px w-8 bg-white/20"></div>
+                                        <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-md border border-white/10">
+                                            <p className="text-xs text-indigo-200 uppercase font-bold">Bitiş</p>
+                                            <p className="text-lg font-black">{format(new Date(user.shifts[0].end), 'HH:mm')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-white/10 p-4 rounded-3xl backdrop-blur-sm border border-white/10 hidden sm:block">
+                                    <Calendar className="h-12 w-12 text-white" />
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center">
+                            <Calendar className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                            <h3 className="text-slate-900 font-bold">Planlanmış Vardiya Yok</h3>
+                            <p className="text-slate-500 text-sm">Önümüzdeki günler için vardiya planınız bulunmuyor.</p>
+                        </div>
+                    )}
+
+                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="font-bold text-slate-900 flex items-center gap-2">
+                                <Trophy className="h-5 w-5 text-amber-500" />
+                                Panoyla Etkileşim
+                            </h2>
+                        </div>
+                        <DashboardWidgetsClient />
+                    </div>
+                </div>
+
+                {/* Right Column: Achievements & Mini Details */}
+                <div className="space-y-6">
+                    <TopPerformers />
+                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                        <h2 className="font-bold text-slate-900 mb-6 flex items-center gap-2">
+                            <Crown className="h-5 w-5 text-yellow-500" />
+                            Son Başarımlar
+                        </h2>
+
+                        {(user.achievements.length > 0 || user.employeeOfTheMonths.length > 0) ? (
+                            <div className="space-y-4">
+                                {user.employeeOfTheMonths.slice(0, 1).map(e => (
+                                    <div key={e.id} className="bg-gradient-to-r from-amber-100 to-orange-100 p-4 rounded-2xl border border-amber-200 flex items-center gap-4">
+                                        <div className="bg-white p-3 rounded-full shadow-sm">
+                                            <Crown className="h-6 w-6 text-amber-500" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-amber-900 text-sm">Ayın Personeli</p>
+                                            <p className="text-xs text-amber-700 font-medium">{e.month} {e.year}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                {user.achievements.slice(0, 3).map(a => (
+                                    <div key={a.id} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                                        <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold shrink-0">
+                                            <Star className="h-5 w-5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-slate-900 text-sm truncate">{a.title}</p>
+                                            <p className="text-xs text-slate-500 truncate">{format(new Date(a.date), 'd MMMM yyyy', { locale: tr })}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6">
+                                <p className="text-slate-400 text-sm">Henüz başarım kazanılmadı.</p>
+                            </div>
                         )}
-                    </div>
 
-                    <div className="mt-6">
-                        <Link href="/scan" className={`w-full py-4 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all
-                            ${isCheckedIn ? 'bg-red-500 hover:bg-red-600 shadow-red-200' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'}`}>
-                            <ScanLine className="h-5 w-5" />
-                            {isCheckedIn ? "Çıkış Yap" : "Giriş Yap"}
+                        <Link href="/profile" className="flex items-center justify-center gap-2 text-xs font-bold text-indigo-600 mt-6 hover:underline">
+                            Tümünü Gör
                         </Link>
                     </div>
-                </div>
 
-                {/* Weekly Goal Card */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <Clock className="h-32 w-32 text-green-600" />
-                    </div>
-                    <div>
-                        <p className="text-slate-500 text-sm font-medium">Bu Haftaki Performans</p>
-                        <div className="mt-2">
-                            <p className="text-3xl font-bold text-slate-900">{workedHours} <span className="text-lg text-slate-400 font-normal">Saat</span></p>
-                        </div>
-                        <div className="mt-4 w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                            <div className={cn("h-2.5 rounded-full transition-all duration-1000", progressPercent >= 100 ? "bg-green-500" : "bg-blue-500")} style={{ width: `${progressPercent}%` }}></div>
-                        </div>
-                        <p className="text-slate-400 text-xs mt-2">Hedef: {weeklyGoal} Saat (%{progressPercent} Tamamlandı)</p>
-                    </div>
+                    <TeamMood />
                 </div>
             </div>
-
-            {/* Achievements Section */}
-            {(user.achievements.length > 0 || user.employeeOfTheMonths.length > 0) && (
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                    <h2 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <Trophy className="h-5 w-5 text-yellow-500" />
-                        Başarımlarım
-                    </h2>
-                    <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                        {user.employeeOfTheMonths.map(e => (
-                            <div key={e.id} className="min-w-[140px] bg-gradient-to-br from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200 text-center flex-shrink-0">
-                                <div className="bg-white rounded-full h-10 w-10 flex items-center justify-center mx-auto mb-2 shadow-sm">
-                                    <Crown className="h-6 w-6 text-yellow-500" />
-                                </div>
-                                <p className="font-bold text-slate-800 text-sm whitespace-nowrap">{e.month}. Ayın Personeli</p>
-                                <p className="text-xs text-slate-500">{e.year}</p>
-                            </div>
-                        ))}
-                        {user.achievements.map(a => (
-                            <div key={a.id} className="min-w-[140px] bg-slate-50 p-4 rounded-xl border border-slate-200 text-center flex-shrink-0">
-                                <div className="bg-white rounded-full h-10 w-10 flex items-center justify-center mx-auto mb-2 shadow-sm">
-                                    <Star className="h-6 w-6 text-indigo-500" />
-                                </div>
-                                <p className="font-bold text-slate-800 text-sm">{a.title}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-
-
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                <h2 className="font-bold text-slate-900 mb-4">Son İşlemler</h2>
-                <div className="space-y-4">
-                    <div className="text-center text-slate-400 py-4 text-sm">
-                        Henüz geçmiş görüntülenemiyor.
-                    </div>
-                </div>
-            </div>
-        </div >
+        </div>
     );
 }
+

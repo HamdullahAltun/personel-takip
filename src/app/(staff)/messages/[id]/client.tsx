@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import useSWR from 'swr';
 import { Send, User, Check, CheckCheck, ArrowLeft, Phone, MoreVertical, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 
@@ -14,7 +15,7 @@ type Message = {
 };
 
 export default function ChatClient({ id }: { id: string }) {
-    const [messages, setMessages] = useState<Message[]>([]);
+    // const [messages, setMessages] = useState<Message[]>([]); // Removed for SWR
     const [content, setContent] = useState("");
     const [receiverName, setReceiverName] = useState("");
     const [receiverImage, setReceiverImage] = useState<string | null>(null);
@@ -23,32 +24,24 @@ export default function ChatClient({ id }: { id: string }) {
     const bottomRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const fetchMessages = async () => {
-        if (!id) return;
-        const res = await fetch(`/api/messages/${id}`);
-        if (res.ok) {
-            const data = await res.json();
-            setMessages(data);
-        }
-    };
+    const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-    const fetchUser = async () => {
-        if (!id) return;
-        const res = await fetch(`/api/users/${id}/profile`); // Use profile endpoint to get details including image
-        if (res.ok) {
-            const data = await res.json();
-            setReceiverName(data.name);
-            setReceiverImage(data.profilePicture);
-            setReceiverRole(data.role);
-        }
-    }
+    const { data: messages = [], mutate } = useSWR<Message[]>(
+        id ? `/api/messages/${id}` : null,
+        fetcher,
+        { refreshInterval: 2000 }
+    );
 
+    // Profile Fetching
     useEffect(() => {
         if (id) {
-            fetchUser();
-            fetchMessages();
-            const interval = setInterval(fetchMessages, 3000); // Polling
-            return () => clearInterval(interval);
+            fetch(`/api/users/${id}/profile`)
+                .then(r => r.json())
+                .then(data => {
+                    setReceiverName(data.name);
+                    setReceiverImage(data.profilePicture);
+                    setReceiverRole(data.role);
+                });
         }
     }, [id]);
 
@@ -57,7 +50,10 @@ export default function ChatClient({ id }: { id: string }) {
             bottomRef.current.scrollIntoView({ behavior: 'smooth' });
             if (messages.length > 0) {
                 const lastMsg = messages[messages.length - 1];
-                if (lastMsg.senderId === id) {
+                if (lastMsg.senderId === id && !lastMsg.read) {
+                    // Only mark read if not already read (check client side to save calls? 
+                    // API should handle it, but good to check senderId == remoteUser)
+                    // Wait, senderId === id (remote user id passed in props)
                     fetch(`/api/messages/${id}/read`, { method: 'POST' });
                 }
             }
@@ -76,7 +72,7 @@ export default function ChatClient({ id }: { id: string }) {
 
         if (res.ok) {
             setContent("");
-            fetchMessages();
+            mutate();
         }
     };
 
@@ -211,7 +207,7 @@ export default function ChatClient({ id }: { id: string }) {
 
                             if (res.ok) {
                                 setContent("");
-                                fetchMessages();
+                                mutate();
                             }
                         } catch (err) {
                             console.error(err);

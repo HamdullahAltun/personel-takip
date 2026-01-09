@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Trophy, Medal, Award, Plus, Star } from "lucide-react";
 
 type User = {
@@ -12,6 +13,7 @@ type User = {
 };
 
 export default function LeaderboardPage() {
+    const router = useRouter();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -52,11 +54,19 @@ export default function LeaderboardPage() {
         });
 
         if (res.ok) {
+            const updatedUser = await res.json();
+            alert(`Puan başarıyla verildi! ${updatedUser.name} adlı personelin yeni puanı: ${updatedUser.points}`);
+
             setShowModal(false);
             setReason("");
+            setAmount(10); // Reset amount
+
+            setLoading(true); // Show loading state briefly
             await fetchData();
+            router.refresh();
         } else {
-            alert("Puan eklenirken bir hata oluştu.");
+            const data = await res.json();
+            alert(`Hata: ${data.error || "Puan eklenirken bir hata oluştu."}`);
         }
     };
 

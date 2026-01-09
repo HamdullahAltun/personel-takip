@@ -107,3 +107,31 @@ export async function generatePollOptions(question: string): Promise<string[]> {
         return ["Evet", "Hayır"];
     }
 }
+
+/**
+ * Analyze sentiment of a message.
+ * Returns: { score: number (-1 to 1), label: string }
+ */
+export async function analyzeSentiment(text: string): Promise<{ score: number, label: string }> {
+    if (!groq) return { score: 0, label: "NEUTRAL" };
+
+    try {
+        const completion = await groq.chat.completions.create({
+            messages: [
+                {
+                    role: "system",
+                    content: "Analyze the sentiment of the text. Return JSON: { score: number (-1.0 to 1.0), label: string (POSITIVE, NEUTRAL, NEGATIVE) }."
+                },
+                { role: "user", content: text }
+            ],
+            model: "llama3-8b-8192",
+            temperature: 0,
+            response_format: { type: "json_object" }
+        });
+
+        const content = completion.choices[0]?.message?.content;
+        return JSON.parse(content || '{"score": 0, "label": "NEUTRAL"}');
+    } catch (e) {
+        return { score: 0, label: "NEUTRAL" };
+    }
+}

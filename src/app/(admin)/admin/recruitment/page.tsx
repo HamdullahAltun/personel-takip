@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Filter, Briefcase, Users, Sparkles, MoreVertical } from "lucide-react";
+import { Plus, Search, Filter, Briefcase, Users, Sparkles, MoreVertical, X, BrainCircuit, CheckSquare } from "lucide-react";
 import CandidateCard from "./components/CandidateCard";
+import ComparisonModal from "./components/ComparisonModal";
 
 export default function RecruitmentPage() {
     const [candidates, setCandidates] = useState<any[]>([]);
     const [stats, setStats] = useState({ total: 0, new: 0, hired: 0 });
     const [loading, setLoading] = useState(true);
+
+    // Comparison State
+    const [isCompareMode, setIsCompareMode] = useState(false);
+    const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
+    const [showComparisonModal, setShowComparisonModal] = useState(false);
 
     const fetchCandidates = async () => {
         setLoading(true);
@@ -29,6 +35,26 @@ export default function RecruitmentPage() {
     useEffect(() => {
         fetchCandidates();
     }, []);
+
+    const toggleCandidateSelection = (id: string) => {
+        if (selectedCandidateIds.includes(id)) {
+            setSelectedCandidateIds(selectedCandidateIds.filter(cid => cid !== id));
+        } else {
+            if (selectedCandidateIds.length >= 3) {
+                alert("En fazla 3 adayı karşılaştırabilirsiniz.");
+                return;
+            }
+            setSelectedCandidateIds([...selectedCandidateIds, id]);
+        }
+    };
+
+    const handleCompareClick = () => {
+        if (selectedCandidateIds.length < 2) {
+            alert("Karşılaştırma için en az 2 aday seçmelisiniz.");
+            return;
+        }
+        setShowComparisonModal(true);
+    };
 
     const columns = [
         { id: 'NEW', title: 'Yeni Başvuru', color: 'bg-blue-50 text-blue-700 border-blue-100' },
@@ -55,19 +81,41 @@ export default function RecruitmentPage() {
                 </div>
 
                 <div className="flex gap-3">
-                    <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3 text-sm">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">Toplam Aday</span>
-                            <span className="font-bold text-slate-900">{stats.total}</span>
+                    {/* Comparison Controls */}
+                    {isCompareMode ? (
+                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
+                            <div className="bg-indigo-50 text-indigo-700 px-3 py-2 rounded-xl text-sm font-bold border border-indigo-100">
+                                {selectedCandidateIds.length} Aday Seçildi
+                            </div>
+                            <button
+                                onClick={handleCompareClick}
+                                disabled={selectedCandidateIds.length < 2}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold text-sm transition shadow-lg shadow-indigo-200 disabled:opacity-50 flex items-center gap-2"
+                            >
+                                <BrainCircuit className="w-4 h-4" />
+                                Analiz Et
+                            </button>
+                            <button
+                                onClick={() => { setIsCompareMode(false); setSelectedCandidateIds([]); }}
+                                className="bg-white hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-xl border border-slate-200"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
                         </div>
-                        <div className="w-px h-8 bg-slate-100"></div>
-                        <div className="flex flex-col">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">Yeni</span>
-                            <span className="font-bold text-blue-600">{stats.new}</span>
-                        </div>
-                    </div>
-                    <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-indigo-200">
-                        <Plus className="h-5 w-5" /> Aday Ekle
+                    ) : (
+                        <button
+                            onClick={() => setIsCompareMode(true)}
+                            className="bg-white hover:bg-slate-50 text-indigo-600 px-4 py-2 rounded-xl font-bold border border-indigo-100 text-sm flex items-center gap-2"
+                        >
+                            <CheckSquare className="w-4 h-4" />
+                            Karşılaştır
+                        </button>
+                    )}
+
+                    <div className="h-8 w-px bg-slate-200 mx-2"></div>
+
+                    <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-indigo-200 text-sm">
+                        <Plus className="h-4 w-4" /> Aday Ekle
                     </button>
                 </div>
             </div>
@@ -89,7 +137,14 @@ export default function RecruitmentPage() {
                                 <div className="flex-1 bg-slate-50/50 rounded-2xl border border-slate-200/50 p-2 space-y-3 overflow-y-auto">
                                     {colCandidates.length > 0 ? (
                                         colCandidates.map(c => (
-                                            <CandidateCard key={c.id} candidate={c} onRefresh={fetchCandidates} />
+                                            <CandidateCard
+                                                key={c.id}
+                                                candidate={c}
+                                                onRefresh={fetchCandidates}
+                                                selectable={isCompareMode}
+                                                selected={selectedCandidateIds.includes(c.id)}
+                                                onSelect={() => toggleCandidateSelection(c.id)}
+                                            />
                                         ))
                                     ) : (
                                         <div className="h-32 flex items-center justify-center text-slate-300 text-xs italic border-2 border-dashed border-slate-100 rounded-xl">
@@ -102,6 +157,14 @@ export default function RecruitmentPage() {
                     })}
                 </div>
             </div>
+
+            {/* Comparison Modal */}
+            {showComparisonModal && (
+                <ComparisonModal
+                    candidates={candidates.filter(c => selectedCandidateIds.includes(c.id))}
+                    onClose={() => setShowComparisonModal(false)}
+                />
+            )}
         </div>
     );
 }

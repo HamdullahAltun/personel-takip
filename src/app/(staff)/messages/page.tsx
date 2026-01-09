@@ -27,23 +27,19 @@ type UserData = {
     profilePicture?: string | null;
 };
 
+import useSWR from 'swr';
+
 export default function MessageListPage() {
-    const [conversations, setConversations] = useState<Conversation[]>([]);
+    const fetcher = (url: string) => fetch(url).then(r => r.json());
+
+    // Auto refresh inbox every 5s
+    const { data: conversations = [], mutate } = useSWR<Conversation[]>('/api/messages/conversations', fetcher, { refreshInterval: 5000 });
+
     const [allUsers, setAllUsers] = useState<UserData[]>([]);
     const [search, setSearch] = useState("");
     const [showNewChat, setShowNewChat] = useState(false);
 
-    useEffect(() => {
-        fetchConversations();
-    }, []);
-
-    const fetchConversations = () => {
-        fetch('/api/messages/conversations')
-            .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data)) setConversations(data);
-            });
-    };
+    // Removed manual useEffect for fetchConversations
 
     const fetchAllUsers = () => {
         // We reuse the generic messages endpoint or users endpoint. 

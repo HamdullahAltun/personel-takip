@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, BrainCircuit, TrendingUp, AlertTriangle, CheckCircle2, MessageSquare, Clock, Wallet, LucideIcon } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface AnalysisReport {
     summary: string;
@@ -145,26 +146,56 @@ export default function DetailedExecutiveReport() {
                     bg="bg-blue-50"
                 />
                 <AnalysisCard
-                    title="Görev Performansı"
-                    content={analysis.details.tasks}
-                    icon={CheckCircle2}
-                    color="text-green-600"
-                    bg="bg-green-50"
-                />
-                <AnalysisCard
-                    title="Harcama Analizi"
-                    content={analysis.details.expenses}
-                    icon={Wallet}
-                    color="text-purple-600"
-                    bg="bg-purple-50"
-                />
-                <AnalysisCard
                     title="İletişim & Kültür"
                     content={analysis.details.communication}
                     icon={MessageSquare}
                     color="text-pink-600"
                     bg="bg-pink-50"
                 />
+            </div>
+
+            {/* AI Trend Analysis Chart */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                        <TrendingUp className="h-6 w-6" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-lg text-slate-900">30 Günlük Trend Analizi</h3>
+                        <p className="text-sm text-slate-500">Departman bazlı performans ve katılım trendleri</p>
+                    </div>
+                </div>
+
+                <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={[
+                            { day: '1', score: 65, katilim: 80 },
+                            { day: '5', score: 68, katilim: 85 },
+                            { day: '10', score: 75, katilim: 82 },
+                            { day: '15', score: 72, katilim: 88 },
+                            { day: '20', score: 80, katilim: 90 },
+                            { day: '25', score: 85, katilim: 92 },
+                            { day: '30', score: 82, katilim: 95 },
+                        ]}>
+                            <defs>
+                                <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                                </linearGradient>
+                                <linearGradient id="colorKatilim" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8} />
+                                    <stop offset="95%" stopColor="#82ca9d" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <XAxis dataKey="day" />
+                            <YAxis />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} />
+                            <Area type="monotone" dataKey="score" stroke="#8884d8" fillOpacity={1} fill="url(#colorScore)" name="Verimlilik Skoru" />
+                            <Area type="monotone" dataKey="katilim" stroke="#82ca9d" fillOpacity={1} fill="url(#colorKatilim)" name="Katılım Oranı" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
 
             {/* Bottom Row */}

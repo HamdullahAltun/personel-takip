@@ -45,6 +45,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Mic, Loader2, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { VoiceVisualizer } from "./VoiceVisualizer";
 
 /**
  * Advanced Voice Assistant for PWA
@@ -161,19 +162,23 @@ export default function VoiceAssistant() {
             <button
                 onClick={toggleListening}
                 className={cn(
-                    "w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-90 pointer-events-auto",
+                    "w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95 pointer-events-auto relative overflow-hidden",
                     isListening
-                        ? "bg-red-500 scale-110 shadow-red-200 animate-pulse"
-                        : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 hover:-translate-y-1"
+                        ? "bg-gradient-to-r from-pink-500 to-rose-500 scale-110 shadow-rose-200"
+                        : "bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-indigo-200 hover:-translate-y-1"
                 )}
             >
                 {isListening ? (
-                    <Mic className="text-white h-6 w-6" />
+                    <>
+                        <VoiceVisualizer isListening={isListening} />
+
+                    </>
                 ) : (
-                    <Mic className="text-white h-6 w-6" />
+                    <Mic className="text-white h-7 w-7" />
                 )}
+
                 {isListening && (
-                    <div className="absolute inset-0 rounded-full border-4 border-white/20 animate-ping" />
+                    <div className="absolute inset-0 rounded-full border-4 border-white/20 animate-ping pointer-events-none" />
                 )}
             </button>
         </div>

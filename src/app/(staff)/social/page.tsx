@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import { Heart, MessageCircle, Send, Image as ImageIcon, MoreHorizontal, Trophy, Wand2, Loader2, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
+import StoriesBar from "@/components/social/StoriesBar";
 import PollCard from "@/components/social/PollCard";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 type User = {
     id: string;
@@ -23,6 +25,12 @@ type Like = {
     userId: string;
 };
 
+type PollOption = {
+    id: string;
+    text: string;
+    votes: { userId: string }[];
+};
+
 type Post = {
     id: string;
     content: string;
@@ -34,7 +42,7 @@ type Post = {
     type: 'STANDARD' | 'KUDOS' | 'POLL';
     kudosTarget?: { name: string };
     kudosCategory?: string;
-    pollOptions?: { id: string; text: string; votes: { userId: string }[] }[];
+    pollOptions?: PollOption[];
 };
 
 export default function StaffSocialPage() {
@@ -55,16 +63,39 @@ export default function StaffSocialPage() {
     // Poll State
     const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
 
+    // Infinite Scroll
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+
     useEffect(() => {
-        fetchPosts();
         fetchUsers();
         fetch('/api/auth/me').then(res => res.json()).then(d => d.user && setCurrentUserId(d.user.id));
+        loadMorePosts(true);
     }, []);
 
-    const fetchPosts = async () => {
-        const res = await fetch("/api/social");
-        if (res.ok) setPosts(await res.json());
-        setLoading(false);
+    const loadMorePosts = async (reset = false) => {
+        if (!hasMore && !reset) return;
+        setLoading(true);
+
+        const lastPostId = reset ? '' : posts[posts.length - 1]?.id;
+        const url = `/api/social?cursor=${lastPostId || ''}`;
+
+        try {
+            const res = await fetch(url);
+            if (res.ok) {
+                const newPosts = await res.json();
+                if (newPosts.length < 10) setHasMore(false);
+                setPosts(prev => reset ? newPosts : [...prev, ...newPosts]);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Manual re-fetch wrapper
+    const refreshPosts = () => {
+        setHasMore(true);
+        loadMorePosts(true);
     };
 
     const fetchUsers = async () => {
@@ -93,13 +124,23 @@ export default function StaffSocialPage() {
         });
 
         if (res.ok) {
+            if (postType === 'KUDOS') {
+                import('canvas-confetti').then(confetti => {
+                    confetti.default({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ['#EAB308', '#CA8A04', '#FDE047'] // Gold/Yellow shades
+                    });
+                });
+            }
             setNewPost("");
             setImageUrl("");
             setShowImageInput(false);
             setPostType('STANDARD');
             setKudosTargetId("");
             setPollOptions(["", ""]);
-            fetchPosts();
+            refreshPosts();
         }
     };
 
@@ -149,8 +190,8 @@ export default function StaffSocialPage() {
 
         await fetch(`/api/social/${id}/like`, { method: "POST" });
         // Background refresh to ensure sync
-        const res = await fetch("/api/social");
-        if (res.ok) setPosts(await res.json());
+        const res = await fetch(`/api/social?cursor=`);
+        // if (res.ok) setPosts(await res.json()); // Don't reset full list on like
     };
 
     const handleComment = async (id: string, content: string) => {
@@ -159,18 +200,19 @@ export default function StaffSocialPage() {
             body: JSON.stringify({ content }),
             headers: { "Content-Type": "application/json" }
         });
-        fetchPosts();
+        refreshPosts();
     };
 
-    const handlePollUpdate = (postId: string, updatedOptions: any[]) => {
+    const handlePollUpdate = (postId: string, updatedOptions: PollOption[]) => {
         setPosts(prev => prev.map(p => p.id === postId ? { ...p, pollOptions: updatedOptions } : p));
     };
 
     return (
         <div className="max-w-xl mx-auto space-y-6 pb-24">
+            <StoriesBar />
             <div className="flex items-center justify-between mb-2">
                 <h1 className="text-2xl font-bold text-slate-900">Sosyal Akış</h1>
-                <button onClick={fetchPosts} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-slate-100">
+                <button onClick={refreshPosts} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-slate-100">
                     <RefreshCw className="w-5 h-5" />
                 </button>
             </div>
@@ -340,6 +382,27 @@ export default function StaffSocialPage() {
                         onPollUpdate={(opts) => handlePollUpdate(post.id, opts)}
                     />
                 ))}
+
+                {loading && (
+                    <div className="space-y-4">
+                        {Array.from({ length: 2 }).map((_, i) => (
+                            <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <Skeleton className="w-10 h-10 rounded-full" />
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-4 w-32" />
+                                        <Skeleton className="h-3 w-20" />
+                                    </div>
+                                </div>
+                                <Skeleton className="h-16 w-full" />
+                                <div className="flex gap-4">
+                                    <Skeleton className="h-8 w-16" />
+                                    <Skeleton className="h-8 w-16" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
             {posts.length === 0 && !loading && (
                 <div className="text-center py-10 text-slate-400 italic">Henüz paylaşım yok.</div>
@@ -353,7 +416,7 @@ function PostCard({ post, onLike, onComment, currentUserId, onPollUpdate }: {
     onLike: () => void;
     onComment: (c: string) => void;
     currentUserId: string;
-    onPollUpdate: (options: any[]) => void;
+    onPollUpdate: (options: PollOption[]) => void;
 }) {
     const [showComments, setShowComments] = useState(false);
     const [commentText, setCommentText] = useState("");
