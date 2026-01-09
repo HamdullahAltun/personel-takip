@@ -99,6 +99,7 @@ export default function AdminLayout({
         // Admin also gets access to Executive Dashboard
         { href: "/executive/dashboard", label: "Şirket Raporu", icon: BrainCircuit },
         { href: "/admin/ai-manager", label: "AI Yönetici", icon: BrainCircuit },
+        { href: "/admin/analytics", label: "Analizler (AI)", icon: TrendingUp },
         { href: "/admin/emergency", label: "Acil Durum (SOS)", icon: Activity },
     ];
 
