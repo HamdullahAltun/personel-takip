@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { App } from '@capacitor/app';
 import { useRouter, usePathname } from 'next/navigation';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 export default function MobilePolish() {
     const router = useRouter();
@@ -28,12 +29,20 @@ export default function MobilePolish() {
 
             // Set StatusBar color if on mobile
             try {
-                await StatusBar.setStyle({ style: Style.Light });
-                // Note: Overlay not always supported on all Android webviews without extra config, 
-                // but we can try to set a color.
-                if ((window as any).Capacitor?.getPlatform() === 'android') {
+                const platform = (window as any).Capacitor?.getPlatform();
+
+                await StatusBar.setStyle({
+                    style: Style.Light // Dark text for light background
+                });
+
+                if (platform === 'android') {
                     await StatusBar.setBackgroundColor({ color: '#ffffff' });
                 }
+
+                // On iOS, we want to make sure the app fits the safe area
+                // viewport-fit=cover is already set in layout.tsx
+
+                await SplashScreen.hide();
             } catch (e) {
                 // Ignore errors (e.g. running on web)
             }

@@ -116,11 +116,11 @@ export default function AdminLayout({
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 z-50 h-screen w-64 bg-slate-900 text-white transition-transform duration-300 lg:translate-x-0 flex flex-col",
+                    "fixed top-0 left-0 z-50 h-[100dvh] w-64 bg-slate-900 text-white transition-transform duration-300 lg:translate-x-0 flex flex-col",
                     isSidebarOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
-                <div className="flex items-center justify-between p-4 border-b border-slate-700 shrink-0">
+                <div className="flex items-center justify-between p-4 border-b border-slate-700 pt-safe shrink-0">
                     <div className="flex items-center gap-2 font-bold text-xl">
                         <UserCog className="h-6 w-6 text-blue-400" />
                         <span>Yönetici</span>
@@ -179,7 +179,7 @@ export default function AdminLayout({
                     </div>
                 )}
                 {/* Mobile Header */}
-                <header className="bg-white border-b border-slate-200 p-4 flex items-center gap-4 lg:hidden">
+                <header className="bg-white border-b border-slate-200 pt-safe px-4 pb-4 flex items-center gap-4 lg:hidden sticky top-0 z-40">
                     <button
                         onClick={() => setIsSidebarOpen(true)}
                         className="text-slate-600 hover:text-slate-900"
@@ -189,7 +189,7 @@ export default function AdminLayout({
                     <span className="font-semibold text-slate-900">Yönetim Paneli</span>
                 </header>
 
-                <div className="p-4 lg:p-8 flex-1 overflow-auto">
+                <div className="p-4 lg:p-8 flex-1 overflow-auto pb-safe">
                     {children}
                     <VoiceCommand />
                 </div>
