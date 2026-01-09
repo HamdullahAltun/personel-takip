@@ -41,6 +41,7 @@ import MobilePolish from "@/components/MobilePolish";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function RootLayout({
   children,
@@ -59,6 +60,7 @@ export default function RootLayout({
           <OfflineIndicator />
           <Toaster position="top-right" richColors />
           {children}
+          <SpeedInsights />
         </ThemeProvider>
       </body>
     </html>
