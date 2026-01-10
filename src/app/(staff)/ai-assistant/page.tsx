@@ -1,151 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Bot, User, Sparkles, Send, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
-
-type Message = {
-    role: 'user' | 'model';
-    parts: string;
-};
+import AIAssistantChat from "@/components/staff/AIAssistantChat";
 
 export default function AIAssistantPage() {
-    const [messages, setMessages] = useState<Message[]>([
-        { role: 'model', parts: "Merhaba! Ben kişisel asistanınızım. Size görevleriniz, mesai saatleriniz veya genel konularda nasıl yardımcı olabilirim? 🤖" }
-    ]);
-    const [input, setInput] = useState("");
-    const [loading, setLoading] = useState(false);
-    const scrollRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [messages]);
-
-    const handleSend = async (e?: React.FormEvent) => {
-        e?.preventDefault();
-        if (!input.trim() || loading) return;
-
-        const userMsg = input;
-        setInput("");
-        setMessages(prev => [...prev, { role: 'user', parts: userMsg }]);
-        setLoading(true);
-
-        try {
-            const history = messages
-                .filter((_, index) => index !== 0)
-                .map(m => ({
-                    role: m.role,
-                    parts: [{ text: m.parts }]
-                }));
-
-            const res = await fetch('/api/ai/chat', {
-                method: 'POST',
-                body: JSON.stringify({ message: userMsg, history }),
-                headers: { 'Content-Type': 'application/json' }
-            });
-
-            if (!res.ok) {
-                const errText = await res.text();
-                throw new Error(`Sunucu Hatası (${res.status}): ${errText.slice(0, 100)}`);
-            }
-
-            const data = await res.json();
-
-            if (!data.response) {
-                setMessages(prev => [...prev, { role: 'model', parts: "Cevap alınamadı. (Veri boş)" }]);
-            } else {
-                setMessages(prev => [...prev, { role: 'model', parts: data.response }]);
-            }
-        } catch (error: any) {
-            console.error(error);
-            setMessages(prev => [...prev, { role: 'model', parts: `Hata: ${error.message}` }]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 flex items-center gap-3 text-white shrink-0">
-                <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                    <Bot className="h-6 w-6" />
-                </div>
-                <div>
-                    <h3 className="font-bold text-sm">AI Asistan</h3>
-                    <p className="text-[10px] text-indigo-100 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                        Çevrimiçi
-                    </p>
-                </div>
+        <div className="max-w-4xl mx-auto h-full space-y-4">
+            <div className="mb-4">
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">AI Asistan & Destek</h1>
+                <p className="text-slate-500 text-sm font-medium">7/24 Sorularınızı yanıtlamaya hazır.</p>
             </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 relative" ref={scrollRef}>
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
-
-                {messages.map((msg, i) => (
-                    <motion.div
-                        key={i}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={cn(
-                            "flex gap-3 max-w-[85%]",
-                            msg.role === 'user' ? "ml-auto flex-row-reverse" : ""
-                        )}
-                    >
-                        <div className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm",
-                            msg.role === 'user' ? "bg-slate-200" : "bg-gradient-to-br from-indigo-500 to-purple-500 text-white"
-                        )}>
-                            {msg.role === 'user' ? <User className="h-4 w-4 text-slate-600" /> : <Sparkles className="h-4 w-4" />}
-                        </div>
-                        <div className={cn(
-                            "p-3 rounded-2xl text-sm shadow-sm leading-relaxed",
-                            msg.role === 'user'
-                                ? "bg-indigo-600 text-white rounded-tr-none"
-                                : "bg-white text-slate-700 border border-slate-100 rounded-tl-none"
-                        )}>
-                            {msg.parts}
-                        </div>
-                    </motion.div>
-                ))}
-                {loading && (
-                    <div className="flex gap-3 max-w-[85%]">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center shrink-0">
-                            <Sparkles className="h-4 w-4" />
-                        </div>
-                        <div className="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-100 flex items-center gap-2">
-                            <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                            <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                            <span className="w-2 h-2 bg-pink-400 rounded-full animate-bounce"></span>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Input Area */}
-            <div className="p-3 bg-white border-t border-slate-100 shrink-0">
-                <form onSubmit={handleSend} className="relative flex items-center gap-2">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Bir şeyler sorun..."
-                        className="flex-1 bg-slate-100 hover:bg-slate-50 focus:bg-white border-transparent focus:border-indigo-500 border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
-                    />
-                    <button
-                        type="submit"
-                        disabled={!input.trim() || loading}
-                        className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
-                    >
-                        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 ml-0.5" />}
-                    </button>
-                </form>
-            </div>
+            <AIAssistantChat />
         </div>
     );
 }

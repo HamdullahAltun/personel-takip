@@ -1,9 +1,36 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sun, Calendar } from "lucide-react";
+import { Sun, Calendar, Cloud, CloudRain, Snowflake } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+
+function WeatherWidget() {
+    const [temp, setTemp] = useState<number | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        // Istanbul coordinates: 41.0082, 28.9784
+        fetch("https://api.open-meteo.com/v1/forecast?latitude=41.0082&longitude=28.9784&current=temperature_2m,weather_code")
+            .then(res => res.json())
+            .then(data => {
+                if (data.current) {
+                    setTemp(Math.round(data.current.temperature_2m));
+                }
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
+    }, []);
+
+    if (loading) return <p className="text-xs text-indigo-200 mt-1 font-medium">Yükleniyor...</p>;
+
+    return (
+        <p className="text-xs text-indigo-200 mt-1 font-medium flex items-center justify-end gap-1">
+            <span>İstanbul</span>
+            <span className="font-bold">{temp !== null ? `${temp}°` : ""}</span>
+        </p>
+    );
+}
 
 export default function WelcomeHeader({ userName }: { userName: string }) {
     const [time, setTime] = useState(new Date());
@@ -39,7 +66,7 @@ export default function WelcomeHeader({ userName }: { userName: string }) {
                         <p className="text-2xl font-bold tabular-nums tracking-wider leading-none">
                             {format(time, "HH:mm")}
                         </p>
-                        <p className="text-xs text-indigo-200 mt-1 font-medium">İstanbul, TR</p>
+                        <WeatherWidget />
                     </div>
                     <div className="h-10 w-10 bg-gradient-to-br from-amber-300 to-orange-400 rounded-full shadow-lg flex items-center justify-center">
                         <Sun className="h-6 w-6 text-white" />

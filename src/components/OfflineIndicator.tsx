@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { WifiOff } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function OfflineIndicator() {
     const [isOffline, setIsOffline] = useState(false);
@@ -22,12 +23,23 @@ export default function OfflineIndicator() {
         };
     }, []);
 
-    if (!isOffline) return null;
-
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-[100] bg-slate-900 text-white px-4 py-2 text-xs font-bold flex items-center justify-center gap-2 animate-in slide-in-from-bottom-2">
-            <WifiOff className="h-4 w-4 text-red-400" />
-            <span>İnternet bağlantısı koptu. Veriler kaydedilmeyebilir.</span>
-        </div>
+        <AnimatePresence>
+            {isOffline && (
+                <motion.div
+                    initial={{ y: 100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 100, opacity: 0 }}
+                    className="fixed bottom-6 left-0 right-0 z-[100] flex justify-center pointer-events-none"
+                >
+                    <div className="bg-slate-900/90 backdrop-blur-md text-white px-5 py-3 rounded-full text-xs font-bold flex items-center gap-3 shadow-2xl border border-white/10 pointer-events-auto">
+                        <div className="bg-red-500/20 p-1.5 rounded-full">
+                            <WifiOff className="h-3.5 w-3.5 text-red-400" />
+                        </div>
+                        <span>İnternet bağlantısı koptu</span>
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 }

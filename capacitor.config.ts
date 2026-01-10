@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.personel.app',
+  appId: 'com.hamdullah.personeltakip',
   appName: 'Personel Takip',
   webDir: 'public',
   server: {

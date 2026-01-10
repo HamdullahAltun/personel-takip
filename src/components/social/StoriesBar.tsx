@@ -1,82 +1,109 @@
 "use client";
 
 import useSWR from 'swr';
-import { Plus, Megaphone, X } from 'lucide-react';
+import { Plus, Megaphone } from 'lucide-react';
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import StoryCreator from './StoryCreator';
+import StoryViewer from './StoryViewer';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-export default function StoriesBar() {
-    const { data: announcements = [] } = useSWR('/api/announcements', fetcher);
-    const [selectedStory, setSelectedStory] = useState<any>(null);
+interface Story {
+    id: string;
+    type: "IMAGE" | "TEXT";
+    content?: string;
+    mediaUrl?: string;
+    createdAt: string;
+    user: {
+        id: string;
+        name: string;
+        profilePicture?: string;
+    };
+}
 
-    // Mock stories if empty to show the UI
-    const stories = announcements.length > 0 ? announcements : [
-        { id: 'welcome', title: 'Hoşgeldin!', content: 'Yeni sosyal duvarımıza hoşgeldin. Buradan paylaşımlar yapabilirsin.', isMock: true },
-        { id: 'tips', title: 'İpuçları', content: 'Kudos özelliğini kullanarak arkadaşlarına teşekkür etmeyi unutma!', isMock: true }
-    ];
+interface UserStories {
+    userId: string;
+    user: {
+        id: string;
+        name: string;
+        profilePicture?: string;
+    };
+    stories: Story[];
+}
+
+export default function StoriesBar() {
+    const { data: storiesData = [], mutate } = useSWR<UserStories[]>('/api/social/stories', fetcher);
+    const [isCreatorOpen, setIsCreatorOpen] = useState(false);
+    const [viewerOpen, setViewerOpen] = useState(false);
+    const [activeStoryGroup, setActiveStoryGroup] = useState<UserStories | null>(null);
+
+    const handleStoryClick = (group: UserStories) => {
+        setActiveStoryGroup(group);
+        setViewerOpen(true);
+    };
 
     return (
         <>
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-6 overflow-x-auto no-scrollbar">
                 <div className="flex gap-4">
-                    {/* My Story (Placeholder for future) */}
-                    <div className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer opacity-50 hover:opacity-100 transition">
-                        <div className="w-16 h-16 rounded-full border-2 border-slate-200 p-1">
-                            <div className="w-full h-full bg-slate-100 rounded-full flex items-center justify-center">
-                                <Plus className="w-6 h-6 text-slate-400" />
+                    {/* Add Story Button */}
+                    <div
+                        className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer group"
+                        onClick={() => setIsCreatorOpen(true)}
+                    >
+                        <div className="w-16 h-16 rounded-full border-2 border-slate-200 p-1 group-hover:border-blue-400 transition-colors">
+                            <div className="w-full h-full bg-slate-50 rounded-full flex items-center justify-center">
+                                <Plus className="w-6 h-6 text-slate-400 group-hover:text-blue-500 transition-colors" />
                             </div>
                         </div>
                         <span className="text-[10px] font-medium text-slate-500 truncate w-full text-center">Hikayen</span>
                     </div>
 
-                    {stories.map((story: any) => (
+                    {storiesData.map((group) => (
                         <div
-                            key={story.id}
+                            key={group.userId}
                             className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer group"
-                            onClick={() => setSelectedStory(story)}
+                            onClick={() => handleStoryClick(group)}
                         >
                             <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-yellow-400 to-fuchsia-600 p-[2px] group-hover:scale-105 transition-transform duration-300">
                                 <div className="w-full h-full bg-white rounded-full p-0.5">
-                                    <div className="w-full h-full bg-indigo-50 rounded-full flex items-center justify-center overflow-hidden">
-                                        <Megaphone className="w-6 h-6 text-indigo-600" />
+                                    <div className="w-full h-full rounded-full overflow-hidden">
+                                        {group.user.profilePicture ? (
+                                            <img src={group.user.profilePicture} className="w-full h-full object-cover" alt={group.user.name} />
+                                        ) : (
+                                            <div className="w-full h-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 text-xs">
+                                                {group.user.name[0]}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
-                            <span className="text-[10px] font-medium text-slate-700 truncate w-full text-center">{story.title}</span>
+                            <span className="text-[10px] font-medium text-slate-700 truncate w-full text-center">{group.user.name.split(' ')[0]}</span>
                         </div>
                     ))}
+
+                    {storiesData.length === 0 && (
+                        <div className="flex items-center text-xs text-slate-400 italic px-4">
+                            Henüz aktif hikaye yok...
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Story Viewer */}
-            <Dialog open={!!selectedStory} onOpenChange={() => setSelectedStory(null)}>
-                <DialogContent className="sm:max-w-md h-[400px] flex flex-col bg-gradient-to-br from-indigo-900 to-purple-900 text-white border-0 p-0 overflow-hidden">
-                    {selectedStory && (
-                        <div className="flex-1 flex flex-col justify-center items-center p-8 text-center relative">
-                            {/* Progress bar mock */}
-                            <div className="absolute top-4 left-4 right-4 h-1 bg-white/20 rounded-full overflow-hidden">
-                                <div className="h-full bg-white animate-[width_5s_linear_forwards]" />
-                            </div>
+            <StoryCreator
+                isOpen={isCreatorOpen}
+                onClose={() => setIsCreatorOpen(false)}
+                onCreated={() => mutate()}
+            />
 
-                            <div className="bg-white/20 p-6 rounded-full mb-6 backdrop-blur-md">
-                                <Megaphone className="w-12 h-12 text-white" />
-                            </div>
-
-                            <h2 className="text-2xl font-black mb-4">{selectedStory.title}</h2>
-                            <p className="text-indigo-100 text-lg leading-relaxed">{selectedStory.content}</p>
-
-                            <button
-                                onClick={() => setSelectedStory(null)}
-                                className="absolute top-6 right-4 text-white/50 hover:text-white"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
+            {activeStoryGroup && (
+                <StoryViewer
+                    isOpen={viewerOpen}
+                    onClose={() => setViewerOpen(false)}
+                    stories={activeStoryGroup.stories}
+                    initialStoryIndex={0}
+                />
+            )}
         </>
     );
 }

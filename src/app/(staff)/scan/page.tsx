@@ -3,17 +3,18 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import QRScanner from "@/components/QRScanner";
-import { Loader2, CheckCircle2, XCircle, QrCode, ScanLine } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, QrCode, ScanLine, Box } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { generateUserToken } from "@/app/actions/qr";
 
 export default function ScanPage() {
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<'SCAN' | 'BADGE'>('SCAN');
+    const [activeTab, setActiveTab] = useState<'SCAN' | 'BADGE' | 'ASSET'>('SCAN');
 
     // Scan Status
     const [status, setStatus] = useState<"IDLE" | "PROCESSING" | "SUCCESS" | "ERROR">("IDLE");
     const [message, setMessage] = useState("");
+    const [scannedAsset, setScannedAsset] = useState<any>(null);
 
     // Badge State
     const [qrValue, setQrValue] = useState("");
@@ -53,6 +54,24 @@ export default function ScanPage() {
         if (status === "PROCESSING" || status === "SUCCESS") return;
 
         setStatus("PROCESSING");
+
+        if (activeTab === 'ASSET') {
+            setMessage("Demirbaş aranıyor...");
+            // Mock Asset Lookup
+            setTimeout(() => {
+                setStatus("SUCCESS");
+                setScannedAsset({
+                    id: data,
+                    name: "MacBook Pro M3",
+                    serial: "C02...",
+                    assignedTo: "Ahmet Yılmaz",
+                    status: "Zimmetli"
+                });
+                setMessage("Demirbaş Bulundu");
+            }, 1000);
+            return;
+        }
+
         setMessage("Konum doğrulanıyor...");
 
         let location = null;
@@ -69,8 +88,6 @@ export default function ScanPage() {
             };
         } catch (locErr: any) {
             console.warn("Location error (proceeding without location):", locErr);
-            // We proceed without location if error, API handles strictness
-            // Do NOT throw here. 
         }
 
         setMessage("Giriş yapılıyor...");
@@ -100,6 +117,12 @@ export default function ScanPage() {
         }
     };
 
+    const resetScan = () => {
+        setStatus("IDLE");
+        setScannedAsset(null);
+        setMessage("");
+    };
+
     return (
         <div className="flex flex-col flex-1 w-full min-h-[60vh] bg-slate-900 text-white rounded-2xl overflow-hidden relative shadow-2xl">
 
@@ -107,15 +130,23 @@ export default function ScanPage() {
             <div className="flex border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-md sticky top-0 z-20">
                 <button
                     onClick={() => setActiveTab('SCAN')}
-                    className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'SCAN' ? 'text-blue-400 bg-slate-800 border-b-2 border-blue-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`flex-1 py-4 text-xs font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'SCAN' ? 'text-blue-400 bg-slate-800 border-b-2 border-blue-400' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                     <ScanLine className="h-4 w-4" />
                     OKUT
                 </button>
                 <div className="w-px bg-slate-700/50"></div>
                 <button
+                    onClick={() => setActiveTab('ASSET')}
+                    className={`flex-1 py-4 text-xs font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'ASSET' ? 'text-blue-400 bg-slate-800 border-b-2 border-blue-400' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                    <Box className="h-4 w-4" />
+                    DEMİRBAŞ
+                </button>
+                <div className="w-px bg-slate-700/50"></div>
+                <button
                     onClick={() => setActiveTab('BADGE')}
-                    className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'BADGE' ? 'text-blue-400 bg-slate-800 border-b-2 border-blue-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`flex-1 py-4 text-xs font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'BADGE' ? 'text-blue-400 bg-slate-800 border-b-2 border-blue-400' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                     <QrCode className="h-4 w-4" />
                     KİMLİĞİM
@@ -123,23 +154,54 @@ export default function ScanPage() {
             </div>
 
 
-            {/* Main Content Area - Updated to remove padding for full-screen scanner */}
+            {/* Main Content Area */}
             <div className="flex-1 flex flex-col items-center justify-center relative bg-black">
 
-                {/* SCANNER VIEW */}
-                {activeTab === 'SCAN' && (
+                {/* SCANNER VIEW (ATTENDANCE & ASSET) */}
+                {(activeTab === 'SCAN' || activeTab === 'ASSET') && (
                     <div className="absolute inset-0 w-full h-full">
                         <div className="absolute top-0 left-0 right-0 p-4 z-10 text-center pointer-events-none bg-gradient-to-b from-black/80 to-transparent">
-                            <h2 className="text-sm text-slate-200 font-medium">Ofis QR kodunu okutun</h2>
+                            <h2 className="text-sm text-slate-200 font-medium">
+                                {activeTab === 'SCAN' ? 'Ofis QR kodunu okutun' : 'Demirbaş üzerindeki barkodu okutun'}
+                            </h2>
                         </div>
 
                         <div className="w-full h-full relative">
+                            {/* Success State */}
                             {status === "SUCCESS" ? (
-                                <div className="absolute inset-0 flex items-center justify-center bg-green-600 animate-in zoom-in z-30 p-8 text-center text-white">
-                                    <div>
-                                        <CheckCircle2 className="h-20 w-20 mx-auto mb-4" />
-                                        <p className="font-bold text-2xl">{message}</p>
-                                    </div>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-600 animate-in zoom-in z-30 p-8 text-center text-white">
+                                    {activeTab === 'ASSET' && scannedAsset ? (
+                                        <div className="bg-white text-slate-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+                                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <Box className="w-8 h-8 text-green-600" />
+                                            </div>
+                                            <h3 className="text-xl font-bold mb-1">{scannedAsset.name}</h3>
+                                            <p className="text-slate-500 text-sm mb-4">Zimmetli: <span className="font-bold text-slate-800">{scannedAsset.assignedTo}</span></p>
+
+                                            <div className="bg-slate-50 rounded-xl p-3 text-left space-y-2 mb-4">
+                                                <div className="flex justify-between text-xs">
+                                                    <span className="text-slate-500">Seri No</span>
+                                                    <span className="font-mono font-bold">{scannedAsset.serial}</span>
+                                                </div>
+                                                <div className="flex justify-between text-xs">
+                                                    <span className="text-slate-500">Durum</span>
+                                                    <span className="text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">{scannedAsset.status}</span>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                onClick={resetScan}
+                                                className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800"
+                                            >
+                                                Yeni Tarama
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <CheckCircle2 className="h-20 w-20 mx-auto mb-4" />
+                                            <p className="font-bold text-2xl">{message}</p>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="w-full h-full [&>section]:!h-full [&>section]:!w-full [&_video]:!object-cover">
@@ -147,6 +209,7 @@ export default function ScanPage() {
                                 </div>
                             )}
 
+                            {/* Processing State */}
                             {status === "PROCESSING" && (
                                 <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-30 text-white gap-3">
                                     <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
@@ -154,6 +217,7 @@ export default function ScanPage() {
                                 </div>
                             )}
 
+                            {/* Error State */}
                             {status === "ERROR" && (
                                 <div className="absolute bottom-20 left-4 right-4 bg-red-600/90 backdrop-blur p-4 rounded-xl text-center animate-in slide-in-from-bottom z-30 text-white shadow-lg border border-red-500/50">
                                     <XCircle className="h-6 w-6 mx-auto mb-1" />

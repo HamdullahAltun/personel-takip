@@ -1,34 +1,87 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
     Briefcase,
     Calendar,
     FileText,
     GraduationCap,
-    MessageCircle,
-    CreditCard,
-    Plane,
-    Users
+    Users,
+    Sparkles,
+    Timer,
+    Moon,
+    Sun
 } from "lucide-react";
+import confetti from "canvas-confetti";
+import { useTheme } from "../ThemeProvider";
+import PomodoroModal from "./PomodoroModal";
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 export default function DashboardQuickActions() {
+    const { theme, setTheme } = useTheme();
+    const [showPomodoro, setShowPomodoro] = useState(false);
+
+    const triggerHaptic = async () => {
+        try {
+            await Haptics.impact({ style: ImpactStyle.Medium });
+        } catch (e) {
+            // Ignore on web
+        }
+    };
+
+    const triggerConfetti = () => {
+        triggerHaptic();
+        const duration = 3 * 1000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+        const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+        const interval: any = setInterval(function () {
+            const timeLeft = animationEnd - Date.now();
+
+            if (timeLeft <= 0) {
+                return clearInterval(interval);
+            }
+
+            const particleCount = 50 * (timeLeft / duration);
+            confetti({
+                ...defaults, particleCount,
+                origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+            });
+            confetti({
+                ...defaults, particleCount,
+                origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+            });
+        }, 250);
+    };
+
+    const toggleTheme = () => {
+        triggerHaptic();
+        setTheme(theme === "DARK" ? "LIGHT" : "DARK");
+    };
+
+    const openPomodoro = () => {
+        triggerHaptic();
+        setShowPomodoro(true);
+    }
+
     const actions = [
-        { label: "İzin Talebi", icon: Plane, href: "/leave", color: "bg-blue-50 text-blue-600", border: "border-blue-100" },
+        { label: "İzin Talebi", icon: Briefcase, href: "/leave", color: "bg-blue-50 text-blue-600", border: "border-blue-100" },
         { label: "Bordro", icon: FileText, href: "/payroll", color: "bg-emerald-50 text-emerald-600", border: "border-emerald-100" },
         { label: "Eğitimler", icon: GraduationCap, href: "/lms", color: "bg-indigo-50 text-indigo-600", border: "border-indigo-100" },
-        { label: "Avans", icon: CreditCard, href: "/payroll/advance", color: "bg-violet-50 text-violet-600", border: "border-violet-100" },
-        { label: "Sosyal Duvar", icon: Users, href: "/social", color: "bg-pink-50 text-pink-600", border: "border-pink-100" },
         { label: "Vardiyam", icon: Calendar, href: "/shifts", color: "bg-orange-50 text-orange-600", border: "border-orange-100" },
+        { label: "Sosyal Duvar", icon: Users, href: "/social", color: "bg-pink-50 text-pink-600", border: "border-pink-100" },
     ];
 
     return (
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
             <h2 className="font-bold text-slate-900 mb-4 text-sm uppercase tracking-wider flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-slate-400" />
+                <Sparkles className="h-4 w-4 text-slate-400" />
                 Hızlı İşlemler
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
                 {actions.map((action, i) => (
                     <Link
                         key={i}
@@ -45,7 +98,40 @@ export default function DashboardQuickActions() {
                         <span className="text-xs font-bold text-slate-600">{action.label}</span>
                     </Link>
                 ))}
+
+                {/* Interactive Actions */}
+                <button
+                    onClick={triggerConfetti}
+                    className="flex flex-col items-center justify-center gap-3 p-4 rounded-2xl border border-amber-100 bg-white hover:shadow-lg hover:-translate-y-1 active:scale-95 transition-all group"
+                >
+                    <div className="p-3 rounded-xl bg-amber-50 text-amber-600 group-hover:rotate-12 transition-transform">
+                        <Sparkles className="h-6 w-6" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-600">Kutla</span>
+                </button>
+
+                <button
+                    onClick={openPomodoro}
+                    className="flex flex-col items-center justify-center gap-3 p-4 rounded-2xl border border-violet-100 bg-white hover:shadow-lg hover:-translate-y-1 active:scale-95 transition-all"
+                >
+                    <div className="p-3 rounded-xl bg-violet-50 text-violet-600">
+                        <Timer className="h-6 w-6" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-600">Odaklan</span>
+                </button>
+
+                <button
+                    onClick={toggleTheme}
+                    className="flex flex-col items-center justify-center gap-3 p-4 rounded-2xl border border-slate-200 bg-white hover:shadow-lg hover:-translate-y-1 active:scale-95 transition-all"
+                >
+                    <div className="p-3 rounded-xl bg-slate-100 text-slate-600">
+                        {theme === "DARK" ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
+                    </div>
+                    <span className="text-xs font-bold text-slate-600">Tema</span>
+                </button>
             </div>
+
+            <PomodoroModal isOpen={showPomodoro} onClose={() => setShowPomodoro(false)} />
         </div>
     );
 }

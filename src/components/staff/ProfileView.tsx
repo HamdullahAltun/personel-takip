@@ -9,6 +9,7 @@ import AttendanceCalendar from "@/components/AttendanceCalendar";
 import ScheduleWidget from "@/components/staff/ScheduleWidget";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import ThemeEditor from "@/components/ThemeEditor";
+import LevelCard from "@/components/staff/LevelCard";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ProfileViewProps {
@@ -59,7 +60,7 @@ export default function ProfileView({ user }: ProfileViewProps) {
             </div>
 
             {/* Tabs Navigation */}
-            <div className="flex p-1 bg-slate-100 rounded-xl overflow-x-auto no-scrollbar">
+            <div className="flex p-1 bg-slate-100 rounded-xl overflow-x-auto no-scrollbar relative">
                 {tabs.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
@@ -67,11 +68,17 @@ export default function ProfileView({ user }: ProfileViewProps) {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${isActive ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                                }`}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap relative z-10 ${isActive ? "text-blue-600" : "text-slate-500 hover:text-slate-700"}`}
                         >
-                            <Icon className="h-4 w-4" />
-                            {tab.label}
+                            {isActive && (
+                                <motion.div
+                                    layoutId="activeTab"
+                                    className="absolute inset-0 bg-white rounded-lg shadow-sm"
+                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                />
+                            )}
+                            <Icon className="h-4 w-4 relative z-10" />
+                            <span className="relative z-10">{tab.label}</span>
                         </button>
                     );
                 })}
@@ -87,29 +94,35 @@ export default function ProfileView({ user }: ProfileViewProps) {
                     transition={{ duration: 0.2 }}
                 >
                     {activeTab === "general" && (
-                        <div className="space-y-4">
+                        <div className="space-y-6">
+                            {/* Gamification Level Card */}
+                            <LevelCard points={user.points || 0} />
+
                             {/* Achievements */}
-                            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-100 space-y-3">
-                                <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-                                    <Trophy className="h-4 w-4 text-yellow-600" />
+                            <div className="space-y-3">
+                                <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm px-1">
+                                    <Trophy className="h-4 w-4 text-yellow-500" />
                                     Başarımlarım
                                 </h3>
                                 {user.achievements.length > 0 ? (
-                                    <div className="grid grid-cols-1 gap-2">
+                                    <div className="grid grid-cols-1 gap-3">
                                         {user.achievements.map((ach: any) => (
-                                            <div key={ach.id} className="bg-white/80 backdrop-blur-sm p-3 rounded-lg flex items-center gap-3 shadow-sm border border-yellow-100/50">
-                                                <div className="bg-yellow-100 p-2 rounded-full text-yellow-600">
-                                                    <Star className="h-4 w-4 fill-current" />
+                                            <div key={ach.id} className="bg-white p-4 rounded-xl flex items-center gap-4 shadow-sm border border-slate-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+                                                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-yellow-50 to-transparent rounded-bl-full opacity-50" />
+                                                <div className="bg-gradient-to-br from-yellow-100 to-amber-100 p-3 rounded-full text-yellow-600 shadow-inner">
+                                                    <Star className="h-5 w-5 fill-current" />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-bold text-slate-900 text-xs">{ach.title}</h4>
-                                                    {ach.description && <p className="text-slate-500 text-[10px]">{ach.description}</p>}
+                                                    <h4 className="font-bold text-slate-900 text-sm group-hover:text-amber-600 transition-colors">{ach.title}</h4>
+                                                    {ach.description && <p className="text-slate-500 text-xs mt-0.5">{ach.description}</p>}
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className="text-xs text-slate-500 italic">Henüz bir başarım kazanılmadı.</p>
+                                    <div className="bg-slate-50 rounded-xl p-6 text-center border border-dashed border-slate-200">
+                                        <p className="text-xs text-slate-500 italic">Henüz bir başarım kazanılmadı.</p>
+                                    </div>
                                 )}
                             </div>
 

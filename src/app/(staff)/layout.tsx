@@ -7,13 +7,15 @@ import {
     Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText,
     LogOut, ChevronDown, Menu as MenuIcon, ClipboardList, Receipt, BrainCircuit,
     Calendar, MessageSquare, BookOpen, CalendarClock, LayoutGrid, X, UserCog,
-    Share2, CalendarRange, Crown, Network, Bot, Gift, Banknote, MapPin, Database
+    Share2, CalendarRange, Crown, Network, Bot, Gift, Banknote, MapPin, Database, Search
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import VoiceAssistant from "@/components/VoiceAssistant";
 import StatusPoller from "@/components/StatusPoller";
 import LocationTracker from "@/components/LocationTracker";
 import EmergencyButton from "@/components/EmergencyButton";
+import CommandPalette from "@/components/CommandPalette";
+import NotificationCenter from "@/components/NotificationCenter";
 
 export default function StaffLayout({
     children,
@@ -26,6 +28,9 @@ export default function StaffLayout({
     const [userName, setUserName] = React.useState("");
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+    // Command Palette Trigger State (can be used to programmatically open if we pass it down)
+    // For now the Global Event Listener in CommandPalette handles keyboard shortcuts.
 
     // Notification Logic
     React.useEffect(() => {
@@ -108,10 +113,21 @@ export default function StaffLayout({
         window.location.href = '/login';
     };
 
+    const triggerCommandPalette = () => {
+        // Dispatch keydown event to trigger Command Palette
+        const event = new KeyboardEvent("keydown", {
+            key: "k",
+            metaKey: true,
+            bubbles: true,
+        });
+        document.dispatchEvent(event);
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col">
             <StatusPoller onUnreadChange={setUnreadCount} />
             <LocationTracker />
+            <CommandPalette />
 
             <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/50 fixed top-0 left-0 right-0 z-50 pt-safe pb-4 px-4 shadow-sm lg:hidden transition-all duration-300 flex items-center justify-between">
                 <div>
@@ -121,54 +137,66 @@ export default function StaffLayout({
                     </h1>
                 </div>
 
-                <div className="relative">
+                <div className="flex items-center gap-3">
+                    {/* Visual Search Trigger for Command Palette */}
                     <button
-                        onClick={() => setShowProfileMenu(!showProfileMenu)}
-                        className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold ring-2 ring-white shadow-sm active:scale-95 transition-all overflow-hidden"
+                        onClick={triggerCommandPalette}
+                        className="p-2 bg-white rounded-full hover:bg-slate-50 transition-colors border border-slate-100 shadow-sm"
                     >
-                        {profilePicture ? (
-                            <img src={profilePicture} alt={userName} className="w-full h-full object-cover" />
-                        ) : (
-                            userName ? userName.charAt(0).toUpperCase() : <User className="h-5 w-5" />
-                        )}
+                        <Search className="w-5 h-5 text-slate-500" />
                     </button>
 
-                    {/* Profile Dropdown */}
-                    {showProfileMenu && (
-                        <>
-                            <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)} />
-                            <div className="absolute top-12 right-0 bg-white rounded-2xl shadow-xl border border-slate-100 w-56 py-2 z-50 animate-in fade-in slide-in-from-top-2">
-                                <div className="px-4 py-2 border-b border-slate-50 mb-2">
-                                    <p className="text-sm font-bold text-slate-900">{userName}</p>
-                                    <p className="text-xs text-slate-500">
-                                        {userRole === 'ADMIN' ? 'Yönetici' : userRole === 'EXECUTIVE' ? 'Üst Yönetici' : 'Personel'}
-                                    </p>
-                                </div>
-                                {userRole === 'ADMIN' && (
-                                    <Link href="/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm text-purple-600 hover:bg-slate-50 font-bold transition-colors">
-                                        <UserCog className="h-4 w-4" />
-                                        Yönetici Paneli
+                    <NotificationCenter />
+
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowProfileMenu(!showProfileMenu)}
+                            className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold ring-2 ring-white shadow-sm active:scale-95 transition-all overflow-hidden"
+                        >
+                            {profilePicture ? (
+                                <img src={profilePicture} alt={userName} className="w-full h-full object-cover" />
+                            ) : (
+                                userName ? userName.charAt(0).toUpperCase() : <User className="h-5 w-5" />
+                            )}
+                        </button>
+
+                        {/* Profile Dropdown */}
+                        {showProfileMenu && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)} />
+                                <div className="absolute top-12 right-0 bg-white rounded-2xl shadow-xl border border-slate-100 w-56 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                                    <div className="px-4 py-2 border-b border-slate-50 mb-2">
+                                        <p className="text-sm font-bold text-slate-900">{userName}</p>
+                                        <p className="text-xs text-slate-500">
+                                            {userRole === 'ADMIN' ? 'Yönetici' : userRole === 'EXECUTIVE' ? 'Üst Yönetici' : 'Personel'}
+                                        </p>
+                                    </div>
+                                    {userRole === 'ADMIN' && (
+                                        <Link href="/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm text-purple-600 hover:bg-slate-50 font-bold transition-colors">
+                                            <UserCog className="h-4 w-4" />
+                                            Yönetici Paneli
+                                        </Link>
+                                    )}
+                                    <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium transition-colors">
+                                        <User className="h-4 w-4" />
+                                        Profilim
                                     </Link>
-                                )}
-                                <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium transition-colors">
-                                    <User className="h-4 w-4" />
-                                    Profilim
-                                </Link>
-                                <Link href="/leaves" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium transition-colors">
-                                    <FileClock className="h-4 w-4" />
-                                    İzinlerim
-                                </Link>
-                                <div className="h-px bg-slate-100 my-1" />
-                                <button
-                                    onClick={handleLogout}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-medium transition-colors text-left"
-                                >
-                                    <LogOut className="h-4 w-4" />
-                                    Çıkış Yap
-                                </button>
-                            </div>
-                        </>
-                    )}
+                                    <Link href="/leaves" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium transition-colors">
+                                        <FileClock className="h-4 w-4" />
+                                        İzinlerim
+                                    </Link>
+                                    <div className="h-px bg-slate-100 my-1" />
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-medium transition-colors text-left"
+                                    >
+                                        <LogOut className="h-4 w-4" />
+                                        Çıkış Yap
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
             </header>
 

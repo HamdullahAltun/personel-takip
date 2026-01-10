@@ -5,6 +5,7 @@ import { App } from '@capacitor/app';
 import { useRouter, usePathname } from 'next/navigation';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 export default function MobilePolish() {
     const router = useRouter();
@@ -24,6 +25,21 @@ export default function MobilePolish() {
                 } else {
                     // Try to go back in Next.js router
                     router.back();
+                }
+            });
+
+            // Revalidate data on app resume
+            await App.addListener('appStateChange', async (state) => {
+                if (state.isActive) {
+                    // Trigger a light haptic to indicate app is active
+                    try {
+                        await Haptics.impact({ style: ImpactStyle.Light });
+                        // Force soft refresh of data by toggling a hidden state or just relying on SWR revalidateOnFocus
+                        // Next.js router.refresh() will re-run server components and fetchers
+                        router.refresh();
+                    } catch (e) {
+                        // Haptics might fail on web
+                    }
                 }
             });
 
