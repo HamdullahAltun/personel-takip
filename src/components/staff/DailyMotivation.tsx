@@ -3,21 +3,33 @@
 import { useEffect, useState } from "react";
 import { Quote, Sparkles } from "lucide-react";
 
-const quotes = [
-    { text: "Başarı, hazırlık ve fırsatın buluştuğu yerdir.", author: "Bobby Unser" },
-    { text: "Tek sınırımız, yarınlara dair şüphelerimizdir.", author: "Franklin D. Roosevelt" },
-    { text: "Yaratıcılık bulaşıcıdır. Onu başkalarına aktarın.", author: "Albert Einstein" },
-    { text: "Kalite bir eylem değil, bir alışkanlıktır.", author: "Aristoteles" },
-    { text: "İyi yapılan iş, iyi söylenen işten daha iyidir.", author: "Benjamin Franklin" }
-];
+interface QuoteData {
+    text: string;
+    author: string;
+}
 
 export default function DailyMotivation() {
-    const [quote, setQuote] = useState(quotes[0]);
+    const [quote, setQuote] = useState<QuoteData>({
+        text: "Başarı, hazırlık ve fırsatın buluştuğu yerdir.",
+        author: "Bobby Unser"
+    });
 
     useEffect(() => {
-        // Pick a random quote based on the day of the year to keep it consistent for the day
-        const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
-        setQuote(quotes[dayOfYear % quotes.length]);
+        const fetchQuote = async () => {
+            try {
+                const res = await fetch('/api/quotes');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.quote) {
+                        setQuote(data.quote);
+                    }
+                }
+            } catch (error) {
+                // Keep default
+            }
+        };
+
+        fetchQuote();
     }, []);
 
     return (

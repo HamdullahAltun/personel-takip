@@ -14,8 +14,9 @@ import VoiceAssistant from "@/components/VoiceAssistant";
 import StatusPoller from "@/components/StatusPoller";
 import LocationTracker from "@/components/LocationTracker";
 import EmergencyButton from "@/components/EmergencyButton";
-import CommandPalette from "@/components/CommandPalette";
-import NotificationCenter from "@/components/NotificationCenter";
+import OfflineIndicator from "@/components/ui/OfflineIndicator";
+import CommandPalette from "@/components/ui/CommandPalette";
+import NotificationCenter from "@/components/staff/NotificationCenter";
 
 export default function StaffLayout({
     children,
@@ -125,6 +126,7 @@ export default function StaffLayout({
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col">
+            <OfflineIndicator />
             <StatusPoller onUnreadChange={setUnreadCount} />
             <LocationTracker />
             <CommandPalette />

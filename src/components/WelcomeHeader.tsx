@@ -54,10 +54,14 @@ export default function WelcomeHeader({ userName }: { userName: string }) {
                         {format(time, "d MMMM yyyy, EEEE", { locale: tr })}
                     </div>
                     <h1 className="text-3xl md:text-4xl font-bold">
-                        {greeting}, {userName.split(' ')[0]}
+                        {hour >= 5 && hour < 12 ? "Günaydın" :
+                            hour >= 12 && hour < 17 ? "Tünaydın" :
+                                hour >= 17 && hour < 22 ? "İyi Akşamlar" : "İyi Geceler"}, {userName.split(' ')[0]}
                     </h1>
                     <p className="text-indigo-100 mt-2 text-sm md:text-base opacity-90">
-                        Bugün harika işler başaracağına inanıyoruz!
+                        {hour < 12 ? "Güne enerjik başla, harika işler çıkar!" :
+                            hour < 17 ? "Günün geri kalanı verimli geçsin." :
+                                "Bugün çok çalıştın, dinlenmeyi hak ediyorsun."}
                     </p>
                 </div>
 

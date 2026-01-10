@@ -121,6 +121,10 @@ model User {
   // Votes
   pollVotes   PollVote[]
   stories     Story[]
+
+  // New Widgets
+  moods       TeamMood[]
+  notifications Notification[]
 }
 
 model Department {
@@ -782,4 +786,32 @@ model Story {
   expiresAt DateTime
   viewers   String[] @default([]) // Array of User IDs
   createdAt DateTime @default(now())
+}
+
+model TeamMood {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  mood      String   // HAPPY, NEUTRAL, SAD, TIRED, MOTIVATED
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      String   // INFO, SUCCESS, WARNING, ERROR
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model MotivationalQuote {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  text      String
+  author    String
+  showDate  DateTime?
+  isActive  Boolean  @default(true)
 }
