@@ -151,7 +151,7 @@ export default function ProfileView({ user }: ProfileViewProps) {
                                 </div>
                             </div>
 
-                            <ScheduleWidget schedules={user.workSchedules} />
+                            <ScheduleWidget shifts={user.shifts || []} />
                             <ThemeEditor />
 
                             <button

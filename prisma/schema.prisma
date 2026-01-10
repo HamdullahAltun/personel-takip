@@ -47,7 +47,7 @@ model User {
 
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
-  workSchedules    WorkSchedule[]
+
 
   // Tasks
   tasksGiven    Task[]       @relation("CreatedTasks")
@@ -93,8 +93,6 @@ model User {
 
   // Shifts
   shifts      Shift[]
-  shiftTradesRequested ShiftTrade[] @relation("TradeRequester")
-  shiftTradesReceived  ShiftTrade[] @relation("TradeRecipient")
 
   // Rewards
   rewardRequests RewardRequest[]
@@ -347,17 +345,7 @@ model Message {
   isAnonymous   Boolean @default(false)
 }
 
-model WorkSchedule {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId
-  user      User     @relation(fields: [userId], references: [id])
-  dayOfWeek Int      // 1=Monday, ..., 7=Sunday
-  startTime String   @default("09:00")
-  endTime   String   @default("18:00")
-  isOffDay  Boolean  @default(false)
 
-  @@unique([userId, dayOfWeek])
-}
 
 model AttendanceRecord {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -604,14 +592,44 @@ model Comment {
 
 // Shifts
 model Shift {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId
-  user      User     @relation(fields: [userId], references: [id])
-  start     DateTime
-  end       DateTime
-  title     String? 
-  color     String?
-  trades    ShiftTrade[]
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  
+  startTime   DateTime
+  endTime     DateTime
+  
+  type        ShiftType @default(REGULAR)
+  status      ShiftStatus @default(PUBLISHED)
+  
+  title       String?
+  notes       String?
+  location    String?
+  
+  breakDurationMinutes Int @default(60)
+  
+  isOvertime  Boolean   @default(false)
+  
+  approvedBy  String?   @db.ObjectId 
+  approvedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum ShiftType {
+  REGULAR
+  OVERTIME
+  FLEXIBLE
+  REMOTE
+  TRAINING
+}
+
+enum ShiftStatus {
+  DRAFT
+  PUBLISHED
+  COMPLETED
+  CANCELLED
 }
 
 model Reward {
@@ -636,17 +654,7 @@ model RewardRequest {
   createdAt DateTime @default(now())
 }
 
-model ShiftTrade {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  shiftId     String   @db.ObjectId
-  shift       Shift    @relation(fields: [shiftId], references: [id])
-  requesterId String   @db.ObjectId
-  requester   User     @relation("TradeRequester", fields: [requesterId], references: [id])
-  recipientId String?  @db.ObjectId
-  recipient   User?    @relation("TradeRecipient", fields: [recipientId], references: [id])
-  status      String   @default("OPEN") // OPEN, ACCEPTED, APPROVED, REJECTED (APPROVED means manager said yes)
-  createdAt   DateTime @default(now())
-}
+
 
 model CompanySettings {
   id             String @id @default(auto()) @map("_id") @db.ObjectId

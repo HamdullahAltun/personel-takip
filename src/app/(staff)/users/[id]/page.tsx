@@ -279,17 +279,22 @@ export default function UserProfilePage() {
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                             <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
                                 <Calendar className="h-5 w-5 text-blue-500" />
-                                Çalışma Programı
+                                Yaklaşan Vardiyalar
                             </h3>
                             <div className="space-y-2">
-                                {user.workSchedules?.length > 0 ? (
-                                    user.workSchedules.map((ws: any) => (
-                                        <div key={ws.id} className="flex justify-between items-center text-sm p-2 rounded-lg hover:bg-slate-50">
-                                            <span className="font-medium text-slate-700">
-                                                {["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"][ws.dayOfWeek % 7]}
-                                            </span>
+                                {user.shifts?.length > 0 ? (
+                                    user.shifts.map((shift: any) => (
+                                        <div key={shift.id} className="flex justify-between items-center text-sm p-2 rounded-lg hover:bg-slate-50">
+                                            <div className="flex flex-col">
+                                                <span className="font-medium text-slate-700">
+                                                    {format(new Date(shift.startTime), "d MMMM EEEE", { locale: tr })}
+                                                </span>
+                                                <span className="text-xs text-slate-400">
+                                                    {shift.title || 'Vardiya'}
+                                                </span>
+                                            </div>
                                             <span className="text-slate-500 font-mono text-xs bg-slate-100 px-2 py-1 rounded">
-                                                {ws.isOffDay ? 'İZİNLİ' : `${ws.startTime} - ${ws.endTime}`}
+                                                {format(new Date(shift.startTime), "HH:mm")} - {format(new Date(shift.endTime), "HH:mm")}
                                             </span>
                                         </div>
                                     ))

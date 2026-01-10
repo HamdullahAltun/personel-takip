@@ -1,109 +1,95 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks, subWeeks, startOfMonth, endOfMonth } from "date-fns";
 import { tr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Calendar, MapPin, Clock, List, History } from "lucide-react";
-
-type Shift = {
-    id: string;
-    user: { name: string };
-    start: string;
-    end: string;
-    title?: string;
-    color?: string;
-};
-
-type AttendanceRecord = {
-    id: string;
-    type: 'CHECK_IN' | 'CHECK_OUT';
-    timestamp: string;
-    method: string;
-    isLate: boolean;
-};
+import { ChevronLeft, ChevronRight, Calendar, Clock, PlusCircle } from "lucide-react";
+import { Shift, User } from "@prisma/client";
 
 export default function StaffShiftsPage() {
-    const [currentDate, setCurrentDate] = useState(new Date());
+    const [date, setDate] = useState(new Date());
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'MY_SHIFTS' | 'MARKET' | 'HISTORY'>('MY_SHIFTS');
-    const [marketTrades, setMarketTrades] = useState<any[]>([]);
-    const [history, setHistory] = useState<AttendanceRecord[]>([]);
+    const [viewMode, setViewMode] = useState<'WEEK' | 'MONTH'>('WEEK');
 
     useEffect(() => {
-        if (activeTab === 'MY_SHIFTS') fetchShifts();
-        if (activeTab === 'MARKET') fetchMarket();
-        if (activeTab === 'HISTORY') fetchHistory();
-    }, [currentDate, activeTab]);
+        fetchShifts();
+    }, [date, viewMode]);
 
     const fetchShifts = async () => {
-        const start = startOfWeek(startOfMonth(currentDate)).toISOString();
-        const end = endOfWeek(endOfMonth(currentDate)).toISOString();
-        const res = await fetch(`/api/shifts?start=${start}&end=${end}`);
-        if (res.ok) setShifts(await res.json());
+        setLoading(true);
+        let start, end;
+
+        if (viewMode === 'WEEK') {
+            start = startOfWeek(date, { weekStartsOn: 1 }).toISOString();
+            end = endOfWeek(date, { weekStartsOn: 1 }).toISOString();
+        } else {
+            start = startOfMonth(date).toISOString();
+            end = endOfMonth(date).toISOString();
+        }
+
+        const res = await fetch(`/api/shifts?start=${start}&end=${end}`); // Will auto-filter for current user in API
+        if (res.ok) {
+            setShifts(await res.json());
+        }
         setLoading(false);
     };
 
-    const fetchMarket = async () => {
-        const res = await fetch('/api/shifts/market');
-        if (res.ok) setMarketTrades(await res.json());
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [requestDate, setRequestDate] = useState("");
+    const [requestTime, setRequestTime] = useState("");
+    const [requestDuration, setRequestDuration] = useState(4);
+    const [requestNotes, setRequestNotes] = useState("");
+
+    const handleOpenModal = () => {
+        const now = new Date();
+        setRequestDate(format(now, 'yyyy-MM-dd'));
+        setRequestTime(format(now, 'HH:mm'));
+        setRequestNotes("");
+        setIsModalOpen(true);
     };
 
-    const fetchHistory = async () => {
-        const res = await fetch('/api/attendance');
-        if (res.ok) setHistory(await res.json());
-    };
+    const handleRequestOvertime = async (e: React.FormEvent) => {
+        e.preventDefault();
 
-    const handleTradePost = async (shiftId: string) => {
-        if (!confirm('Bu vardiyayı takas pazarına eklemek istiyor musunuz?')) return;
+        const start = new Date(`${requestDate}T${requestTime}`);
+        const end = new Date(start.getTime() + requestDuration * 60 * 60 * 1000);
+
         try {
-            const res = await fetch('/api/shifts/trade', {
+            const res = await fetch('/api/shifts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ shiftId })
+                body: JSON.stringify({
+                    startTime: start,
+                    endTime: end,
+                    type: 'OVERTIME',
+                    notes: requestNotes,
+                    isOvertime: true
+                })
             });
+
             if (res.ok) {
-                alert('Vardiya pazara eklendi!');
+                alert("Mesai talebi oluşturuldu. Yönetici onayı bekleniyor.");
+                setIsModalOpen(false);
                 fetchShifts();
             } else {
-                const d = await res.json();
-                alert(d.error);
+                alert("Talep oluşturulamadı.");
             }
-        } catch (e) { alert('Hata oluştu'); }
-    };
-
-    const handleTakeShift = async (tradeId: string) => {
-        if (!confirm('Bu vardiyayı almak istiyor musunuz?')) return;
-        try {
-            const res = await fetch('/api/shifts/trade', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tradeId })
-            });
-            if (res.ok) {
-                alert('Talep iletildi. Yönetici onayı bekleniyor.');
-                fetchMarket();
-            } else {
-                const d = await res.json();
-                alert(d.error);
-            }
-        } catch (e) { alert('Hata oluştu'); }
-    };
-
-    const days = eachDayOfInterval({
-        start: startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }),
-        end: endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 })
-    });
-
-    const getColorClass = (c: string) => {
-        switch (c) {
-            case 'red': return 'bg-red-100 text-red-700 border-red-200';
-            case 'green': return 'bg-green-100 text-green-700 border-green-200';
-            case 'orange': return 'bg-orange-100 text-orange-700 border-orange-200';
-            case 'purple': return 'bg-purple-100 text-purple-700 border-purple-200';
-            default: return 'bg-blue-100 text-blue-700 border-blue-200';
+        } catch (e) {
+            alert("Hata oluştu");
         }
     };
+
+    const handlePrev = () => viewMode === 'WEEK' ? setDate(subWeeks(date, 1)) : setDate(subWeeks(date, 4));
+    const handleNext = () => viewMode === 'WEEK' ? setDate(addWeeks(date, 1)) : setDate(addWeeks(date, 4));
+
+    const sortedShifts = [...shifts].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+    // Group by day for list view
+    const days = eachDayOfInterval({
+        start: viewMode === 'WEEK' ? startOfWeek(date, { weekStartsOn: 1 }) : startOfMonth(date),
+        end: viewMode === 'WEEK' ? endOfWeek(date, { weekStartsOn: 1 }) : endOfMonth(date)
+    });
 
     return (
         <div className="flex flex-col h-[calc(100vh-6rem)] max-w-lg mx-auto pb-20">
@@ -113,145 +99,141 @@ export default function StaffShiftsPage() {
                         <Calendar className="h-6 w-6" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Vardiya & Mesai</h1>
-                        <p className="text-xs text-slate-500">Planlama, Takas ve Kayıtlar</p>
+                        <h1 className="text-2xl font-bold text-slate-900">Vardiyalarım</h1>
+                        <p className="text-xs text-slate-500">Çalışma planı ve mesai talepleri</p>
                     </div>
                 </div>
+                <button
+                    onClick={handleOpenModal}
+                    className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 active:scale-95 transition-all"
+                >
+                    <PlusCircle size={20} />
+                </button>
             </div>
 
-            <div className="flex gap-2 mb-4 px-2">
-                <button onClick={() => setActiveTab('MY_SHIFTS')} className={`flex-1 py-2 font-bold text-xs rounded-xl transition-colors ${activeTab === 'MY_SHIFTS' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200'}`}>Takvim</button>
-                <button onClick={() => setActiveTab('HISTORY')} className={`flex-1 py-2 font-bold text-xs rounded-xl transition-colors ${activeTab === 'HISTORY' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200'}`}>Geçmiş</button>
-                <button onClick={() => setActiveTab('MARKET')} className={`flex-1 py-2 font-bold text-xs rounded-xl transition-colors ${activeTab === 'MARKET' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200'}`}>Pazar</button>
-            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-1">
+                <div className="p-4 flex justify-between items-center border-b border-slate-100 bg-slate-50">
+                    <button onClick={handlePrev} className="p-2 hover:bg-white rounded-full shadow-sm transition"><ChevronLeft className="h-4 w-4" /></button>
+                    <span className="font-bold text-slate-800">{format(date, 'MMMM yyyy', { locale: tr })}</span>
+                    <button onClick={handleNext} className="p-2 hover:bg-white rounded-full shadow-sm transition"><ChevronRight className="h-4 w-4" /></button>
+                </div>
 
-            {activeTab === 'MY_SHIFTS' ? (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-1">
-                    <div className="p-4 flex justify-between items-center border-b border-slate-100 bg-slate-50">
-                        <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-2 hover:bg-white rounded-full shadow-sm transition"><ChevronLeft className="h-4 w-4" /></button>
-                        <span className="font-bold text-slate-800">{format(currentDate, 'MMMM yyyy', { locale: tr })}</span>
-                        <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-2 hover:bg-white rounded-full shadow-sm transition"><ChevronRight className="h-4 w-4" /></button>
-                    </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    {days.map(day => {
+                        const dayShifts = shifts.filter(s => isSameDay(new Date(s.startTime), day));
+                        if (dayShifts.length === 0) return null;
 
-                    <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                        {days.map(day => {
-                            const dayShifts = shifts.filter(s => isSameDay(new Date(s.start), day));
-                            if (dayShifts.length === 0) return null;
-
-                            return (
-                                <div key={day.toString()} className="border border-slate-100 rounded-xl p-3 bg-slate-50/50">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className={`text-xs font-bold px-2 py-1 rounded ${isSameDay(day, new Date()) ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
-                                            {format(day, 'd MMM EEEE', { locale: tr })}
-                                        </div>
+                        return (
+                            <div key={day.toString()} className="space-y-2">
+                                <div className="flex items-center gap-2 sticky top-0 bg-white/90 backdrop-blur-sm z-10 py-1">
+                                    <div className={`text-xs font-bold px-3 py-1 rounded-full ${isSameDay(day, new Date()) ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                        {format(day, 'd MMM EEEE', { locale: tr })}
                                     </div>
-                                    <div className="space-y-2">
-                                        {dayShifts.map(shift => (
-                                            <div key={shift.id} className={`p-2 rounded-lg border flex justify-between items-center ${getColorClass(shift.color || 'blue')} relative group`}>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 rounded-full bg-white/50 flex items-center justify-center text-xs font-bold text-slate-700">
-                                                        {shift.user.name[0]}
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-sm font-bold block leading-none">{shift.user.name}</span>
-                                                        <span className="text-[10px] opacity-80">{format(new Date(shift.start), 'HH:mm')} - {format(new Date(shift.end), 'HH:mm')}</span>
-                                                    </div>
-                                                </div>
+                                    <div className="h-px bg-slate-100 flex-1"></div>
+                                </div>
 
-                                                {(new Date(shift.start) > new Date()) && (
-                                                    <button
-                                                        onClick={() => handleTradePost(shift.id)}
-                                                        className="bg-white/50 hover:bg-white text-xs font-bold px-2 py-1 rounded shadow-sm text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    >
-                                                        Devret
-                                                    </button>
-                                                )}
+                                {dayShifts.map(shift => (
+                                    <div key={shift.id} className={`p-4 rounded-xl border flex justify-between items-center relative overflow-hidden ${shift.type === 'OVERTIME' || shift.isOvertime
+                                        ? 'bg-amber-50 border-amber-100'
+                                        : 'bg-white border-slate-100 shadow-sm'
+                                        }`}>
+                                        {shift.status === 'DRAFT' && (
+                                            <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-[9px] font-bold px-2 py-0.5 rounded-bl-lg">ONAY BEKLİYOR</div>
+                                        )}
+
+                                        <div className="flex items-center gap-4">
+                                            <div className={`p-3 rounded-full ${shift.type === 'OVERTIME' || shift.isOvertime ? 'bg-amber-100 text-amber-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                                                <Clock size={20} />
                                             </div>
-                                        ))}
+                                            <div>
+                                                <div className={`font-bold ${shift.type === 'OVERTIME' || shift.isOvertime ? 'text-amber-900' : 'text-slate-900'}`}>
+                                                    {shift.title || (shift.isOvertime ? 'Fazla Mesai' : 'Vardiya')}
+                                                </div>
+                                                <div className="text-xs text-slate-500 font-medium mt-0.5">
+                                                    {format(new Date(shift.startTime), 'HH:mm')} - {format(new Date(shift.endTime), 'HH:mm')}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-right">
+                                            <div className="text-xs font-bold text-slate-400">Süre</div>
+                                            <div className="font-bold text-slate-700">
+                                                {((new Date(shift.endTime).getTime() - new Date(shift.startTime).getTime()) / (1000 * 60 * 60)).toFixed(1)} s
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
-                        {shifts.length === 0 && !loading && <div className="text-center py-10 text-slate-400">Bu ay için vardiya bulunamadı.</div>}
-                    </div>
-                </div>
-            ) : activeTab === 'HISTORY' ? (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-1">
-                    <div className="flex-1 overflow-y-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold sticky top-0">
-                                <tr>
-                                    <th className="p-3">Tarih</th>
-                                    <th className="p-3">İşlem</th>
-                                    <th className="p-3 text-right">Durum</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {history.length === 0 ? (
-                                    <tr><td colSpan={3} className="p-6 text-center text-slate-400">Kayıt bulunamadı.</td></tr>
-                                ) : history.map(rec => (
-                                    <tr key={rec.id}>
-                                        <td className="p-3">
-                                            <div className="font-bold text-slate-900">{format(new Date(rec.timestamp), 'd MMM', { locale: tr })}</div>
-                                            <div className="text-xs text-slate-500">{format(new Date(rec.timestamp), 'HH:mm')}</div>
-                                        </td>
-                                        <td className="p-3">
-                                            <span className={`px-2 py-1 rounded-md text-xs font-bold ${rec.type === 'CHECK_IN' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                {rec.type === 'CHECK_IN' ? 'Giriş' : 'Çıkış'}
-                                            </span>
-                                        </td>
-                                        <td className="p-3 text-right">
-                                            {rec.isLate ? (
-                                                <span className="text-red-600 text-xs font-bold">GEÇ</span>
-                                            ) : (
-                                                <span className="text-green-600 text-xs font-bold">-</span>
-                                            )}
-                                        </td>
-                                    </tr>
                                 ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            ) : (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-1 p-4 overflow-y-auto">
-                    {marketTrades.length === 0 ? (
-                        <div className="text-center py-20 text-slate-400">
-                            Pazarda şu an açık vardiya yok.
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {marketTrades.map(trade => (
-                                <div key={trade.id} className="border border-slate-200 rounded-xl p-4 flex flex-col gap-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 overflow-hidden">
-                                            {trade.requester.profilePicture ? <img src={trade.requester.profilePicture} className="w-full h-full object-cover" /> : trade.requester.name[0]}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-900">{trade.requester.name}</p>
-                                            <p className="text-xs text-slate-500">Vardiya Devrediyor</p>
-                                        </div>
-                                    </div>
-                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="text-xs font-bold text-slate-500">Tarih</span>
-                                            <span className="text-sm font-bold text-slate-900">{format(new Date(trade.shift.start), 'd MMMM yyyy', { locale: tr })}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-bold text-slate-500">Saat</span>
-                                            <span className="text-sm font-bold text-indigo-600">{format(new Date(trade.shift.start), 'HH:mm')} - {format(new Date(trade.shift.end), 'HH:mm')}</span>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => handleTakeShift(trade.id)}
-                                        className="w-full py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors shadow-lg shadow-green-200"
-                                    >
-                                        Vardiyayı Al
-                                    </button>
-                                </div>
-                            ))}
+                            </div>
+                        );
+                    })}
+
+                    {shifts.length === 0 && !loading && (
+                        <div className="text-center py-20 opacity-50">
+                            <Calendar className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                            <p className="text-slate-400 font-medium">Bu aralıkta vardiya bulunamadı.</p>
                         </div>
                     )}
+                </div>
+            </div>
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <h3 className="font-bold text-slate-900">Fazla Mesai Talep Et</h3>
+                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <PlusCircle className="rotate-45" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleRequestOvertime} className="p-4 space-y-4">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">Tarih</label>
+                                    <input
+                                        type="date"
+                                        required
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                                        value={requestDate}
+                                        onChange={e => setRequestDate(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">Saat</label>
+                                    <input
+                                        type="time"
+                                        required
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                                        value={requestTime}
+                                        onChange={e => setRequestTime(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Süre (Saat)</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="12"
+                                    required
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                                    value={requestDuration}
+                                    onChange={e => setRequestDuration(Number(e.target.value))}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Açıklama / Neden</label>
+                                <textarea
+                                    required
+                                    rows={3}
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                                    value={requestNotes}
+                                    onChange={e => setRequestNotes(e.target.value)}
+                                />
+                            </div>
+                            <button type="submit" className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-indigo-200">
+                                Talep Gönder
+                            </button>
+                        </form>
+                    </div>
                 </div>
             )}
         </div>

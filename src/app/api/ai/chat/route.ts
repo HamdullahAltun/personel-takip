@@ -21,11 +21,11 @@ export async function POST(req: Request) {
         const user = await prisma.user.findUnique({
             where: { id: session.id as string },
             include: {
-                tasksReceived: { where: { status: { not: 'COMPLETED' } } },
-                workSchedules: true,
+                // tasksReceived: { where: { status: { not: 'COMPLETED' } } },
+                // workSchedules: true,
                 attendance: { orderBy: { timestamp: 'desc' }, take: 1 },
                 leaves: { where: { status: 'APPROVED', endDate: { gte: new Date() } } },
-                lmsCompletions: { include: { module: true } }
+                // lmsCompletions: { include: { module: true } }
             }
         });
 
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
                     select: {
                         name: true, role: true, hourlyRate: true, points: true, annualLeaveDays: true,
                         attendance: { take: 5, orderBy: { timestamp: 'desc' }, select: { type: true, timestamp: true, isLate: true } },
-                        tasksReceived: { select: { status: true, priority: true } },
+                        // tasksReceived: { select: { status: true, priority: true } },
                         reviewsReceived: { take: 1, orderBy: { createdAt: 'desc' }, select: { score: true } }
                     }
                 }),
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
                 prisma.companySettings.findFirst(),
                 prisma.asset.findMany({ include: { assignedTo: { select: { name: true } } } }),
                 prisma.advanceRequest.findMany({ where: { status: 'PENDING' }, include: { user: { select: { name: true } } } }),
-                prisma.shift.findMany({ where: { start: { gte: today } }, take: 10, include: { user: { select: { name: true } } } }),
+                prisma.shift.findMany({ where: { startTime: { gte: today } }, take: 10, include: { user: { select: { name: true } } } }),
                 prisma.fieldTask.findMany({ where: { status: { not: 'COMPLETED' } }, include: { user: { select: { name: true } } } }),
                 prisma.department.findMany({ include: { _count: { select: { users: true } } } }),
                 prisma.checklistAssignment.findMany({
@@ -111,8 +111,8 @@ GÖREVLERİN:
             // --- STAFF RESTRICTED MODE ---
             // Fetch extra personal details for context
             const upcomingShift = await prisma.shift.findFirst({
-                where: { userId: session.id, start: { gte: new Date() } },
-                orderBy: { start: 'asc' }
+                where: { userId: session.id, startTime: { gte: new Date() } },
+                orderBy: { startTime: 'asc' }
             });
             const lastPayroll = await prisma.payroll.findFirst({
                 where: { userId: session.id },
@@ -126,10 +126,10 @@ TARİH: ${dateStr}, ${dayName}
 KULLANICI VERİLERİ:
 - Yıllık İzin Bakiyesi: ${user.annualLeaveDays} gün
 - Puan: ${user.points}
-- Bekleyen Görevler: ${user.tasksReceived.length}
-- Bir Sonraki Vardiya: ${upcomingShift ? `${format(upcomingShift.start, 'd MMMM HH:mm')} - ${format(upcomingShift.end, 'HH:mm')}` : 'Planlanmamış'}
-- Son Maaş: ${lastPayroll ? `${lastPayroll.totalPaid} TL (${lastPayroll.month}/${lastPayroll.year})` : 'Bilgi yok'}
-- Tamamlanan Eğitimler: ${user.lmsCompletions.map((c: any) => c.module.title).join(', ')}
+            // - Bekleyen Görevler: (Veri yok)
+            // - Bir Sonraki Vardiya: ${upcomingShift ? `${format(upcomingShift.startTime, 'd MMMM HH:mm')} - ${format(upcomingShift.endTime, 'HH:mm')}` : 'Planlanmamış'}
+            // - Son Maaş: ${lastPayroll ? `${lastPayroll.totalPaid} TL (${lastPayroll.month}/${lastPayroll.year})` : 'Bilgi yok'}
+            // - Tamamlanan Eğitimler: (Veri yok)
 
 === ŞİRKET HAFIZASI (BİLGİ BANKASI) ===
 ${knowledgeStr}

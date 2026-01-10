@@ -42,8 +42,8 @@ async function getUser() {
                 orderBy: { createdAt: 'desc' }
             },
             shifts: {
-                where: { start: { gte: new Date() } },
-                orderBy: { start: 'asc' },
+                where: { startTime: { gte: new Date() } },
+                orderBy: { startTime: 'asc' },
                 take: 1
             }
         }
@@ -190,18 +190,18 @@ export default async function StaffDashboard() {
                                             <div className="flex items-center gap-2 mb-2">
                                                 <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm border border-white/10">Sıradaki Vardiya</span>
                                             </div>
-                                            <h3 className="text-3xl font-black mb-1">{format(new Date(user.shifts[0].start), 'EEEE', { locale: tr })}</h3>
-                                            <p className="text-indigo-100 font-medium">{format(new Date(user.shifts[0].start), 'd MMMM yyyy', { locale: tr })}</p>
+                                            <h3 className="text-3xl font-black mb-1">{format(new Date(user.shifts[0].startTime), 'EEEE', { locale: tr })}</h3>
+                                            <p className="text-indigo-100 font-medium">{format(new Date(user.shifts[0].startTime), 'd MMMM yyyy', { locale: tr })}</p>
 
                                             <div className="flex items-center gap-4 mt-6">
                                                 <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-md border border-white/10">
                                                     <p className="text-xs text-indigo-200 uppercase font-bold">Başlangıç</p>
-                                                    <p className="text-lg font-black">{format(new Date(user.shifts[0].start), 'HH:mm')}</p>
+                                                    <p className="text-lg font-black">{format(new Date(user.shifts[0].startTime), 'HH:mm')}</p>
                                                 </div>
                                                 <div className="h-px w-8 bg-white/20"></div>
                                                 <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-md border border-white/10">
                                                     <p className="text-xs text-indigo-200 uppercase font-bold">Bitiş</p>
-                                                    <p className="text-lg font-black">{format(new Date(user.shifts[0].end), 'HH:mm')}</p>
+                                                    <p className="text-lg font-black">{format(new Date(user.shifts[0].endTime), 'HH:mm')}</p>
                                                 </div>
                                             </div>
                                         </div>

@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
         const staff = await (prisma.user as any).findMany({
             where: { role: 'STAFF' },
-            select: { id: true, name: true, workSchedules: true, points: true }
+            select: { id: true, name: true, points: true }
         });
 
         const prompt = `
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
         1. Her gün için en az 2 kişi atanmalı.
         2. Sabah (09:00-17:00) ve Akşam (17:00-01:00) vardiyaları olsun.
         3. Puanı yüksek olanlara daha az yoğunluk verebilirsin.
-        4. Kişilerin workSchedules (off days) verilerine dikkat et.
+
         
         SADECE JSON döndür: { shifts: [{ userId: string, start: string (ISO), end: string (ISO), title: string }] }
         `;

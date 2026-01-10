@@ -4,7 +4,7 @@ export async function calculatePayroll(userId: string, month: number, year: numb
     // 1. Get User Data
     const user = await prisma.user.findUnique({
         where: { id: userId },
-        include: { workSchedules: true }
+        include: {}
     });
 
     if (!user) throw new Error("User not found");

@@ -15,7 +15,10 @@ async function getUser() {
         include: {
             attendance: { orderBy: { timestamp: 'desc' } },
             achievements: { orderBy: { date: 'desc' } },
-            workSchedules: true,
+            shifts: {
+                where: { startTime: { gte: new Date() } },
+                orderBy: { startTime: 'asc' }
+            },
             assets: true,
             documents: { orderBy: { uploadedAt: 'desc' } }
         }

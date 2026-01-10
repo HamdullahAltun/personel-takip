@@ -49,12 +49,12 @@ export async function POST(req: Request) {
 
     if (result.action === 'SHIFT_QUERY') {
         const nextShift = await prisma.shift.findFirst({
-            where: { userId: session.id as string, start: { gte: new Date() } },
-            orderBy: { start: 'asc' }
+            where: { userId: session.id as string, startTime: { gte: new Date() } },
+            orderBy: { startTime: 'asc' }
         });
         if (nextShift) {
-            const dateStr = new Date(nextShift.start).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' });
-            const timeStr = `${new Date(nextShift.start).getHours()}:${new Date(nextShift.start).getMinutes().toString().padStart(2, '0')}`;
+            const dateStr = new Date(nextShift.startTime).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' });
+            const timeStr = `${new Date(nextShift.startTime).getHours()}:${new Date(nextShift.startTime).getMinutes().toString().padStart(2, '0')}`;
             result.message = `Bir sonraki vardiyan ${dateStr} saat ${timeStr}'da başlıyor.`;
         } else {
             result.message = "Yakın tarihte planlanmış bir vardiyan bulunmuyor.";

@@ -114,26 +114,29 @@ export async function POST(req: Request) {
         });
         const userName = user?.name || "";
 
-        // Fetch Schedule for Late Check
+        // Fetch Schedule (Shift) for Late Check
         const today = new Date();
-        const currentDayOfWeek = today.getDay() === 0 ? 7 : today.getDay(); // JS: 0=Sun, 6=Sat -> ISO: 1=Mon, 7=Sun
+        const startOfDay = new Date(today);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(today);
+        endOfDay.setHours(23, 59, 59, 999);
 
-        const schedule = await prisma.workSchedule.findUnique({
+        const currentShift = await prisma.shift.findFirst({
             where: {
-                userId_dayOfWeek: {
-                    userId: targetUserId,
-                    dayOfWeek: currentDayOfWeek
+                userId: targetUserId,
+                startTime: {
+                    gte: startOfDay,
+                    lte: endOfDay
                 }
             }
         });
 
         let isLate = false;
-        if (newType === 'CHECK_IN' && schedule && !schedule.isOffDay) {
-            const [schedHour, schedMin] = schedule.startTime.split(':').map(Number);
-            const limitTime = new Date(today);
-            limitTime.setHours(schedHour, schedMin + 15, 0, 0); // 15 mins tolerance
+        if (newType === 'CHECK_IN' && currentShift) {
+            const limitTime = new Date(currentShift.startTime);
+            limitTime.setMinutes(limitTime.getMinutes() + 15); // 15 mins tolerance
 
-            if (today > limitTime) {
+            if (today.getTime() > limitTime.getTime()) {
                 isLate = true;
             }
         }

@@ -1,110 +1,83 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getAuth } from '@/lib/auth';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getAuth } from "@/lib/auth";
 
 export async function GET(req: Request) {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
-    const start = searchParams.get('start');
-    const end = searchParams.get('end');
+    const start = searchParams.get("start");
+    const end = searchParams.get("end");
+    const userId = searchParams.get("userId");
 
-    if (!start || !end) return NextResponse.json({ error: "Start and End required" }, { status: 400 });
+    const where: any = {};
+
+    if (start && end) {
+        where.startTime = {
+            gte: new Date(start),
+            lte: new Date(end),
+        };
+    }
+
+    // Admin can see all, Staff can only see theirs unless specified otherwise
+    if (userId) {
+        where.userId = userId;
+    } else if (session.role === "STAFF") {
+        where.userId = session.id;
+    }
 
     try {
         const shifts = await prisma.shift.findMany({
-            where: {
-                start: { gte: new Date(start) },
-                end: { lte: new Date(end) }
-            },
+            where,
             include: {
-                user: { select: { name: true } }
-            }
+                user: {
+                    select: {
+                        name: true,
+                        profilePicture: true,
+                        department: { select: { name: true } }
+                    }
+                }
+            },
+            orderBy: { startTime: 'asc' }
         });
         return NextResponse.json(shifts);
-    } catch (e) {
+    } catch (error) {
         return NextResponse.json({ error: "Failed to fetch shifts" }, { status: 500 });
     }
 }
 
 export async function POST(req: Request) {
     const session = await getAuth();
-    if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { userId, date, startTime, endTime, title, color } = body;
-    // Expecting simplified input: date (YYYY-MM-DD), startTime (HH:mm), endTime (HH:mm)
+    const { userId, startTime, endTime, type, title, notes, isOvertime } = body;
 
-    // Combine to Date objects
-    const start = new Date(`${date}T${startTime}`);
-    const end = new Date(`${date}T${endTime}`);
-
-    // Handle overnight shifts? Assuming same day for now or simple logic
-    if (end < start) end.setDate(end.getDate() + 1);
+    // Staff can only request overtime (creating DRAFT shift)
+    if (session.role !== "ADMIN" && session.role !== "EXECUTIVE") {
+        if (type !== "OVERTIME") {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+    }
 
     try {
         const shift = await prisma.shift.create({
             data: {
-                userId,
-                start,
-                end,
+                userId: userId || session.id,
+                startTime: new Date(startTime),
+                endTime: new Date(endTime),
+                type: type || "REGULAR",
                 title,
-                color
-            },
-            include: {
-                user: { select: { name: true } }
+                notes,
+                isOvertime: isOvertime || type === "OVERTIME",
+                status: (session.role === "ADMIN" || session.role === "EXECUTIVE") ? "PUBLISHED" : "DRAFT",
+                approvedBy: (session.role === "ADMIN" || session.role === "EXECUTIVE") ? session.id : undefined,
+                approvedAt: (session.role === "ADMIN" || session.role === "EXECUTIVE") ? new Date() : undefined,
             }
         });
         return NextResponse.json(shift);
-    } catch (e) {
-        return NextResponse.json({ error: "Failed to create" }, { status: 500 });
-    }
-}
-
-export async function PATCH(req: Request) {
-    const session = await getAuth();
-    if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const body = await req.json();
-    const { id, date, startTime, endTime } = body;
-
-    try {
-        // If just moving date, we keep time but change date
-        // But we need to know previous time if not provided? 
-        // Or simpler: always provide new Start and End Date objects or strings.
-
-        // Let's assume the frontend calculates the full ISO strings
-        const { start, end } = body;
-
-        if (start && end) {
-            const shift = await prisma.shift.update({
-                where: { id },
-                data: { start, end },
-                include: { user: { select: { name: true } } }
-            });
-            return NextResponse.json(shift);
-        }
-
-        return NextResponse.json({ error: "Start and End required" }, { status: 400 });
-
-    } catch (e) {
-        return NextResponse.json({ error: "Failed to update" }, { status: 500 });
-    }
-}
-
-export async function DELETE(req: Request) {
-    const session = await getAuth();
-    if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-
-    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
-
-    try {
-        await prisma.shift.delete({ where: { id } });
-        return NextResponse.json({ success: true });
-    } catch (e) {
-        return NextResponse.json({ error: "Failed" }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: "Failed to create shift" }, { status: 500 });
     }
 }

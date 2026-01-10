@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, AttendanceRecord, LeaveRequest, Achievement, WorkSchedule } from "@prisma/client";
+import { User, AttendanceRecord, LeaveRequest, Achievement, Shift } from "@prisma/client";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Trash2, ArrowLeft, Save, Clock, CalendarDays, Coins, User as UserIcon, CalendarClock } from "lucide-react";
@@ -14,49 +14,14 @@ type UserWithRelations = User & {
     attendance: AttendanceRecord[];
     leaves: LeaveRequest[];
     achievements: Achievement[];
-    workSchedules: WorkSchedule[];
-    shifts: { id: string; start: Date; end: Date; title: string | null; color: string | null }[];
+    shifts: Shift[];
 };
 
 export default function EmployeeDetailClient({ user }: { user: UserWithRelations }) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
 
-    // Initialize schedules state with default if empty
-    const defaultSchedules = Array.from({ length: 7 }, (_, i) => {
-        const existing = user.workSchedules.find(s => s.dayOfWeek === i + 1);
-        return existing || {
-            dayOfWeek: i + 1,
-            startTime: "09:00",
-            endTime: "18:00",
-            isOffDay: i + 1 === 6 || i + 1 === 7 // Sat/Sun off by default
-        };
-    });
-
-    const [schedules, setSchedules] = useState<any[]>(defaultSchedules);
-
-    const handleScheduleChange = (index: number, field: string, value: any) => {
-        const newSchedules = [...schedules];
-        newSchedules[index] = { ...newSchedules[index], [field]: value };
-        setSchedules(newSchedules);
-    };
-
-    const saveSchedule = async () => {
-        setLoading(true);
-        try {
-            await fetch(`/api/users/${user.id}/schedule`, {
-                method: 'POST',
-                body: JSON.stringify(schedules),
-                headers: { 'Content-Type': 'application/json' }
-            });
-            alert("Çalışma saatleri güncellendi.");
-            router.refresh();
-        } catch (error) {
-            alert("Hata oluştu.");
-        } finally {
-            setLoading(false);
-        }
-    };
+    // WorkSchedule logic removed
 
     // Calculate Stats
     const sortedRecords = [...user.attendance].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -218,50 +183,6 @@ export default function EmployeeDetailClient({ user }: { user: UserWithRelations
                 {/* Right Column */}
                 <div className="md:col-span-2 space-y-6">
 
-                    {/* Work Schedule Editor */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <CalendarClock className="h-5 w-5 text-slate-500" />
-                                <h3 className="font-semibold text-slate-900">Çalışma Saatleri</h3>
-                            </div>
-                            <button onClick={saveSchedule} disabled={loading} className="text-sm bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800 transition">
-                                {loading ? "..." : "Güncelle"}
-                            </button>
-                        </div>
-                        <div className="p-4 space-y-2">
-                            {schedules.map((s, i) => (
-                                <div key={i} className="flex items-center gap-4 text-sm">
-                                    <div className="w-24 font-medium text-slate-700">{DAYS[i]}</div>
-                                    <div className="flex-1 grid grid-cols-2 gap-2">
-                                        <input
-                                            type="time"
-                                            value={s.startTime}
-                                            disabled={s.isOffDay}
-                                            onChange={e => handleScheduleChange(i, 'startTime', e.target.value)}
-                                            className="border rounded px-2 py-1 disabled:opacity-50"
-                                        />
-                                        <input
-                                            type="time"
-                                            value={s.endTime}
-                                            disabled={s.isOffDay}
-                                            onChange={e => handleScheduleChange(i, 'endTime', e.target.value)}
-                                            className="border rounded px-2 py-1 disabled:opacity-50"
-                                        />
-                                    </div>
-                                    <label className="flex items-center gap-2 cursor-pointer w-24 justify-end">
-                                        <input
-                                            type="checkbox"
-                                            checked={s.isOffDay}
-                                            onChange={e => handleScheduleChange(i, 'isOffDay', e.target.checked)}
-                                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <span className="text-slate-500 text-xs">Tatil</span>
-                                    </label>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 gap-4">
@@ -297,19 +218,19 @@ export default function EmployeeDetailClient({ user }: { user: UserWithRelations
                             {user.shifts && user.shifts.length > 0 ? (
                                 <div className="space-y-2">
                                     {user.shifts
-                                        .filter(s => new Date(s.start) >= new Date())
-                                        .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+                                        .filter(s => new Date(s.startTime) >= new Date())
+                                        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
                                         .slice(0, 5)
                                         .map(shift => (
                                             <div key={shift.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/50">
                                                 <div>
-                                                    <p className="font-medium text-slate-900 text-sm">{format(new Date(shift.start), 'd MMMM yyyy', { locale: tr })}</p>
+                                                    <p className="font-medium text-slate-900 text-sm">{format(new Date(shift.startTime), 'd MMMM yyyy', { locale: tr })}</p>
                                                     <p className="text-xs text-slate-500">
-                                                        {format(new Date(shift.start), 'HH:mm')} - {format(new Date(shift.end), 'HH:mm')}
+                                                        {format(new Date(shift.startTime), 'HH:mm')} - {format(new Date(shift.endTime), 'HH:mm')}
                                                     </p>
                                                 </div>
-                                                <div className={`px-2 py-1 rounded text-xs font-bold text-white`} style={{ backgroundColor: shift.color || '#3b82f6' }}>
-                                                    {shift.title || 'Vardiya'}
+                                                <div className={`px-2 py-1 rounded text-xs font-bold text-white bg-indigo-500`}>
+                                                    {shift.title || (shift.isOvertime ? 'Fazla Mesai' : 'Vardiya')}
                                                 </div>
                                             </div>
                                         ))

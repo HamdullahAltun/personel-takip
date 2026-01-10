@@ -34,7 +34,7 @@ export async function POST(req: Request) {
                 role: 'STAFF'
             },
             include: {
-                workSchedules: true
+
             }
         });
 
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
         // 3. Fetch ALL existing shifts for the week at once
         const existingShifts = await prisma.shift.findMany({
             where: {
-                start: {
+                startTime: {
                     gte: start,
                     lt: end
                 }
@@ -68,14 +68,26 @@ export async function POST(req: Request) {
 
             // Identify available staff
             const availableStaff = staff.filter(user => {
-                const preference = user.workSchedules.find(s => s.dayOfWeek === dayOfWeek);
-                if (preference && preference.isOffDay) return false;
+                // Default to standard hours if no schedule preference (legacy)
+                const startHour = 9;
+                const endHour = 18;
+
 
                 // Check if already has a shift this day (either existing or newly created in this loop)
-                const hasExistingShift = existingShifts.some(s =>
-                    s.userId === user.id &&
-                    new Date(s.start).toDateString() === currentDayDate.toDateString()
-                );
+                const hasExistingShift = existingShifts.some(s => {
+                    if (s.userId === user.id) {
+                        const shiftStart = new Date(s.startTime);
+                        // Check if already has a shift this day
+                        if (
+                            shiftStart.getDate() === currentDayDate.getDate() &&
+                            shiftStart.getMonth() === currentDayDate.getMonth() &&
+                            shiftStart.getFullYear() === currentDayDate.getFullYear()
+                        ) {
+                            return true; // Found an existing shift for this user on this day
+                        }
+                    }
+                    return false; // No existing shift found for this user on this day
+                });
                 const hasNewShift = newShifts.some(s =>
                     s.userId === user.id &&
                     s.start.toDateString() === currentDayDate.toDateString()
@@ -116,10 +128,11 @@ export async function POST(req: Request) {
 
                 newShifts.push({
                     userId: user.id,
-                    start: shiftStart,
-                    end: shiftEnd,
-                    title: 'AI Scheduled',
-                    color: '#4f46e5'
+                    startTime: shiftStart,
+                    endTime: shiftEnd,
+                    type: 'SHIFT',
+                    status: 'PUBLISHED',
+                    title: 'AI Planned',
                 });
             }
         }

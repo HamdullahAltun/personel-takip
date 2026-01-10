@@ -73,7 +73,6 @@ export async function deleteEmployee(id: string) {
         await prisma.$transaction(async (tx) => {
             // 1. Operational Data
             await tx.attendanceRecord.deleteMany({ where: { userId: id } });
-            await tx.workSchedule.deleteMany({ where: { userId: id } });
             await tx.shift.deleteMany({ where: { userId: id } });
             await tx.leaveRequest.deleteMany({ where: { userId: id } });
 

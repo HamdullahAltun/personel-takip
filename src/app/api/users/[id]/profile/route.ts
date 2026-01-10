@@ -42,7 +42,11 @@ export async function GET(
                     tasksReceived: { orderBy: { createdAt: 'desc' }, take: 20 },
                     expenses: { orderBy: { date: 'desc' }, take: 20 },
                     leaves: { orderBy: { startDate: 'desc' }, take: 10 },
-                    workSchedules: true,
+                    shifts: {
+                        where: { startTime: { gte: new Date() } },
+                        orderBy: { startTime: 'asc' },
+                        take: 10
+                    },
                     attendance: { orderBy: { timestamp: 'desc' }, take: 30 }
                 }
             });
