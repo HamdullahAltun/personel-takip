@@ -9,6 +9,41 @@ import { ChevronLeft, ChevronRight, Calendar, Plus, Filter, User as UserIcon } f
 import ShiftModal from "@/components/admin/ShiftModal";
 import { Shift, User } from "@prisma/client";
 
+function ShiftCard({ shift, onClick, mobile }: { shift: Shift & { user: User }, onClick: () => void, mobile?: boolean }) {
+    return (
+        <div
+            onClick={onClick}
+            className={`p-3 rounded-xl border shadow-sm cursor-pointer hover:scale-[1.02] transition-all active:scale-95 ${shift.isOvertime
+                ? 'bg-amber-50 border-amber-200 hover:border-amber-400'
+                : 'bg-white border-slate-100 hover:border-indigo-400'
+                } ${mobile ? 'flex items-center justify-between gap-4' : ''}`}
+        >
+            <div className={`flex items-center gap-3 ${mobile ? '' : 'mb-3'}`}>
+                {shift.user.profilePicture ? (
+                    <img src={shift.user.profilePicture} className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" />
+                ) : (
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-200">
+                        {shift.user.name[0]}
+                    </div>
+                )}
+                <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-900 truncate">{shift.user.name}</p>
+                    {shift.title && <p className="text-[10px] text-slate-500 truncate">{shift.title}</p>}
+                </div>
+            </div>
+
+            <div className={`flex flex-col ${mobile ? 'items-end' : 'items-start'}`}>
+                <div className={`text-xs font-black ${shift.isOvertime ? 'text-amber-700' : 'text-indigo-700'}`}>
+                    {format(new Date(shift.startTime), 'HH:mm')} - {format(new Date(shift.endTime), 'HH:mm')}
+                </div>
+                {shift.isOvertime && (
+                    <span className="mt-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-bold rounded uppercase tracking-wider">Mesai</span>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export default function AdminShiftsPage() {
     const [date, setDate] = useState(new Date());
     const [shifts, setShifts] = useState<(Shift & { user: User })[]>([]);
@@ -44,29 +79,14 @@ export default function AdminShiftsPage() {
     };
 
     const fetchUsers = async () => {
-        const res = await fetch('/api/staff/list'); // Assuming this exists or similar
-        if (res.ok) {
-            const data = await res.json();
-            // Usually returns a list of users, verify structure if needed
-            setUsers(data);
-        } else {
-            // Fallback to simpler fetch if that specific route doesn't exist
-            // Actually currently I don't recall a generic staff list API that works perfectly without auth scope, 
-            // but assuming /api/staff/visitors or something similar exists, or maybe /api/users if created.
-            // I'll assume /api/users or I might need to create it. 
-            // Let's try /api/staff/list, if it fails I'll handle it. 
-            // Wait, previous context showed I didn't create /api/staff/list.
-            // I recall seeing /api/staff in other files.
-            // Let's create a quick user fetch via the same shifts API if needed or assume standard conventions.
-            // I will use /api/staff/directory if it exists, or just create a temporary fetch in the server component if I was using RSC.
-            // Since this is client, I'll try fetching from /api/staff/directory if it exists.
-            // Let's just create a quick util function here to fetch users if we fail.
-            // Actually, I'll assume /api/admin/employees exists from directory listing earlier.
-            const res2 = await fetch('/api/admin/employees');
-            if (res2.ok) {
-                const data = await res2.json();
+        try {
+            const res = await fetch('/api/users');
+            if (res.ok) {
+                const data = await res.json();
                 setUsers(data);
             }
+        } catch (error) {
+            console.error("Fetch users error:", error);
         }
     };
 
@@ -175,13 +195,13 @@ export default function AdminShiftsPage() {
             </div>
 
             {/* Calendar Grid */}
-            <div className="flex-1 overflow-x-auto overflow-y-auto p-4">
-                <div className="min-w-[1000px] h-full flex flex-col">
-                    {/* Week Header */}
-                    <div className="grid grid-cols-7 gap-4 mb-4">
+            <div className="flex-1 overflow-x-auto overflow-y-auto p-4 md:p-6">
+                <div className="md:min-w-[1000px] h-full flex flex-col">
+                    {/* Week Header - Desktop */}
+                    <div className="hidden md:grid grid-cols-7 gap-4 mb-4">
                         {days.map(day => (
                             <div key={day.toString()} className={`text-center p-3 rounded-xl border ${isSameDay(day, new Date()) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-600'}`}>
-                                <div className="text-xs font-medium opacity-80 uppercase">{format(day, 'EEEE', { locale: tr })}</div>
+                                <div className="text-xs font-medium opacity-80 uppercase">{format(day, 'EEE', { locale: tr })}</div>
                                 <div className="text-xl font-bold">{format(day, 'd')}</div>
                                 <div className="mt-1 flex justify-center gap-1">
                                     {getDailyStats(day).overtimeCount > 0 && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title={`${getDailyStats(day).overtimeCount} mesai`}></span>}
@@ -191,59 +211,65 @@ export default function AdminShiftsPage() {
                         ))}
                     </div>
 
-                    {/* Week Content */}
-                    <div className="grid grid-cols-7 gap-4 flex-1">
+                    {/* Week Content - Desktop */}
+                    <div className="hidden md:grid grid-cols-7 gap-4 flex-1">
                         {days.map(day => {
                             const dayShifts = shifts.filter(s => isSameDay(new Date(s.startTime), day));
                             dayShifts.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
                             return (
-                                <div key={day.toString()} className="bg-slate-100/50 rounded-xl p-2 min-h-[400px] relative group border border-dashed border-slate-200 hover:border-indigo-300 transition-colors">
-                                    <button
-                                        onClick={() => handleAddShift(day)}
-                                        className="absolute inset-0 w-full h-full z-0 opacity-0 group-hover:opacity-10 pointer-events-none bg-indigo-500 rounded-xl"
-                                    />
-
+                                <div key={day.toString()} className="bg-slate-100/50 rounded-xl p-2 min-h-[500px] relative group border border-dashed border-slate-200 hover:border-indigo-300 transition-colors">
                                     <div className="space-y-2 relative z-10">
                                         {dayShifts.map(shift => (
-                                            <div
-                                                key={shift.id}
-                                                onClick={() => handleEditShift(shift)}
-                                                className={`p-3 rounded-lg border shadow-sm cursor-pointer hover:scale-[1.02] transition-transform ${shift.isOvertime
-                                                    ? 'bg-amber-50 border-amber-200 hover:border-amber-400'
-                                                    : 'bg-white border-indigo-100 hover:border-indigo-400'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    {shift.user.profilePicture ? (
-                                                        <img src={shift.user.profilePicture} className="w-6 h-6 rounded-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                                                            {shift.user.name[0]}
-                                                        </div>
-                                                    )}
-                                                    <span className="text-xs font-bold truncate">{shift.user.name.split(' ')[0]}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-xs">
-                                                    <span className={`font-bold ${shift.isOvertime ? 'text-amber-700' : 'text-indigo-700'}`}>
-                                                        {format(new Date(shift.startTime), 'HH:mm')} - {format(new Date(shift.endTime), 'HH:mm')}
-                                                    </span>
-                                                </div>
-                                                {shift.title && (
-                                                    <div className="mt-1 text-[10px] text-slate-500 truncate">{shift.title}</div>
-                                                )}
-                                                {shift.isOvertime && (
-                                                    <div className="mt-1 inline-block px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-bold rounded">Mesai</div>
-                                                )}
-                                            </div>
+                                            <ShiftCard key={shift.id} shift={shift} onClick={() => handleEditShift(shift)} />
                                         ))}
 
                                         <button
                                             onClick={() => handleAddShift(day)}
-                                            className="w-full py-2 rounded-lg border border-dashed border-slate-300 text-slate-400 text-xs font-bold hover:bg-white hover:text-indigo-600 hover:border-indigo-300 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100"
+                                            className="w-full py-4 rounded-lg border border-dashed border-slate-300 text-slate-400 text-xs font-bold hover:bg-white hover:text-indigo-600 hover:border-indigo-300 transition-colors flex items-center justify-center gap-1"
                                         >
-                                            <Plus className="h-3 w-3" /> Ekle
+                                            <Plus className="h-4 w-4" /> Ekle
                                         </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Mobile View - Vertical List */}
+                    <div className="md:hidden space-y-6">
+                        {days.map(day => {
+                            const dayShifts = shifts.filter(s => isSameDay(new Date(s.startTime), day));
+                            const isToday = isSameDay(day, new Date());
+
+                            return (
+                                <div key={day.toString()} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                    <div className={`p-4 flex items-center justify-between border-b ${isToday ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-900'}`}>
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-center">
+                                                <div className="text-[10px] uppercase font-bold opacity-80">{format(day, 'EEE', { locale: tr })}</div>
+                                                <div className="text-xl font-black">{format(day, 'd')}</div>
+                                            </div>
+                                            <div className="h-8 w-px bg-current opacity-20"></div>
+                                            <div className="font-bold">{format(day, 'MMMM', { locale: tr })}</div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleAddShift(day)}
+                                            className={`p-2 rounded-lg ${isToday ? 'bg-white/20 hover:bg-white/30' : 'bg-indigo-600 text-white'}`}
+                                        >
+                                            <Plus className="h-5 w-5" />
+                                        </button>
+                                    </div>
+                                    <div className="p-4 space-y-3">
+                                        {dayShifts.length > 0 ? (
+                                            dayShifts.map(shift => (
+                                                <ShiftCard key={shift.id} shift={shift} onClick={() => handleEditShift(shift)} mobile />
+                                            ))
+                                        ) : (
+                                            <div className="py-4 text-center text-slate-400 text-xs italic border border-dashed rounded-xl">
+                                                Bu gün için vardiya planlanmadı.
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );
