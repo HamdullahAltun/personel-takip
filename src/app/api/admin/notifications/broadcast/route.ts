@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getAuth } from '@/lib/auth';
-import { sendBroadcastNotification, sendPushNotification } from '@/lib/notifications';
 
 export async function POST(req: Request) {
     const session = await getAuth();
@@ -12,8 +11,10 @@ export async function POST(req: Request) {
         const { title, body, targetUserId } = await req.json();
 
         if (targetUserId) {
-            await sendPushNotification(targetUserId, title, body);
+            const { createNotification } = await import("@/lib/notifications");
+            await createNotification(targetUserId, title, body, 'INFO');
         } else {
+            const { sendBroadcastNotification } = await import("@/lib/notifications");
             await sendBroadcastNotification(title, body);
         }
 

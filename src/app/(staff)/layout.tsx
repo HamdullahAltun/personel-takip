@@ -7,7 +7,8 @@ import {
     Home, QrCode, ScanLine, User, FileClock, Megaphone, MessageSquareText,
     LogOut, ChevronDown, Menu as MenuIcon, ClipboardList, Receipt, BrainCircuit,
     Calendar, MessageSquare, BookOpen, CalendarClock, LayoutGrid, X, UserCog,
-    Share2, CalendarRange, Crown, Network, Bot, Gift, Banknote, MapPin, Database, Search
+    Share2, CalendarRange, Crown, Network, Bot, Gift, Banknote, MapPin, Database, Search, Bell,
+    Activity, TrendingUp, Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import VoiceAssistant from "@/components/VoiceAssistant";
@@ -100,6 +101,10 @@ export default function StaffLayout({
         { href: "/lms", label: "Eğitim", icon: BookOpen, priority: 10 },
         { href: "/booking", label: "Rezervasyon", icon: CalendarClock, priority: 10 },
         { href: "/visitors", label: "Ziyaretçi Davet", icon: QrCode, priority: 10 },
+        { href: "/culture/wellness", label: "Sağlık", icon: Activity, priority: 8 },
+        { href: "/career", label: "Kariyerim", icon: TrendingUp, priority: 8 },
+        { href: "/feedback", label: "Öneri Kutusu", icon: Shield, priority: 9 },
+        { href: "/notifications", label: "Bildirimler", icon: Bell, priority: 9 },
     ];
 
     if (userRole === 'EXECUTIVE') {

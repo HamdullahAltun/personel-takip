@@ -135,3 +135,4 @@ export async function analyzeSentiment(text: string): Promise<{ score: number, l
         return { score: 0, label: "NEUTRAL" };
     }
 }
+export * from "./rag";

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Trash2, ShoppingBag, Edit2, X, Image as ImageIcon } from "lucide-react";
+import { toast } from "sonner";
 
 type Reward = {
     id: string;
@@ -56,11 +57,18 @@ export default function AdminRewardShop() {
 
     const handleDelete = async (id: string) => {
         if (!confirm("Bu ödülü silmek istiyor musunuz?")) return;
-        // Assuming DELETE endpoint exists or needs to be added
-        // For now, we'll just hide it or call a delete API if available
-        // await fetch(\`/api/rewards?id=\${id}\`, { method: 'DELETE' });
-        // fetchRewards();
-        alert("Silme fonksiyonu henüz API'de aktif değil.");
+
+        try {
+            const res = await fetch(`/api/rewards?id=${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                toast.success("Ödül başarıyla silindi");
+                fetchRewards();
+            } else {
+                toast.error("Silinirken bir hata oluştu");
+            }
+        } catch (error) {
+            toast.error("Bağlantı hatası");
+        }
     };
 
     return (

@@ -91,10 +91,29 @@ export async function GET() {
             };
         });
 
+        // Pending Swap Requests
+        const pendingSwapRequests = await prisma.shiftSwapRequest.findMany({
+            where: {
+                OR: [
+                    { requesterId: session.id },
+                    { claimantId: session.id }
+                ],
+                status: "PENDING_APPROVAL"
+            },
+            include: {
+                shift: true,
+                requester: { select: { name: true } },
+                claimant: { select: { name: true } }
+            },
+            orderBy: { updatedAt: 'desc' },
+            take: 3
+        });
+
         return NextResponse.json({
             announcement,
             eom,
-            weeklyActivity: chartData
+            weeklyActivity: chartData,
+            pendingSwapRequests
         });
     } catch (error) {
         console.error("Dashboard stats error:", error);

@@ -4,6 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { Search, Book, FileText, Bookmark, X, ChevronRight, File, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import KnowledgeChat from "@/components/knowledge/KnowledgeChat";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -248,6 +249,8 @@ export default function KnowledgePage() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <KnowledgeChat />
         </div>
     );
 }

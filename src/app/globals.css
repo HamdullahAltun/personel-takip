@@ -3,6 +3,13 @@
 :root {
   --background: #ffffff;
   --foreground: #0f172a;
+  --primary: #4f46e5;
+  --secondary: #64748b;
+}
+
+@theme {
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
 }
 
 @media (prefers-color-scheme: dark) {

@@ -123,6 +123,22 @@ model User {
   // New Widgets
   moods       TeamMood[]
   notifications Notification[]
+  
+  // Shift Swaps
+  swapRequests     ShiftSwapRequest[] @relation("SwapRequester")
+  swapsClaimed     ShiftSwapRequest[] @relation("SwapClaimant")
+
+  // --- NEW RELATIONS ---
+  aiQueries        AiQueryLog[]
+  sentimentLogs    SentimentLog[]
+  attritionRisk    AttritionRisk?
+  
+  projectsManaged  Project[] @relation("ProjectManager")
+  
+  stockTransactions StockTransaction[] @relation("StockHandler")
+  
+  wellnessActivities WellnessActivity[]
+  skillGaps        SkillGap[]
 }
 
 model Department {
@@ -184,6 +200,8 @@ model FieldTask {
   notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  
+  customerFeedback CustomerFeedback?
 }
 
 model Asset {
@@ -281,6 +299,12 @@ model Task {
   
   assignedById String       @db.ObjectId
   assignedBy   User         @relation("CreatedTasks", fields: [assignedById], references: [id])
+
+  // Project Management
+  projectId    String?      @db.ObjectId
+  project      Project?     @relation(fields: [projectId], references: [id])
+  columnId     String?      @db.ObjectId
+  column       ProjectColumn? @relation(fields: [columnId], references: [id])
 
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -615,6 +639,8 @@ model Shift {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  swapRequests ShiftSwapRequest[]
 }
 
 enum ShiftType {
@@ -651,6 +677,7 @@ model RewardRequest {
   rewardId  String   @db.ObjectId
   reward    Reward   @relation(fields: [rewardId], references: [id])
   status    String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  note      String?
   createdAt DateTime @default(now())
 }
 
@@ -703,6 +730,8 @@ model KnowledgeBaseDoc {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   signatures      DocSignature[]
+  
+  embedding       KnowledgeBaseEmbedding?
 }
 
 model DocSignature {
@@ -822,4 +851,183 @@ model MotivationalQuote {
   author    String
   showDate  DateTime?
   isActive  Boolean  @default(true)
+}
+
+
+model ShiftSwapRequest {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  shiftId     String   @db.ObjectId
+  shift       Shift    @relation(fields: [shiftId], references: [id])
+  requesterId String   @db.ObjectId
+  requester   User     @relation("SwapRequester", fields: [requesterId], references: [id])
+  
+  targetUserId String? @db.ObjectId // Optional: Swap with specific person
+  
+  claimantId  String?  @db.ObjectId // Who wants to take it
+  claimant    User?    @relation("SwapClaimant", fields: [claimantId], references: [id])
+  
+  status      String   @default("OPEN") // OPEN, PENDING_APPROVAL, APPROVED, REJECTED
+  reason      String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// --- NEW MODULES FOR PHASE 1 ---
+
+// 1. AI & RAG (Knowledge Base Enchancements)
+model KnowledgeBaseEmbedding {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  docId     String   @db.ObjectId @unique
+  doc       KnowledgeBaseDoc @relation(fields: [docId], references: [id], onDelete: Cascade)
+  vector    Float[]  // Embedding vector
+  createdAt DateTime @default(now())
+}
+
+model AiQueryLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  query     String
+  response  String
+  sources   Json?    // Array of source doc IDs and relevance scores
+  createdAt DateTime @default(now())
+}
+
+// 2. ATTRITION & SENTIMENT
+model SentimentLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // MESSAGE, FEEDBACK, MOOD, SURVEY
+  score     Float    // -1.0 to 1.0
+  sourceId  String?  // ID of the message or item
+  createdAt DateTime @default(now())
+}
+
+model AttritionRisk {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId @unique
+  user      User     @relation(fields: [userId], references: [id])
+  riskScore Float    // 0-100 (Higher is riskier)
+  factors   Json     // Reasons: "Low Engagement", "Negative Sentiment"
+  updatedAt DateTime @updatedAt
+}
+
+// 3. PROJECT & RESOURCE MANAGEMENT
+model Project {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  status      String   @default("ACTIVE") // ACTIVE, COMPLETED, ON_HOLD
+  startDate   DateTime?
+  endDate     DateTime?
+  managerId   String   @db.ObjectId
+  manager     User     @relation("ProjectManager", fields: [managerId], references: [id])
+  members     String[] @db.ObjectId // Array of user IDs
+  tasks       Task[]
+  columns     ProjectColumn[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ProjectColumn {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  projectId String   @db.ObjectId
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  order     Int
+  tasks     Task[]
+}
+
+// 4. INVENTORY & STOCK
+model InventoryItem {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  sku         String?  @unique
+  category    String   // OFFICE, ELECTRONICS, KITCHEN
+  quantity    Int      @default(0)
+  minQuantity Int      @default(5) // Alert threshold
+  unit        String   // PCS, BOX, KG
+  location    String?
+  transactions StockTransaction[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StockTransaction {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  itemId    String   @db.ObjectId
+  item      InventoryItem @relation(fields: [itemId], references: [id])
+  userId    String   @db.ObjectId
+  user      User     @relation("StockHandler", fields: [userId], references: [id])
+  type      String   // IN, OUT, ADJUSTMENT
+  quantity  Int
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+// 5. WELLNESS & GAMIFICATION EXTENSIONS
+model WellnessActivity {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // STEPS, MEDITATION, WATER, SLEEP
+  value     Float
+  unit      String   // steps, minutes, liters, hours
+  date      DateTime @default(now())
+}
+
+model WellnessChallenge {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  type        String   // STEPS_RACE, MEDITATION_STREAK
+  targetValue Float
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  participants String[] @db.ObjectId // IDs
+  createdAt   DateTime @default(now())
+}
+
+// 6. FEEDBACK & CAREER
+model CustomerFeedback {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  fieldTaskId String   @db.ObjectId @unique
+  fieldTask   FieldTask @relation(fields: [fieldTaskId], references: [id])
+  rating      Int      // 1-5
+  comment     String?
+  createdAt   DateTime @default(now())
+}
+
+model AnonymousFeedback {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  category  String   // SUGGESTION, COMPLAINT, HR
+  status    String   @default("NEW") // NEW, READ, ADDRESSED
+  sentiment Float?
+  createdAt DateTime @default(now())
+}
+
+model CareerPath {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  level     Int
+  requiredSkills String[]
+  nextLevelId String? @db.ObjectId
+  createdAt DateTime @default(now())
+}
+
+model SkillGap {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  skill     String
+  currentLevel Int // 1-5
+  targetLevel  Int // 1-5
+  recommendedModules String[] // LmsModule IDs
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, skill])
 }

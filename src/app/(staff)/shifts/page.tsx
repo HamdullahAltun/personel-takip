@@ -3,18 +3,25 @@
 import { useState, useEffect } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks, subWeeks, startOfMonth, endOfMonth } from "date-fns";
 import { tr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Calendar, Clock, PlusCircle } from "lucide-react";
-import { Shift, User } from "@prisma/client";
+import { ChevronLeft, ChevronRight, Calendar, Clock, PlusCircle, Repeat } from "lucide-react";
+import { Shift } from "@prisma/client";
+import ShiftTabs from "@/components/shifts/ShiftTabs";
+import MarketplaceTab from "@/components/shifts/MarketplaceTab";
+import { createSwapRequest } from "@/actions/shifts/marketplace";
+import { toast } from "sonner";
 
 export default function StaffShiftsPage() {
+    const [activeTab, setActiveTab] = useState<'MY_SHIFTS' | 'MARKETPLACE'>('MY_SHIFTS');
     const [date, setDate] = useState(new Date());
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'WEEK' | 'MONTH'>('WEEK');
 
     useEffect(() => {
-        fetchShifts();
-    }, [date, viewMode]);
+        if (activeTab === 'MY_SHIFTS') {
+            fetchShifts();
+        }
+    }, [date, viewMode, activeTab]);
 
     const fetchShifts = async () => {
         setLoading(true);
@@ -28,13 +35,38 @@ export default function StaffShiftsPage() {
             end = endOfMonth(date).toISOString();
         }
 
-        const res = await fetch(`/api/shifts?start=${start}&end=${end}`); // Will auto-filter for current user in API
+        const res = await fetch(`/api/shifts?start=${start}&end=${end}`);
         if (res.ok) {
             setShifts(await res.json());
         }
         setLoading(false);
     };
 
+    // Swap Modal State
+    const [swapShiftId, setSwapShiftId] = useState<string | null>(null);
+    const [swapReason, setSwapReason] = useState("");
+
+    const handleSwapRequest = async () => {
+        if (!swapShiftId) return;
+
+        const promise = createSwapRequest(swapShiftId, swapReason);
+
+        toast.promise(promise, {
+            loading: 'Talep oluşturuluyor...',
+            success: (res: any) => {
+                if (res.success) {
+                    setSwapShiftId(null);
+                    setSwapReason("");
+                    return "Takas talebi oluşturuldu!";
+                } else {
+                    throw new Error(res.error);
+                }
+            },
+            error: (err: any) => err.message || "Hata oluştu"
+        });
+    };
+
+    // Overtime Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [requestDate, setRequestDate] = useState("");
     const [requestTime, setRequestTime] = useState("");
@@ -55,29 +87,30 @@ export default function StaffShiftsPage() {
         const start = new Date(`${requestDate}T${requestTime}`);
         const end = new Date(start.getTime() + requestDuration * 60 * 60 * 1000);
 
-        try {
-            const res = await fetch('/api/shifts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    startTime: start,
-                    endTime: end,
-                    type: 'OVERTIME',
-                    notes: requestNotes,
-                    isOvertime: true
-                })
-            });
+        const promise = fetch('/api/shifts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                startTime: start,
+                endTime: end,
+                type: 'OVERTIME',
+                notes: requestNotes,
+                isOvertime: true
+            })
+        }).then(async res => {
+            if (!res.ok) throw new Error("Talep oluşturulamadı");
+            return res;
+        });
 
-            if (res.ok) {
-                alert("Mesai talebi oluşturuldu. Yönetici onayı bekleniyor.");
+        toast.promise(promise, {
+            loading: 'Mesai talebi gönderiliyor...',
+            success: () => {
                 setIsModalOpen(false);
                 fetchShifts();
-            } else {
-                alert("Talep oluşturulamadı.");
-            }
-        } catch (e) {
-            alert("Hata oluştu");
-        }
+                return "Mesai talebi oluşturuldu. Yönetici onayı bekleniyor.";
+            },
+            error: "Talep oluşturulamadı."
+        });
     };
 
     const handlePrev = () => viewMode === 'WEEK' ? setDate(subWeeks(date, 1)) : setDate(subWeeks(date, 4));
@@ -111,70 +144,95 @@ export default function StaffShiftsPage() {
                 </button>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-1">
-                <div className="p-4 flex justify-between items-center border-b border-slate-100 bg-slate-50">
-                    <button onClick={handlePrev} className="p-2 hover:bg-white rounded-full shadow-sm transition"><ChevronLeft className="h-4 w-4" /></button>
-                    <span className="font-bold text-slate-800">{format(date, 'MMMM yyyy', { locale: tr })}</span>
-                    <button onClick={handleNext} className="p-2 hover:bg-white rounded-full shadow-sm transition"><ChevronRight className="h-4 w-4" /></button>
+            <ShiftTabs activeTab={activeTab} onChange={setActiveTab} />
+
+            {activeTab === 'MARKETPLACE' ? (
+                <div className="flex-1 overflow-y-auto">
+                    <MarketplaceTab />
                 </div>
+            ) : (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-1">
+                    <div className="p-4 flex justify-between items-center border-b border-slate-100 bg-slate-50">
+                        <button onClick={handlePrev} className="p-2 hover:bg-white rounded-full shadow-sm transition"><ChevronLeft className="h-4 w-4" /></button>
+                        <span className="font-bold text-slate-800">{format(date, 'MMMM yyyy', { locale: tr })}</span>
+                        <button onClick={handleNext} className="p-2 hover:bg-white rounded-full shadow-sm transition"><ChevronRight className="h-4 w-4" /></button>
+                    </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                    {days.map(day => {
-                        const dayShifts = shifts.filter(s => isSameDay(new Date(s.startTime), day));
-                        if (dayShifts.length === 0) return null;
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {days.map(day => {
+                            const dayShifts = shifts.filter(s => isSameDay(new Date(s.startTime), day));
+                            if (dayShifts.length === 0) return null;
 
-                        return (
-                            <div key={day.toString()} className="space-y-2">
-                                <div className="flex items-center gap-2 sticky top-0 bg-white/90 backdrop-blur-sm z-10 py-1">
-                                    <div className={`text-xs font-bold px-3 py-1 rounded-full ${isSameDay(day, new Date()) ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                                        {format(day, 'd MMM EEEE', { locale: tr })}
+                            return (
+                                <div key={day.toString()} className="space-y-2">
+                                    <div className="flex items-center gap-2 sticky top-0 bg-white/90 backdrop-blur-sm z-10 py-1">
+                                        <div className={`text-xs font-bold px-3 py-1 rounded-full ${isSameDay(day, new Date()) ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                            {format(day, 'd MMM EEEE', { locale: tr })}
+                                        </div>
+                                        <div className="h-px bg-slate-100 flex-1"></div>
                                     </div>
-                                    <div className="h-px bg-slate-100 flex-1"></div>
+
+                                    {dayShifts.map(shift => (
+                                        <div key={shift.id} className={`p-4 rounded-xl border flex flex-col gap-3 relative overflow-hidden ${shift.type === 'OVERTIME' || shift.isOvertime
+                                            ? 'bg-amber-50 border-amber-100'
+                                            : 'bg-white border-slate-100 shadow-sm'
+                                            }`}>
+                                            {shift.status === 'DRAFT' && (
+                                                <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-[9px] font-bold px-2 py-0.5 rounded-bl-lg">ONAY BEKLİYOR</div>
+                                            )}
+
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`p-3 rounded-full ${shift.type === 'OVERTIME' || shift.isOvertime ? 'bg-amber-100 text-amber-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                                                        <Clock size={20} />
+                                                    </div>
+                                                    <div>
+                                                        <div className={`font-bold ${shift.type === 'OVERTIME' || shift.isOvertime ? 'text-amber-900' : 'text-slate-900'}`}>
+                                                            {shift.title || (shift.isOvertime ? 'Fazla Mesai' : 'Vardiya')}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500 font-medium mt-0.5">
+                                                            {format(new Date(shift.startTime), 'HH:mm')} - {format(new Date(shift.endTime), 'HH:mm')}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="text-right">
+                                                    <div className="text-xs font-bold text-slate-400">Süre</div>
+                                                    <div className="font-bold text-slate-700">
+                                                        {((new Date(shift.endTime).getTime() - new Date(shift.startTime).getTime()) / (1000 * 60 * 60)).toFixed(1)} s
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Action Buttons */}
+                                            {shift.status === 'PUBLISHED' && !shift.isOvertime && (
+                                                <div className="flex justify-end border-t border-slate-100 pt-3">
+                                                    <button
+                                                        onClick={() => setSwapShiftId(shift.id)}
+                                                        className="text-xs font-bold text-indigo-600 flex items-center gap-1 hover:bg-indigo-50 px-2 py-1 rounded"
+                                                    >
+                                                        <Repeat size={14} />
+                                                        Devret / Takas Et
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
+                            );
+                        })}
 
-                                {dayShifts.map(shift => (
-                                    <div key={shift.id} className={`p-4 rounded-xl border flex justify-between items-center relative overflow-hidden ${shift.type === 'OVERTIME' || shift.isOvertime
-                                        ? 'bg-amber-50 border-amber-100'
-                                        : 'bg-white border-slate-100 shadow-sm'
-                                        }`}>
-                                        {shift.status === 'DRAFT' && (
-                                            <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-[9px] font-bold px-2 py-0.5 rounded-bl-lg">ONAY BEKLİYOR</div>
-                                        )}
-
-                                        <div className="flex items-center gap-4">
-                                            <div className={`p-3 rounded-full ${shift.type === 'OVERTIME' || shift.isOvertime ? 'bg-amber-100 text-amber-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                                                <Clock size={20} />
-                                            </div>
-                                            <div>
-                                                <div className={`font-bold ${shift.type === 'OVERTIME' || shift.isOvertime ? 'text-amber-900' : 'text-slate-900'}`}>
-                                                    {shift.title || (shift.isOvertime ? 'Fazla Mesai' : 'Vardiya')}
-                                                </div>
-                                                <div className="text-xs text-slate-500 font-medium mt-0.5">
-                                                    {format(new Date(shift.startTime), 'HH:mm')} - {format(new Date(shift.endTime), 'HH:mm')}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="text-right">
-                                            <div className="text-xs font-bold text-slate-400">Süre</div>
-                                            <div className="font-bold text-slate-700">
-                                                {((new Date(shift.endTime).getTime() - new Date(shift.startTime).getTime()) / (1000 * 60 * 60)).toFixed(1)} s
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                        {shifts.length === 0 && !loading && (
+                            <div className="text-center py-20 opacity-50">
+                                <Calendar className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                                <p className="text-slate-400 font-medium">Bu aralıkta vardiya bulunamadı.</p>
                             </div>
-                        );
-                    })}
-
-                    {shifts.length === 0 && !loading && (
-                        <div className="text-center py-20 opacity-50">
-                            <Calendar className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-                            <p className="text-slate-400 font-medium">Bu aralıkta vardiya bulunamadı.</p>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* Overtime Request Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
@@ -236,6 +294,42 @@ export default function StaffShiftsPage() {
                     </div>
                 </div>
             )}
+
+            {/* Swap Request Modal */}
+            {swapShiftId && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <h3 className="font-bold text-slate-900">Vardiya Devret / Takas</h3>
+                            <button onClick={() => setSwapShiftId(null)} className="text-slate-400 hover:text-slate-600">
+                                <PlusCircle className="rotate-45" />
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <p className="text-sm text-slate-500">
+                                Bu vardiyayı takas pazarına göndermek üzeresiniz. Başka bir personel devralana kadar sorumluluk sizdedir.
+                            </p>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Sebep / Not</label>
+                                <textarea
+                                    rows={2}
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                                    placeholder="Örn: Acil işim çıktı..."
+                                    value={swapReason}
+                                    onChange={e => setSwapReason(e.target.value)}
+                                />
+                            </div>
+                            <button
+                                onClick={handleSwapRequest}
+                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors"
+                            >
+                                Pazara Gönder
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+

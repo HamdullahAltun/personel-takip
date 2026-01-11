@@ -25,11 +25,29 @@ interface PendingExpense {
     user: { name: string };
 }
 
+interface PendingSwap {
+    id: string;
+    shift: {
+        startTime: string;
+        endTime: string;
+    };
+    requester: {
+        name: string;
+        department?: { name: string };
+    };
+    claimant?: {
+        name: string;
+        department?: { name: string };
+    };
+    reason?: string;
+}
+
 export default function PendingApprovals() {
     const [leaves, setLeaves] = useState<PendingLeave[]>([]);
     const [expenses, setExpenses] = useState<PendingExpense[]>([]);
+    const [swaps, setSwaps] = useState<PendingSwap[]>([]);
     const [loading, setLoading] = useState(true);
-    const [expanded, setExpanded] = useState<'leaves' | 'expenses' | null>(null);
+    const [expanded, setExpanded] = useState<'leaves' | 'expenses' | 'swaps' | null>(null);
 
     const fetchData = async () => {
         try {
@@ -43,6 +61,13 @@ export default function PendingApprovals() {
             const expenseData = await expenseRes.json();
             if (Array.isArray(expenseData)) {
                 setExpenses(expenseData.filter((e: PendingExpense) => e.status === 'PENDING'));
+            }
+
+            // Fetch swaps
+            const swapRes = await fetch('/api/shifts/pending');
+            const swapData = await swapRes.json();
+            if (Array.isArray(swapData)) {
+                setSwaps(swapData);
             }
         } catch (e) {
             console.error(e);
@@ -97,7 +122,41 @@ export default function PendingApprovals() {
         }
     };
 
-    const toggleExpand = (section: 'leaves' | 'expenses') => {
+    // Note: Shift Swap approval/rejection is handled via server actions in the main page, 
+    // but here we need API endpoints or we must use server actions passed down/imported.
+    // Since this is a client component, we should import the actions.
+    // However, server actions in client components imported from a file with "use server" work fine.
+    // BUT we can't easily import them dynamically if they weren't planned.
+    // Let's use the API approach or assume we can invoke the server action if we import it.
+    // Actually, let's just make a simple API for approval/rejection or re-use existing patterns? 
+    // The previous code used server actions in forms. 
+    // Let's stick to API for consistency in this file or Server Actions if possible.
+    // Let's use the `approveSwapRequest` and `rejectSwapRequest` from `@/actions/shifts/marketplace` 
+    // but we need to check if they are exported.
+    // Let's look at the imports in step 29: `import { getPendingSwapRequests, approveSwapRequest, rejectSwapRequest } from "@/actions/shifts/marketplace";`
+    // So we can import them.
+
+    const handleSwapAction = async (id: string, action: 'approve' | 'reject') => {
+        try {
+            // We'll call an API route wrapping the server action or just use the server action directly if Next.js allows.
+            // In Client Components, we can call Server Actions.
+            const { approveSwapRequest, rejectSwapRequest } = await import("@/actions/shifts/marketplace");
+
+            if (action === 'approve') {
+                await approveSwapRequest(id);
+                toast.success('Takas onaylandı');
+            } else {
+                await rejectSwapRequest(id);
+                toast.success('Takas reddedildi');
+            }
+            fetchData();
+        } catch (e) {
+            toast.error("İşlem başarısız");
+            console.error(e);
+        }
+    };
+
+    const toggleExpand = (section: 'leaves' | 'expenses' | 'swaps') => {
         if (expanded === section) setExpanded(null);
         else setExpanded(section);
     };
@@ -105,7 +164,7 @@ export default function PendingApprovals() {
     if (loading) return <div className="animate-pulse h-40 bg-slate-100 rounded-2xl w-full"></div>;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
             {/* Expenses Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col transition-all duration-300">
@@ -239,6 +298,73 @@ export default function PendingApprovals() {
                                     </button>
                                     <button
                                         onClick={() => handleLeaveAction(leave.id, 'REJECTED')}
+                                        className="px-4 py-2 bg-white border border-red-100 text-red-500 hover:bg-red-50 rounded-lg text-xs font-bold flex items-center gap-2 transition-all"
+                                    >
+                                        <X className="h-4 w-4" /> Reddet
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Shift Swaps Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col transition-all duration-300">
+                <div className="bg-gradient-to-br from-blue-400 to-cyan-500 p-6 text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <ArrowRight size={120} />
+                    </div>
+                    <div className="flex items-center gap-3 mb-6 relative z-10">
+                        <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner">
+                            <ArrowRight className="h-6 w-6 text-white" />
+                        </div>
+                        <h3 className="font-bold text-lg tracking-tight">Vardiya Takasları</h3>
+                    </div>
+                    <div className="flex justify-between items-end relative z-10">
+                        <div>
+                            <span className="text-5xl font-black tracking-tighter">{swaps.length}</span>
+                            <span className="text-white/80 ml-2 font-bold text-sm uppercase tracking-wide opacity-80">Bekleyen</span>
+                        </div>
+                        <button
+                            onClick={() => toggleExpand('swaps')}
+                            className="bg-white/20 hover:bg-white/30 active:bg-white/40 backdrop-blur-md px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20"
+                        >
+                            {expanded === 'swaps' ? 'Gizle' : 'Yönet'}
+                            <ArrowRight className={`h-4 w-4 transition-transform ${expanded === 'swaps' ? 'rotate-90' : ''}`} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Swaps List */}
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expanded === 'swaps' ? 'max-h-[500px] border-t border-slate-100' : 'max-h-0'}`}>
+                    <div className="overflow-y-auto max-h-[300px] divide-y divide-slate-50">
+                        {swaps.length === 0 ? (
+                            <div className="p-8 text-center text-slate-400 text-sm">Bekleyen takas talebi yok.</div>
+                        ) : swaps.map((swap) => (
+                            <div key={swap.id} className="p-5 hover:bg-blue-50/30 transition-colors">
+                                <div className="flex flex-col gap-2 mb-3">
+                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase">
+                                        <span>{format(new Date(swap.shift.startTime), 'd MMMM', { locale: tr })}</span>
+                                        <span>•</span>
+                                        <span>{format(new Date(swap.shift.startTime), 'HH:mm')} - {format(new Date(swap.shift.endTime), 'HH:mm')}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-slate-800">{swap.requester.name}</span>
+                                        <ArrowRight size={14} className="text-slate-400" />
+                                        <span className="font-bold text-slate-800">{swap.claimant?.name || '?'}</span>
+                                    </div>
+                                    <div className="text-xs text-slate-500">{swap.reason || "Sebep belirtilmemiş"}</div>
+                                </div>
+                                <div className="flex gap-2 justify-end pt-2 border-t border-slate-100 border-dashed">
+                                    <button
+                                        onClick={() => handleSwapAction(swap.id, 'approve')}
+                                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-sm shadow-green-200 text-xs font-bold flex items-center gap-2 transition-all transform active:scale-95"
+                                    >
+                                        <Check className="h-4 w-4" /> Onayla
+                                    </button>
+                                    <button
+                                        onClick={() => handleSwapAction(swap.id, 'reject')}
                                         className="px-4 py-2 bg-white border border-red-100 text-red-500 hover:bg-red-50 rounded-lg text-xs font-bold flex items-center gap-2 transition-all"
                                     >
                                         <X className="h-4 w-4" /> Reddet

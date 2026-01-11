@@ -1,19 +1,20 @@
 {
-    "name": "Personel Takip",
-    "short_name": "Personel",
+    "name": "Personel Yönetim Sistemi",
+    "short_name": "PYS",
     "theme_color": "#4f46e5",
     "background_color": "#ffffff",
     "display": "standalone",
     "orientation": "portrait",
+    "scope": "/",
     "start_url": "/",
     "icons": [
         {
-            "src": "/icons/icon-192.png",
+            "src": "/icons/icon-192x192.png",
             "sizes": "192x192",
             "type": "image/png"
         },
         {
-            "src": "/icons/icon-512.png",
+            "src": "/icons/icon-512x512.png",
             "sizes": "512x512",
             "type": "image/png"
         }

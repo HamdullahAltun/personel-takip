@@ -3,6 +3,7 @@
 import AnnouncementWidget from "@/components/staff/AnnouncementWidget";
 import EOMWidget from "@/components/staff/EOMWidget";
 import WeeklyActivityChart from "@/components/staff/WeeklyActivityChart";
+import PendingRequestsWidget from "@/components/staff/PendingRequestsWidget";
 import useSWR from "swr";
 import { BarChart3 } from "lucide-react";
 
@@ -24,6 +25,7 @@ interface DashboardStats {
         hours: number;
         fullDate: string;
     }[];
+    pendingSwapRequests?: any[];
 }
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
@@ -50,6 +52,8 @@ export default function DashboardWidgets() {
     return (
         <div className="space-y-6">
             <AnnouncementWidget announcement={data.announcement} />
+
+            <PendingRequestsWidget requests={data.pendingSwapRequests || []} />
 
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
                 <div className="flex items-center gap-2 mb-6">

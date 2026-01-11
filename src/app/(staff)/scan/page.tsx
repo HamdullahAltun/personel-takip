@@ -57,18 +57,38 @@ export default function ScanPage() {
 
         if (activeTab === 'ASSET') {
             setMessage("Demirbaş aranıyor...");
-            // Mock Asset Lookup
-            setTimeout(() => {
-                setStatus("SUCCESS");
+
+            try {
+                const res = await fetch(`/api/assets/${data}`);
+                if (!res.ok) {
+                    if (res.status === 404) throw new Error("Demirbaş bulunamadı.");
+                    throw new Error("Sorgulama hatası.");
+                }
+
+                const asset = await res.json();
+
+                // Map API response to UI state
                 setScannedAsset({
-                    id: data,
-                    name: "MacBook Pro M3",
-                    serial: "C02...",
-                    assignedTo: "Ahmet Yılmaz",
-                    status: "Zimmetli"
+                    id: asset.id,
+                    name: asset.name,
+                    serial: asset.serialNumber || 'Yok',
+                    assignedTo: asset.assignedTo?.name || 'Zimmetlenmemiş',
+                    status: asset.status === 'ASSIGNED' ? 'Zimmetli' :
+                        asset.status === 'AVAILABLE' ? 'Müsait' :
+                            asset.status === 'MAINTENANCE' ? 'Bakımda' : asset.status
                 });
+
+                setStatus("SUCCESS");
                 setMessage("Demirbaş Bulundu");
-            }, 1000);
+
+            } catch (err: any) {
+                setStatus("ERROR");
+                setMessage(err.message || "Bilinmeyen hata");
+                setTimeout(() => {
+                    setStatus("IDLE");
+                    setMessage("");
+                }, 3000);
+            }
             return;
         }
 

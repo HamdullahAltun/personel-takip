@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Story {
@@ -11,6 +11,8 @@ interface Story {
     content?: string;
     mediaUrl?: string;
     createdAt: string;
+    userId: string;
+    viewers: string[]; // List of user IDs
     user: {
         name: string;
         profilePicture?: string;
@@ -22,12 +24,14 @@ interface StoryViewerProps {
     initialStoryIndex: number;
     isOpen: boolean;
     onClose: () => void;
+    currentUserId: string;
 }
 
-export default function StoryViewer({ stories, initialStoryIndex, isOpen, onClose }: StoryViewerProps) {
+export default function StoryViewer({ stories, initialStoryIndex, isOpen, onClose, currentUserId }: StoryViewerProps) {
     const [currentIndex, setCurrentIndex] = useState(initialStoryIndex);
     const [progress, setProgress] = useState(0);
 
+    // Sync state when dialog opens
     useEffect(() => {
         if (isOpen) {
             setCurrentIndex(initialStoryIndex);
@@ -35,22 +39,36 @@ export default function StoryViewer({ stories, initialStoryIndex, isOpen, onClos
         }
     }, [isOpen, initialStoryIndex]);
 
+    // View Tracking
+    useEffect(() => {
+        if (!isOpen || !stories[currentIndex]) return;
+
+        const storyId = stories[currentIndex].id;
+        const viewers = stories[currentIndex].viewers || [];
+
+        // If not already viewed by me, call API
+        if (!viewers.includes(currentUserId)) {
+            fetch(`/api/social/stories/${storyId}/view`, { method: "POST" })
+                .catch(err => console.error("Failed to mark story as viewed", err));
+        }
+
+    }, [currentIndex, isOpen, stories, currentUserId]);
+
+    // Timer Logic
     useEffect(() => {
         if (!isOpen) return;
 
         const duration = 5000; // 5 seconds per story
-        const interval = 50; // Update every 50ms
+        const interval = 50;
         const step = 100 / (duration / interval);
 
         const timer = setInterval(() => {
             setProgress(prev => {
                 if (prev >= 100) {
-                    // Move to next story
                     if (currentIndex < stories.length - 1) {
                         setCurrentIndex(c => c + 1);
-                        return 0; // Reset progress for next story
+                        return 0;
                     } else {
-                        // End of stories
                         onClose();
                         return 100;
                     }
@@ -81,6 +99,7 @@ export default function StoryViewer({ stories, initialStoryIndex, isOpen, onClos
     if (!stories[currentIndex]) return null;
 
     const currentStory = stories[currentIndex];
+    const isOwner = currentStory.userId === currentUserId;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -132,8 +151,8 @@ export default function StoryViewer({ stories, initialStoryIndex, isOpen, onClos
                             <>
                                 <img src={currentStory.mediaUrl} className="w-full h-full object-cover" alt="Story" />
                                 {currentStory.content && (
-                                    <div className="absolute bottom-10 left-0 right-0 p-6 text-center bg-gradient-to-t from-black/80 to-transparent pt-20">
-                                        <p className="text-white text-lg font-medium">{currentStory.content}</p>
+                                    <div className="absolute bottom-10 left-0 right-0 p-6 text-center bg-gradient-to-t from-black/80 to-transparent pt-20 z-10">
+                                        <p className="text-white text-lg font-medium shadow-black drop-shadow-md">{currentStory.content}</p>
                                     </div>
                                 )}
                             </>
@@ -153,6 +172,14 @@ export default function StoryViewer({ stories, initialStoryIndex, isOpen, onClos
                     <div className="w-1/3 h-full" onClick={handleBack} />
                     <div className="w-2/3 h-full" onClick={handleNext} />
                 </div>
+
+                {/* View Counter (For Owner) */}
+                {isOwner && (
+                    <div className="absolute bottom-6 left-6 z-20 bg-black/40 backdrop-blur rounded-full px-3 py-1.5 flex items-center gap-2 text-white/90 text-xs font-medium">
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>{(currentStory.viewers || []).length} Görüntüleme</span>
+                    </div>
+                )}
 
             </DialogContent>
         </Dialog>

@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks, subWeeks, startOfDay, addDays } from "date-fns";
 import { tr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Calendar, Plus, Filter, User as UserIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Plus, Filter, User as UserIcon, Clock, Repeat } from "lucide-react";
 import ShiftModal from "@/components/admin/ShiftModal";
 import { Shift, User } from "@prisma/client";
 
@@ -38,6 +38,9 @@ function ShiftCard({ shift, onClick, mobile }: { shift: Shift & { user: User }, 
                 </div>
                 {shift.isOvertime && (
                     <span className="mt-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-bold rounded uppercase tracking-wider">Mesai</span>
+                )}
+                {shift.status === 'DRAFT' && (
+                    <span className="mt-1 px-1.5 py-0.5 bg-rose-100 text-rose-700 text-[9px] font-bold rounded uppercase tracking-wider animate-pulse">Onay Bekliyor</span>
                 )}
             </div>
         </div>
@@ -178,8 +181,33 @@ export default function AdminShiftsPage() {
                         <Plus className="h-5 w-5" />
                         <span className="hidden md:inline">Yeni Vardiya</span>
                     </button>
+
+                    <a
+                        href="/admin/shifts/approvals"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-bold shadow-sm transition-all"
+                    >
+                        <Repeat size={20} />
+                        <span className="hidden md:inline">Takas Onayları</span>
+                    </a>
                 </div>
             </header>
+
+            {/* Pending Requests Notification */}
+            {shifts.some(s => s.status === 'DRAFT') && (
+                <div className="mx-4 mt-4 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-between animate-in slide-in-from-top duration-500">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-rose-500 rounded-lg text-white">
+                            <Clock className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-rose-900">
+                                {shifts.filter(s => s.status === 'DRAFT').length} Bekleyen Talep Var
+                            </p>
+                            <p className="text-xs text-rose-600 font-medium">Lütfen onaylamak veya reddetmek için vardiyalara tıklayın.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Calendar Controls */}
             <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200">

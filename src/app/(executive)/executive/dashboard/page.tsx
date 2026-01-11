@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, BrainCircuit, TrendingUp, AlertTriangle, CheckCircle2, MessageSquare, Clock, Wallet } from "lucide-react";
+import { Loader2, BrainCircuit, TrendingUp, AlertTriangle, CheckCircle2, MessageSquare, Clock, Wallet, Printer } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { tr } from "date-fns/locale";
 
 interface AnalysisReport {
@@ -21,6 +22,37 @@ interface AnalysisReport {
 export default function ExecutiveDashboard() {
     const [loading, setLoading] = useState(true);
     const [analysis, setAnalysis] = useState<AnalysisReport | null>(null);
+    const [generating, setGenerating] = useState(false);
+
+    const handleGenerateReport = async () => {
+        setGenerating(true);
+        try {
+            const res = await fetch('/api/admin/reports/generate', {
+                method: 'POST',
+                body: JSON.stringify({ dateRange: 'WEEK' }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (res.ok) {
+                const html = await res.text();
+                const win = window.open('', '_blank');
+                if (win) {
+                    win.document.write(html);
+                    win.document.close();
+                    win.focus();
+                    setTimeout(() => win.print(), 500);
+                } else {
+                    toast.error("Pop-up engelleyiciyi kapatın.");
+                }
+            } else {
+                toast.error("Rapor oluşturulamadı.");
+            }
+        } catch (error) {
+            toast.error("Hata oluştu.");
+        } finally {
+            setGenerating(false);
+        }
+    };
 
     useEffect(() => {
         fetch('/api/ai/executive-report')
@@ -52,11 +84,28 @@ export default function ExecutiveDashboard() {
 
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
-            <header>
-                <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Yönetici Özeti</h1>
-                <p className="text-slate-500 mt-2">
-                    {format(new Date(), "d MMMM yyyy, EEEE", { locale: tr })} • AI Destekli Detaylı Analiz
-                </p>
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Yönetici Özeti</h1>
+                    <p className="text-slate-500 mt-2">
+                        {format(new Date(), "d MMMM yyyy, EEEE", { locale: tr })} • AI Destekli Detaylı Analiz
+                    </p>
+                </div>
+                <button
+                    onClick={handleGenerateReport}
+                    disabled={generating}
+                    className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center gap-2 disabled:opacity-70 shadow-lg shadow-indigo-200"
+                >
+                    {generating ? (
+                        <>
+                            <Loader2 className="h-5 w-5 animate-spin" /> Hazırlanıyor...
+                        </>
+                    ) : (
+                        <>
+                            <Printer className="h-5 w-5" /> Raporu Yazdır
+                        </>
+                    )}
+                </button>
             </header>
 
             {/* Top Score Card */}

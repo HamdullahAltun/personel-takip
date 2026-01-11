@@ -41,7 +41,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
 
         root.classList.add(appliedTheme.toLowerCase());
-        root.style.setProperty("--accent-primary", accentColor);
+        root.style.setProperty("--primary", accentColor);
+        root.style.setProperty("--color-primary", accentColor);
     }, [theme, accentColor]);
 
     return (

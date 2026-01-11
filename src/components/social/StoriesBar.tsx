@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import { Plus, Megaphone } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import StoryCreator from './StoryCreator';
 import StoryViewer from './StoryViewer';
 
@@ -14,6 +14,8 @@ interface Story {
     content?: string;
     mediaUrl?: string;
     createdAt: string;
+    userId: string;
+    viewers: string[];
     user: {
         id: string;
         name: string;
@@ -36,6 +38,13 @@ export default function StoriesBar() {
     const [isCreatorOpen, setIsCreatorOpen] = useState(false);
     const [viewerOpen, setViewerOpen] = useState(false);
     const [activeStoryGroup, setActiveStoryGroup] = useState<UserStories | null>(null);
+    const [currentUserId, setCurrentUserId] = useState("");
+
+    useEffect(() => {
+        fetch('/api/auth/me').then(r => r.json()).then(d => {
+            if (d.user) setCurrentUserId(d.user.id);
+        });
+    }, []);
 
     const handleStoryClick = (group: UserStories) => {
         setActiveStoryGroup(group);
@@ -102,6 +111,7 @@ export default function StoriesBar() {
                     onClose={() => setViewerOpen(false)}
                     stories={activeStoryGroup.stories}
                     initialStoryIndex={0}
+                    currentUserId={currentUserId}
                 />
             )}
         </>

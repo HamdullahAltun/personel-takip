@@ -14,6 +14,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     try {
+        const oldShift = await prisma.shift.findUnique({ where: { id } });
+
         const shift = await prisma.shift.update({
             where: { id },
             data: {
@@ -21,6 +23,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
                 updatedAt: new Date()
             }
         });
+
+        // If it was DRAFT and now it's PUBLISHED, notify the user
+        if (oldShift?.status === 'DRAFT' && shift.status === 'PUBLISHED') {
+            const { createNotification } = await import("@/lib/notifications");
+            await createNotification(
+                shift.userId,
+                "Vardiyanız Onaylandı!",
+                `${new Date(shift.startTime).toLocaleDateString('tr-TR')} tarihindeki vardiyanız onaylanmıştır.`,
+                'SUCCESS'
+            );
+        }
+
         return NextResponse.json(shift);
     } catch (error) {
         return NextResponse.json({ error: "Failed to update shift" }, { status: 500 });

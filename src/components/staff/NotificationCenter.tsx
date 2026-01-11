@@ -102,20 +102,20 @@ export default function NotificationCenter() {
                         >
                             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white text-slate-800">
                                 <div>
-                                    <h3 className="font-bold">Bildirimler</h3>
-                                    <p className="text-xs text-slate-500">{unreadCount} okunmamış</p>
+                                    <h3 className="font-bold text-slate-900">Bildirimler</h3>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{unreadCount} okunmamış</p>
                                 </div>
                                 <div className="flex gap-1">
                                     <button
                                         onClick={markAllAsRead}
-                                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"
+                                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
                                         title="Tümünü Okundu İşaretle"
                                     >
                                         <CheckCircle className="h-4 w-4" />
                                     </button>
                                     <button
                                         onClick={clearAll}
-                                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-red-500"
+                                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-red-500 transition-colors"
                                         title="Tümünü Temizle"
                                     >
                                         <Trash2 className="h-4 w-4" />
@@ -123,56 +123,68 @@ export default function NotificationCenter() {
                                 </div>
                             </div>
 
-                            <div className="max-h-[400px] overflow-y-auto bg-slate-50/50">
+                            <div className="max-h-[400px] overflow-y-auto bg-slate-50/30">
                                 {notifications.length > 0 ? (
-                                    <div className="divide-y divide-slate-100">
+                                    <div className="divide-y divide-slate-50">
                                         {notifications.map((notification) => (
                                             <div
                                                 key={notification.id}
                                                 onClick={() => markAsRead(notification.id, notification.read)}
                                                 className={cn(
-                                                    "p-4 hover:bg-slate-50 transition-colors cursor-pointer relative",
-                                                    !notification.read ? "bg-indigo-50/30" : "bg-white"
+                                                    "p-4 hover:bg-white transition-all cursor-pointer relative group",
+                                                    !notification.read ? "bg-indigo-50/40" : "bg-white/50"
                                                 )}
                                             >
-                                                <div className="flex gap-3">
+                                                <div className="flex gap-4">
                                                     <div className={cn(
-                                                        "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
-                                                        notification.type === 'SUCCESS' ? 'bg-emerald-100 text-emerald-600' :
-                                                            notification.type === 'WARNING' ? 'bg-amber-100 text-amber-600' :
-                                                                'bg-blue-100 text-blue-600'
+                                                        "h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border transition-transform group-hover:scale-110",
+                                                        notification.type === 'SUCCESS' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' :
+                                                            notification.type === 'WARNING' ? 'bg-amber-50 border-amber-100 text-amber-600' :
+                                                                notification.type === 'ERROR' ? 'bg-rose-50 border-rose-100 text-rose-600' :
+                                                                    'bg-blue-50 border-blue-100 text-blue-600'
                                                     )}>
-                                                        {notification.type === 'SUCCESS' ? <CheckCircle className="h-4 w-4" /> :
-                                                            <Info className="h-4 w-4" />}
+                                                        {notification.type === 'SUCCESS' ? <CheckCircle className="h-5 w-5" /> :
+                                                            notification.type === 'WARNING' ? <Info className="h-5 w-5" /> :
+                                                                <Bell className="h-5 w-5" />}
                                                     </div>
-                                                    <div>
-                                                        <div className="flex justify-between items-start w-full gap-2">
-                                                            <h4 className={cn("text-sm font-bold text-slate-900", !notification.read && "text-indigo-900")}>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex justify-between items-start w-full gap-2 mb-0.5">
+                                                            <h4 className={cn("text-sm font-black text-slate-900 truncate", !notification.read && "text-indigo-950")}>
                                                                 {notification.title}
                                                             </h4>
-                                                            <span className="text-[10px] text-slate-400 whitespace-nowrap">
-                                                                {/* Simple time logic */}
-                                                                {Math.floor((Date.now() - new Date(notification.createdAt).getTime()) / (1000 * 60))}dk önce
+                                                            <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap">
+                                                                {Math.floor((Date.now() - new Date(notification.createdAt).getTime()) / (1000 * 60))}dk
                                                             </span>
                                                         </div>
-                                                        <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">
+                                                        <p className="text-xs text-slate-500 leading-normal line-clamp-2">
                                                             {notification.message}
                                                         </p>
                                                     </div>
                                                 </div>
                                                 {!notification.read && (
-                                                    <span className="absolute top-4 right-2 h-2 w-2 bg-indigo-500 rounded-full" />
+                                                    <span className="absolute top-4 right-2 h-2 w-2 bg-indigo-500 rounded-full ring-2 ring-white animate-pulse" />
                                                 )}
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
                                     <div className="py-12 text-center text-slate-400">
-                                        <Bell className="h-8 w-8 mx-auto mb-3 opacity-20" />
-                                        <p className="text-sm">Bildiriminiz yok</p>
+                                        <div className="bg-slate-100 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4 opacity-50">
+                                            <Bell className="h-8 w-8 text-slate-300" />
+                                        </div>
+                                        <p className="text-sm font-medium">Yeni bildiriminiz yok</p>
+                                        <p className="text-[10px] uppercase font-bold tracking-widest mt-1">Harikasın!</p>
                                     </div>
                                 )}
                             </div>
+
+                            <a
+                                href="/notifications"
+                                className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-center text-xs font-black text-indigo-600 hover:bg-indigo-50 transition-colors uppercase tracking-widest"
+                                onClick={() => setIsOpen(false)}
+                            >
+                                Tümünü Gör
+                            </a>
                         </motion.div>
                     </>
                 )}

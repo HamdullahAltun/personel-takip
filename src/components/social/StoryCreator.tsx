@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Camera, Image as ImageIcon, Type, X, Send } from "lucide-react";
+import { Camera, Image as ImageIcon, Type, X, Send, UploadCloud, Loader2 } from "lucide-react";
 
 interface StoryCreatorProps {
     isOpen: boolean;
@@ -15,6 +15,34 @@ export default function StoryCreator({ isOpen, onClose, onCreated }: StoryCreato
     const [content, setContent] = useState("");
     const [imageUrl, setImageUrl] = useState("");
     const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const res = await fetch("/api/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            if (!res.ok) throw new Error("Upload failed");
+
+            const data = await res.json();
+            setImageUrl(data.url);
+        } catch (error) {
+            console.error("Upload error:", error);
+            alert("Resim yüklenirken hata oluştu.");
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const handleSubmit = async () => {
         if (type === "IMAGE" && !imageUrl) return;
@@ -71,18 +99,40 @@ export default function StoryCreator({ isOpen, onClose, onCreated }: StoryCreato
 
                 <div className="space-y-4">
                     {type === "IMAGE" && (
-                        <div className="space-y-2">
-                            <input
-                                placeholder="Görsel URL (https://...)"
-                                value={imageUrl}
-                                onChange={(e) => setImageUrl(e.target.value)}
-                                className="w-full bg-slate-800 border-slate-700 rounded-xl p-3 text-sm focus:ring-indigo-500 focus:border-indigo-500 text-white placeholder:text-slate-500"
-                            />
-                            {imageUrl && (
-                                <div className="rounded-xl overflow-hidden border border-slate-700 aspect-video bg-black relative">
+                        <div className="space-y-4">
+                            {!imageUrl ? (
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="border-2 border-dashed border-slate-700 rounded-xl aspect-video flex flex-col items-center justify-center cursor-pointer hover:bg-slate-800/50 transition-colors"
+                                >
+                                    {uploading ? (
+                                        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <UploadCloud className="w-10 h-10 text-slate-500 mb-2" />
+                                            <p className="text-sm text-slate-400 font-medium">Resim Seç veya Yükle</p>
+                                        </>
+                                    )}
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={handleFileSelect}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="rounded-xl overflow-hidden border border-slate-700 aspect-video bg-black relative group">
                                     <img src={imageUrl} className="w-full h-full object-contain" alt="Preview" />
+                                    <button
+                                        onClick={() => setImageUrl("")}
+                                        className="absolute top-2 right-2 bg-black/50 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
                                 </div>
                             )}
+
                             <input
                                 placeholder="Açıklama ekle (Opsiyonel)"
                                 value={content}

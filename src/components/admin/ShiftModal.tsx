@@ -23,6 +23,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, onDelete, users, i
     const [title, setTitle] = useState("");
     const [notes, setNotes] = useState("");
     const [isOvertime, setIsOvertime] = useState(false);
+    const [status, setStatus] = useState<"DRAFT" | "PUBLISHED" | "COMPLETED" | "CANCELLED">("PUBLISHED");
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -35,6 +36,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, onDelete, users, i
                 setTitle(initialShift.title || "");
                 setNotes(initialShift.notes || "");
                 setIsOvertime(initialShift.isOvertime || false);
+                setStatus(initialShift.status as any);
             } else {
                 setUserId("");
                 const baseDate = selectedDate || new Date();
@@ -50,6 +52,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, onDelete, users, i
                 setTitle("");
                 setNotes("");
                 setIsOvertime(false);
+                setStatus("PUBLISHED");
             }
         }
     }, [isOpen, initialShift, selectedDate]);
@@ -65,7 +68,8 @@ export default function ShiftModal({ isOpen, onClose, onSave, onDelete, users, i
                 type: type as any,
                 title,
                 notes,
-                isOvertime
+                isOvertime,
+                status: status as any
             });
             onClose();
         } catch (error) {
@@ -143,6 +147,24 @@ export default function ShiftModal({ isOpen, onClose, onSave, onDelete, users, i
                                     value={end}
                                     onChange={e => setEnd(e.target.value)}
                                 />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">Durum</label>
+                            <div className="relative">
+                                <Clock className="absolute left-3 top-2.5 text-slate-400 h-4 w-4" />
+                                <select
+                                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    value={status}
+                                    onChange={e => setStatus(e.target.value as "DRAFT" | "PUBLISHED" | "COMPLETED" | "CANCELLED")}
+                                    disabled={!initialShift}
+                                >
+                                    <option value="DRAFT">Taslak / Onay Bekliyor</option>
+                                    <option value="PUBLISHED">Onaylandı / Yayında</option>
+                                    <option value="COMPLETED">Tamamlandı</option>
+                                    <option value="CANCELLED">İptal Edildi</option>
+                                </select>
                             </div>
                         </div>
 

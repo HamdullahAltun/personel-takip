@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Trophy, Medal, Crown } from "lucide-react";
 import useSWR from "swr";
 import { motion } from "framer-motion";
@@ -11,12 +12,18 @@ type User = {
     profilePicture?: string;
 };
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = (url: string) => {
+    if (typeof window === 'undefined') return Promise.resolve(null);
+    return fetch(url).then(r => r.json());
+};
 
 export default function StaffLeaderboardPage() {
     const { data: users = [], isLoading } = useSWR<User[]>("/api/leaderboard", fetcher, { refreshInterval: 5000 });
-    const { data: meData } = useSWR("/api/auth/me", fetcher);
-    const myId = meData?.user?.id;
+    const [myId, setMyId] = useState<string | undefined>(undefined);
+
+    useEffect(() => {
+        fetch("/api/auth/me").then(r => r.json()).then(d => setMyId(d?.user?.id)).catch(() => { });
+    }, []);
 
     const top3 = users.slice(0, 3);
     const rest = users.slice(3);
