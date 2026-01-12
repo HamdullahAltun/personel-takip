@@ -41,7 +41,7 @@ KURALLAR:
                 })),
                 { role: "user", content: message }
             ],
-            model: "llama3-8b-8192", // Fast and capable enough
+            model: "llama-3.1-8b-instant", // Fast and capable enough
             temperature: 0.3, // Lower temperature for factual accuracy
         });
 
