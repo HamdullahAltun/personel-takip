@@ -8,7 +8,7 @@ export async function GET(
     try {
         const { id } = await params;
 
-        const storedFile = await prisma.storedFile.findUnique({
+        const storedFile = await (prisma as any).storedFile.findUnique({
             where: { id }
         });
 
@@ -17,7 +17,7 @@ export async function GET(
         }
 
         // Return the binary data with correct content type
-        return new NextResponse(storedFile.data, {
+        return new NextResponse(new Uint8Array(storedFile.data), {
             headers: {
                 'Content-Type': storedFile.contentType,
                 'Content-Disposition': `inline; filename="${storedFile.filename}"`,

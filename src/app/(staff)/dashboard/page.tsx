@@ -13,6 +13,7 @@ import DashboardQuickActions from "@/components/staff/DashboardQuickActions";
 import TopPerformers from "@/components/staff/TopPerformers";
 import TeamMood from "@/components/staff/TeamMood";
 import PullToRefresh from "@/components/ui/PullToRefresh";
+import EmergencyBanner from "@/components/EmergencyBanner";
 
 import { cn } from "@/lib/utils";
 import { Metadata } from "next";
@@ -105,6 +106,7 @@ export default async function StaffDashboard() {
 
     return (
         <div className="space-y-6 pb-20 animate-in fade-in duration-500">
+            <EmergencyBanner />
             <PullToRefresh>
                 <div className="space-y-6">
                     <WelcomeHeader userName={user.name} />

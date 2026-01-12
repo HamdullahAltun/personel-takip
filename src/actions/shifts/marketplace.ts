@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { verifyJWT } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { validateShiftConstraints } from "@/lib/scheduler-utils";
+import { createNotification, sendPushNotification } from "@/lib/notifications";
 
 async function getSession() {
     const token = (await cookies()).get("personel_token")?.value;
@@ -51,29 +53,65 @@ export async function claimSwapRequest(requestId: string) {
     try {
         const request = await prisma.shiftSwapRequest.findUnique({
             where: { id: requestId },
+            include: { shift: true }
         });
 
         if (!request || request.status !== "OPEN") {
-            return { error: "Request unavailable" };
+            return { error: "Talebe ulaşılamadı veya zaten alınmış." };
         }
 
         if (request.requesterId === session.id) {
-            return { error: "Cannot claim your own shift" };
+            return { error: "Kendi vardiyanızı alamazsınız." };
         }
 
-        await prisma.shiftSwapRequest.update({
-            where: { id: requestId },
-            data: {
-                claimantId: session.id as string,
-                status: "PENDING_APPROVAL",
-            },
-        });
+        // --- AUTO-APPROVAL LOGIC ---
+        const validation = await validateShiftConstraints(
+            session.id as string,
+            request.shift.startTime,
+            request.shift.endTime
+        );
 
-        revalidatePath("/shifts");
-        return { success: true };
+        if (validation.valid) {
+            // AUTO APPROVE
+            await prisma.$transaction([
+                prisma.shiftSwapRequest.update({
+                    where: { id: requestId },
+                    data: {
+                        claimantId: session.id as string,
+                        status: "APPROVED"
+                    }
+                }),
+                prisma.shift.update({
+                    where: { id: request.shiftId },
+                    data: {
+                        userId: session.id as string,
+                        notes: (request.shift.notes || "") + ` \n[OTOMATİK TAKAS: ${request.requesterId} -> ${session.id}]`
+                    }
+                })
+            ]);
+
+            // Notify
+            await createNotification(request.requesterId, "Vardiya Takası Onaylandı", "Vardiyanız kurallar dahilinde otomatik olarak devredildi.", "SUCCESS");
+
+            revalidatePath("/shifts");
+            return { success: true, message: "Vardiya kurallara uygun olduğu için otomatik olarak onaylandı ve size atandı." };
+        } else {
+            // PENDING APPROVAL (Rules not met or manual check needed)
+            await prisma.shiftSwapRequest.update({
+                where: { id: requestId },
+                data: {
+                    claimantId: session.id as string,
+                    status: "PENDING_APPROVAL",
+                },
+            });
+
+            revalidatePath("/shifts");
+            return { success: true, message: "Takas talebiniz alındı. Bazı kurallar (çalışma saati vb.) nedeniyle yönetici onayı bekleniyor." };
+        }
+
     } catch (error) {
         console.error("Claim swap error:", error);
-        return { error: "Failed to claim shift" };
+        return { error: "İşlem başarısız." };
     }
 }
 
@@ -164,6 +202,18 @@ export async function getOpenMarketplaceShifts() {
             }
         },
         orderBy: { createdAt: 'desc' }
+    });
+}
+
+export async function getBiddingShifts() {
+    return await (prisma.shift as any).findMany({
+        where: { isBiddingOpen: true },
+        include: {
+            user: {
+                select: { name: true, profilePicture: true }
+            }
+        },
+        orderBy: { startTime: 'asc' }
     });
 }
 

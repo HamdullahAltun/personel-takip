@@ -35,13 +35,37 @@ export default function StaffPayrollPage() {
 
     return (
         <div className="space-y-6 pb-20">
-            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="relative z-10">
                     <p className="text-emerald-100 text-sm font-medium mb-1">Maaş Bilgilerim</p>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         Bordro Geçmişi
                     </h1>
                 </div>
+
+                <div className="relative z-10">
+                    <button
+                        onClick={() => {
+                            fetch('/api/payroll/ewa/info')
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (confirm(`Hak edilen maaş: ₺${data.totalEarned}\nÇekilebilir tutar (%50): ₺${data.finalAvailable}\n\nÖdeme talebi oluşturilsun mu?`)) {
+                                        fetch('/api/payroll/ewa/request', {
+                                            method: 'POST',
+                                            body: JSON.stringify({ amount: data.finalAvailable, reason: "EWA Talebi" }),
+                                            headers: { 'Content-Type': 'application/json' }
+                                        }).then(res => res.json()).then(r => {
+                                            if (r.success) alert("Talebiniz alınmıştır.");
+                                        });
+                                    }
+                                });
+                        }}
+                        className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl text-sm font-black flex items-center gap-2 transition-all active:scale-95"
+                    >
+                        ⚡ Maaşını Şimdi Çek (EWA)
+                    </button>
+                </div>
+
                 <div className="absolute right-0 top-0 p-4 opacity-10">
                     <Banknote className="h-32 w-32 -rotate-12" />
                 </div>

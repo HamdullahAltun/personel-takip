@@ -46,26 +46,41 @@ export async function POST(req: Request) {
 
         // 3. Construct Prompt
         const prompt = `
-            Act as an expert Workforce Scheduler. Create an optimal shift schedule for 1 week starting ${format(start, 'yyyy-MM-dd')}.
+            Act as an expert Workforce Scheduler for a company. 
+            Create an optimal shift schedule for 1 week starting ${format(start, 'yyyy-MM-dd')} (Monday) to ${format(end, 'yyyy-MM-dd')} (Sunday).
             
             Staff List (ID, Name, Weekly Hour Goal):
             ${JSON.stringify(staff)}
 
-            Unavailable Staff (Leave Requests):
+            Unavailable Staff (Approved Leave Requests):
             ${JSON.stringify(unavailableStaff)}
 
-            Constraints:
-            - Shifts: 08:00-16:00 (Morning), 16:00-24:00 (Evening), 00:00-08:00 (Night).
-            - Min Staff per Shift: Morning=${constraints.minStaffDay || 3}, Evening=${constraints.minStaffPeak || 3}, Night=${constraints.minStaffNight || 1}.
-            - Max Hours Per Employee: ${constraints.maxHoursPerEmployee || 45}.
-            - Do NOT assign staff who are on leave.
-            - Staff cannot work 2 consecutive shifts.
-            - Staff cannot work more than Max Hours.
+            Business Rules:
+            - Shift Slots: 
+               - Morning: 08:00 to 16:00
+               - Evening: 16:00 to 00:00
+               - Night: 00:00 to 08:00
+            - Staff Requirements:
+               - Morning Shift: Min ${constraints.minStaffDay || 3} staff
+               - Evening Shift: Min ${constraints.minStaffPeak || 3} staff
+               - Night Shift: Min ${constraints.minStaffNight || 1} staff
+            - Maximum Working Hours per Staff per Week: ${constraints.maxHoursPerEmployee || 45} hours.
+            - Rest period: Staff MUST have at least 8 hours of rest between shifts. They cannot work two consecutive shifts (e.g., cannot work Evening then Night).
+            - Leaves: Do NOT assign staff on days they have approved leave.
             
-            Output strictly a JSON array of objects:
-            [
-              { "userId": "...", "userName": "...", "date": "YYYY-MM-DD", "startTime": "HH:mm", "endTime": "HH:mm", "type": "AUTO_GENERATED" }
-            ]
+            OUTPUT FORMAT (Strict JSON):
+            {
+              "shifts": [
+                { 
+                  "userId": "staff-mongodb-id", 
+                  "userName": "Staff Name", 
+                  "date": "YYYY-MM-DD", 
+                  "startTime": "HH:mm", 
+                  "endTime": "HH:mm", 
+                  "type": "REGULAR" 
+                }
+              ]
+            }
         `;
 
         // 4. AI Generation
@@ -79,8 +94,8 @@ export async function POST(req: Request) {
         const content = completion.choices[0]?.message?.content || "{}";
         const result = JSON.parse(content);
 
-        // Handle if AI returns object with key "shifts" or just array
-        const shifts = Array.isArray(result) ? result : (result.shifts || []);
+        // Standardize output to always be an array of shifts
+        const shifts = result.shifts || (Array.isArray(result) ? result : []);
 
         return NextResponse.json({ success: true, shifts });
 

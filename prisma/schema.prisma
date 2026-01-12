@@ -106,10 +106,6 @@ model User {
   // LMS
   lmsCompletions LmsCompletion[]
 
-  // Safety
-  safetyStatus String   @default("UNKNOWN") // SAFE, DANGER, UNKNOWN
-  lastSafetyUpdate DateTime?
-
   // Visitors
   invitedVisitors Visitor[] @relation("VisitorInviter")
 
@@ -142,6 +138,10 @@ model User {
   skillGaps        SkillGap[]
   
   inventoryRequests InventoryRequest[]
+
+  // --- SAFETY ---
+  safetyStatus String   @default("SAFE") // SAFE, DANGER, HELP_NEEDED
+  lastSafetyUpdate DateTime?
 }
 
 model Department {
@@ -204,6 +204,14 @@ model FieldTask {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
+  // Evidence based task completion
+  evidenceBeforeUrl String?
+  evidenceAfterUrl  String?
+  assetId           String?   @db.ObjectId
+  asset             Asset?    @relation(fields: [assetId], references: [id])
+  
+  optimizedOrder    Int?      // For Route Optimization
+
   customerFeedback CustomerFeedback?
 }
 
@@ -221,6 +229,7 @@ model Asset {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   logs         AssetLog[]
+  fieldTasks   FieldTask[]
 }
 
 model Document {
@@ -277,6 +286,7 @@ model AdvanceRequest {
   amount      Float
   reason      String
   status      String   // PENDING, APPROVED, REJECTED
+  type        String   @default("ADVANCE") // ADVANCE, EWA
   requestedAt DateTime @default(now())
   processedAt DateTime?
 }
@@ -647,6 +657,11 @@ model Shift {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
+  // Bidding & Marketplace
+  isBiddingOpen Boolean @default(false)
+  bonusPoints   Int     @default(0)
+  bidWinnerId   String? @db.ObjectId
+  
   swapRequests ShiftSwapRequest[]
 }
 
@@ -695,6 +710,10 @@ model CompanySettings {
   officeLat      Float  @default(41.0082) // Default Istanbul
   officeLng      Float  @default(28.9784)
   geofenceRadius Int    @default(500) // meters
+
+  // Emergency Mode
+  isEmergencyMode Boolean @default(false)
+  emergencyMessage String?
 }
 
 // --- MODULE: SMART LMS ---

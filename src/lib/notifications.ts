@@ -7,7 +7,7 @@ createFirebaseAdminApp();
 
 export async function createNotification(userId: string, title: string, message: string, type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' = 'INFO') {
     // 1. Save to Database
-    const notification = await (prisma as any).notification.create({
+    const notification = await prisma.notification.create({
         data: {
             userId,
             title,
@@ -85,7 +85,7 @@ export async function sendBroadcastNotification(title: string, body: string) {
 
     for (const u of users) {
         // Create DB entry
-        await (prisma as any).notification.create({
+        await prisma.notification.create({
             data: {
                 userId: u.id,
                 title,

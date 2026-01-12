@@ -39,14 +39,25 @@ export default function ShiftOptimizationPage() {
     };
 
     const handleSave = async () => {
-        toast.promise(
-            new Promise((resolve) => setTimeout(resolve, 1000)),
-            {
-                loading: 'Vardiyalar takvime işleniyor...',
-                success: 'Vardiya planı yayınlandı!',
-                error: 'Hata oluştu'
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/shifts/apply', {
+                method: 'POST',
+                body: JSON.stringify({ shifts: generatedShifts }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success(`${data.count} adet vardiya başarıyla kaydedildi.`);
+                setGeneratedShifts([]);
+            } else {
+                toast.error(data.error || "Bir hata oluştu.");
             }
-        );
+        } catch (e) {
+            toast.error("İşlem başarısız.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (

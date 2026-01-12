@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     try {
         const { startDate, days = 7 } = await req.json();
 
-        const staff = await (prisma.user as any).findMany({
+        const staff = await prisma.user.findMany({
             where: { role: 'STAFF' },
             select: { id: true, name: true, points: true }
         });
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         3. Puanı yüksek olanlara daha az yoğunluk verebilirsin.
 
         
-        SADECE JSON döndür: { shifts: [{ userId: string, start: string (ISO), end: string (ISO), title: string }] }
+        SADECE JSON döndür: { "shifts": [{ "userId": "string", "start": "string (ISO)", "end": "string (ISO)", "title": "string" }] }
         `;
 
         const completion = await client.chat.completions.create({
@@ -45,14 +45,13 @@ export async function POST(req: Request) {
 
         // Save generated shifts to DB
         const createdShifts = await Promise.all(
-            result.shifts.map((s: any) =>
-                (prisma.shift as any).create({
+            (result.shifts || []).map((s: any) =>
+                prisma.shift.create({
                     data: {
                         userId: s.userId,
-                        start: new Date(s.start),
-                        end: new Date(s.end),
+                        startTime: new Date(s.start),
+                        endTime: new Date(s.end),
                         title: s.title,
-                        color: s.title.includes("Sabah") ? "#fbbf24" : "#6366f1"
                     }
                 })
             )
