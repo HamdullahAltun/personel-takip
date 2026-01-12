@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuth } from "@/lib/auth";
+import { ShiftType, ShiftStatus } from "@prisma/client";
 
 export async function GET(req: Request) {
     const session = await getAuth();
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
 
     // Staff can only request overtime (creating DRAFT shift)
     if (session.role !== "ADMIN" && session.role !== "EXECUTIVE") {
-        if (type !== "OVERTIME") {
+        if (type !== ShiftType.OVERTIME) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
     }
@@ -67,11 +68,11 @@ export async function POST(req: Request) {
                 userId: userId || session.id,
                 startTime: new Date(startTime),
                 endTime: new Date(endTime),
-                type: type || "REGULAR",
+                type: (type as ShiftType) || ShiftType.REGULAR,
                 title,
                 notes,
-                isOvertime: isOvertime || type === "OVERTIME",
-                status: (session.role === "ADMIN" || session.role === "EXECUTIVE") ? "PUBLISHED" : "DRAFT",
+                isOvertime: isOvertime || type === ShiftType.OVERTIME,
+                status: (session.role === "ADMIN" || session.role === "EXECUTIVE") ? ShiftStatus.PUBLISHED : ShiftStatus.DRAFT,
                 approvedBy: (session.role === "ADMIN" || session.role === "EXECUTIVE") ? session.id : undefined,
                 approvedAt: (session.role === "ADMIN" || session.role === "EXECUTIVE") ? new Date() : undefined,
             }

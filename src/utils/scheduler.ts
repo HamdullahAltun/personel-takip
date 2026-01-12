@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, ShiftType, ShiftStatus } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -48,8 +48,8 @@ export async function generateSchedule(config: SchedulerConfig) {
                 userId: user.id,
                 startTime: new Date(shiftStart),
                 endTime: new Date(shiftEnd),
-                type: "REGULAR",
-                status: "PUBLISHED",
+                type: ShiftType.REGULAR,
+                status: ShiftStatus.PUBLISHED,
                 title: "Otomatik Vardiya",
                 location: "Merkez Ofis"
             });

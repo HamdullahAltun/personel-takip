@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
 import { addDays, startOfWeek, endOfWeek, format, nextMonday } from 'date-fns';
+import { ShiftType, ShiftStatus } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -130,8 +131,8 @@ export async function POST(req: Request) {
                     userId: user.id,
                     startTime: shiftStart,
                     endTime: shiftEnd,
-                    type: 'SHIFT',
-                    status: 'PUBLISHED',
+                    type: ShiftType.REGULAR,
+                    status: ShiftStatus.PUBLISHED,
                     title: 'AI Planned',
                 });
             }
