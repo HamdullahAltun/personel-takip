@@ -1055,3 +1055,10 @@ model SkillGap {
   
   @@unique([userId, skill])
 }
+model StoredFile {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  filename    String
+  contentType String
+  data        Bytes
+  createdAt   DateTime @default(now())
+}
