@@ -65,8 +65,8 @@ export async function GET(request: Request) {
             happy: 0,
             neutral: 0,
             sad: 0,
-            tired: 0,
-            motivated: 0
+            love: 0, // Motive
+            coffee: 0 // Yorgun/Kahve
         };
 
         moods.forEach((m: any) => {

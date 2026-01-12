@@ -96,6 +96,24 @@ export async function POST(req: Request) {
             data: { points: { increment: module?.points || 10 } }
         });
 
+        // AUTO-UPDATE SKILL GAPS
+        const relatedGaps = await prisma.skillGap.findMany({
+            where: {
+                userId: session.id as string,
+                recommendedModules: { has: moduleId }
+            }
+        });
+
+        for (const gap of relatedGaps) {
+            // Increment current level if not maxed
+            if (gap.currentLevel < gap.targetLevel) {
+                await prisma.skillGap.update({
+                    where: { id: gap.id },
+                    data: { currentLevel: { increment: 1 } }
+                });
+            }
+        }
+
         return NextResponse.json(completion);
     }
 

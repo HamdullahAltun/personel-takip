@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Activity, Droplets, Moon, Footprints, Trophy, Plus, Check } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import TeamMood from "@/components/staff/TeamMood";
 
 const ACTIVITY_TYPES = [
     { id: 'STEPS', label: 'Adım', icon: Footprints, color: 'text-orange-500', bg: 'bg-orange-100', unit: 'adım' },
@@ -58,6 +59,11 @@ export default function WellnessPage() {
                     <h1 className="text-2xl font-bold text-slate-900">Sağlık & Yaşam</h1>
                     <p className="text-slate-500 text-xs">Kendine iyi bak, daha iyi çalış.</p>
                 </div>
+            </div>
+
+            {/* Mood Tracker */}
+            <div className="mb-6 h-64">
+                <TeamMood />
             </div>
 
             {/* Quick Add */}

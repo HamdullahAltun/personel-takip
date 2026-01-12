@@ -42,6 +42,54 @@ export default function DepartmentsAdmin() {
         }
     };
 
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [selectedDept, setSelectedDept] = useState<any>(null);
+
+    const handleEdit = (dept: any) => {
+        setSelectedDept(dept);
+        setNewDept({
+            name: dept.name,
+            budgetLimit: dept.budgetLimit,
+            managerName: dept.managerName || ""
+        });
+        setShowEditModal(true);
+    };
+
+    const handleDelete = async (id: string, userCount: number) => {
+        if (userCount > 0) {
+            alert("Bu departmanda çalışanlar var. Önce çalışanları başka departmana taşıyın.");
+            return;
+        }
+        if (!confirm("Bu departmanı silmek istediğinize emin misiniz?")) return;
+
+        const res = await fetch("/api/admin/departments", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id })
+        });
+
+        if (res.ok) {
+            fetchData();
+        } else {
+            alert("Silinemedi. Hata oluştu.");
+        }
+    };
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const res = await fetch("/api/admin/departments", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...newDept, id: selectedDept.id })
+        });
+        if (res.ok) {
+            setShowEditModal(false);
+            setSelectedDept(null);
+            setNewDept({ name: "", budgetLimit: 0, managerName: "" });
+            fetchData();
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -70,7 +118,10 @@ export default function DepartmentsAdmin() {
 
                     {activeTab === 'departments' && (
                         <button
-                            onClick={() => setShowAddModal(true)}
+                            onClick={() => {
+                                setNewDept({ name: "", budgetLimit: 0, managerName: "" });
+                                setShowAddModal(true);
+                            }}
                             className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition"
                         >
                             <Plus className="w-4 h-4" />
@@ -89,14 +140,16 @@ export default function DepartmentsAdmin() {
                     {departments.map((dept) => {
                         const usagePercent = dept.budgetLimit > 0 ? (dept.budgetUsed / dept.budgetLimit) * 100 : 0;
                         return (
-                            <div key={dept.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                            <div key={dept.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4 group">
                                 <div className="flex items-center justify-between">
                                     <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
                                         <Building2 className="w-6 h-6" />
                                     </div>
-                                    <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded-full border border-slate-100">
-                                        <Users className="w-3 h-3" />
-                                        {dept._count.users} Kişi
+                                    <div className="flex gap-2">
+                                        <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded-full border border-slate-100">
+                                            <Users className="w-3 h-3" />
+                                            {dept._count.users} Kişi
+                                        </div>
                                     </div>
                                 </div>
 
@@ -130,16 +183,21 @@ export default function DepartmentsAdmin() {
                                         Bütçe limitine çok yakın! Taleplerde kısıtlamaya gidilebilir.
                                     </div>
                                 )}
+
+                                <div className="flex justify-end gap-2 pt-4 border-t border-slate-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => handleEdit(dept)} className="text-xs font-bold text-slate-500 hover:text-indigo-600 px-2 py-1">Düzenle</button>
+                                    <button onClick={() => handleDelete(dept.id, dept._count.users)} className="text-xs font-bold text-slate-500 hover:text-red-600 px-2 py-1">Sil</button>
+                                </div>
                             </div>
                         );
                     })}
                 </div>
             )}
 
-            {/* Modal */}
+            {/* Add Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+                    <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl animate-in zoom-in-95">
                         <h2 className="text-xl font-bold mb-6">Yeni Departman Ekle</h2>
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
@@ -174,6 +232,50 @@ export default function DepartmentsAdmin() {
                             <div className="flex gap-4 pt-6">
                                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-3 border border-slate-200 rounded-xl">İptal</button>
                                 <button type="submit" className="flex-1 px-4 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 text-sm">Departmanı Oluştur</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Modal */}
+            {showEditModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl animate-in zoom-in-95">
+                        <h2 className="text-xl font-bold mb-6">Departmanı Düzenle</h2>
+                        <form onSubmit={handleUpdate} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Departman Adı</label>
+                                <input
+                                    required
+                                    type="text"
+                                    value={newDept.name}
+                                    onChange={(e) => setNewDept({ ...newDept, name: e.target.value })}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Aylık Bütçe Limiti (TL)</label>
+                                <input
+                                    required
+                                    type="number"
+                                    value={newDept.budgetLimit}
+                                    onChange={(e) => setNewDept({ ...newDept, budgetLimit: parseFloat(e.target.value) })}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Yönetici Adı</label>
+                                <input
+                                    type="text"
+                                    value={newDept.managerName}
+                                    onChange={(e) => setNewDept({ ...newDept, managerName: e.target.value })}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+                            <div className="flex gap-4 pt-6">
+                                <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 border border-slate-200 rounded-xl">İptal</button>
+                                <button type="submit" className="flex-1 px-4 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 text-sm">Kaydet</button>
                             </div>
                         </form>
                     </div>

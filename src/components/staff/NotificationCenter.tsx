@@ -20,11 +20,28 @@ export interface Notification {
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
+import { socket } from "@/lib/socket";
+
 export default function NotificationCenter() {
     const [isOpen, setIsOpen] = useState(false);
     const { data, mutate } = useSWR('/api/notifications', fetcher, {
-        refreshInterval: 30000 // Poll every 30s
+        refreshInterval: 30000 // Keep polling as backup
     });
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleNewNotification = () => {
+            mutate();
+            toast.info("Yeni bildiriminiz var");
+        };
+
+        socket.on("notification", handleNewNotification);
+
+        return () => {
+            socket.off("notification", handleNewNotification);
+        };
+    }, [mutate]);
 
     const notifications: Notification[] = data?.notifications || [];
     const unreadCount = notifications.filter(n => !n.read).length;

@@ -11,6 +11,7 @@ export default function ShiftOptimizationPage() {
         minStaffNight: 1,
         maxHoursPerEmployee: 45
     });
+    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [generatedShifts, setGeneratedShifts] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -20,7 +21,7 @@ export default function ShiftOptimizationPage() {
             const res = await fetch('/api/admin/shifts/optimize', {
                 method: 'POST',
                 body: JSON.stringify({
-                    startDate: new Date().toISOString(),
+                    startDate,
                     constraints
                 }),
                 headers: { 'Content-Type': 'application/json' }
@@ -69,6 +70,16 @@ export default function ShiftOptimizationPage() {
                     </h3>
 
                     <div className="space-y-4">
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 mb-1 block">Başlangıç Tarihi</label>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={e => setStartDate(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                            />
+                        </div>
+
                         <div>
                             <label className="text-xs font-bold text-slate-500 mb-1 block">Gündüz (08-16) Min. Personel</label>
                             <input

@@ -60,65 +60,76 @@ export default function OrganizationChart() {
     const [initialLoading, setInitialLoading] = useState(true);
 
     useEffect(() => {
-        fetch('/api/admin/users').then(res => res.json()).then((users: any[]) => {
-            if (!Array.isArray(users)) return;
+        const loadData = async () => {
+            try {
+                const res = await fetch('/api/admin/users');
+                if (!res.ok) throw new Error("Veri çekilemedi");
 
-            // Transform users to nodes/edges
-            const newNodes: Node[] = users.map(u => ({
-                id: u.id,
-                data: {
-                    label: (
-                        <div className="flex flex-col items-center p-3 bg-white rounded-xl shadow-lg border border-slate-100 w-[180px] hover:scale-105 transition-transform">
-                            <div className="relative mb-2">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[2px]">
-                                    <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                                        {u.profilePicture ? (
-                                            <img src={u.profilePicture} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <span className="text-xs font-black text-slate-700">{u.name.substring(0, 2).toUpperCase()}</span>
-                                        )}
+                const users: any[] = await res.json();
+                if (!Array.isArray(users)) throw new Error("Format hatası");
+
+                // Transform users to nodes/edges
+                const newNodes: Node[] = users.map(u => ({
+                    id: u.id,
+                    data: {
+                        label: (
+                            <div className="flex flex-col items-center p-3 bg-white rounded-xl shadow-lg border border-slate-100 w-[180px] hover:scale-105 transition-transform">
+                                <div className="relative mb-2">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[2px]">
+                                        <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                            {u.profilePicture ? (
+                                                <img src={u.profilePicture} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span className="text-xs font-black text-slate-700">{u.name.substring(0, 2).toUpperCase()}</span>
+                                            )}
+                                        </div>
                                     </div>
+                                    {u.role === 'ADMIN' && (
+                                        <span className="absolute -bottom-1 -right-1 bg-amber-400 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white shadow-sm">LIDER</span>
+                                    )}
                                 </div>
-                                {u.role === 'ADMIN' && (
-                                    <span className="absolute -bottom-1 -right-1 bg-amber-400 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white shadow-sm">LIDER</span>
-                                )}
+                                <div className="text-center w-full">
+                                    <p className="text-[11px] font-black text-slate-800 truncate leading-tight mb-0.5">{u.name}</p>
+                                    <p className="text-[9px] font-medium text-slate-400 truncate uppercase tracking-wide">{u.role}</p>
+                                    {u.department && (
+                                        <span className="mt-1.5 inline-block text-[8px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">
+                                            {u.department.name}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                            <div className="text-center w-full">
-                                <p className="text-[11px] font-black text-slate-800 truncate leading-tight mb-0.5">{u.name}</p>
-                                <p className="text-[9px] font-medium text-slate-400 truncate uppercase tracking-wide">{u.role}</p>
-                                {u.department && (
-                                    <span className="mt-1.5 inline-block text-[8px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">
-                                        {u.department.name}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    )
-                },
-                position: { x: 0, y: 0 }, // Calculated by dagre
-                style: { backgroundColor: 'transparent', border: 'none', padding: 0 }
-            }));
+                        )
+                    },
+                    position: { x: 0, y: 0 }, // Calculated by dagre
+                    style: { backgroundColor: 'transparent', border: 'none', padding: 0 }
+                }));
 
-            const newEdges: Edge[] = [];
-            users.forEach(u => {
-                if (u.managerId) {
-                    newEdges.push({
-                        id: `e${u.managerId}-${u.id}`,
-                        source: u.managerId,
-                        target: u.id,
-                        type: 'smoothstep',
-                        markerEnd: { type: MarkerType.ArrowClosed },
-                        animated: true,
-                        style: { stroke: '#94a3b8' }
-                    });
-                }
-            });
+                const newEdges: Edge[] = [];
+                users.forEach(u => {
+                    if (u.managerId) {
+                        newEdges.push({
+                            id: `e${u.managerId}-${u.id}`,
+                            source: u.managerId,
+                            target: u.id,
+                            type: 'smoothstep',
+                            markerEnd: { type: MarkerType.ArrowClosed },
+                            animated: true,
+                            style: { stroke: '#94a3b8' }
+                        });
+                    }
+                });
 
-            const layouted = getLayoutedElements(newNodes, newEdges);
-            setNodes(layouted.nodes);
-            setEdges(layouted.edges);
-            setInitialLoading(false);
-        });
+                const layouted = getLayoutedElements(newNodes, newEdges);
+                setNodes(layouted.nodes);
+                setEdges(layouted.edges);
+            } catch (error) {
+                console.error("Org Chart Error:", error);
+            } finally {
+                setInitialLoading(false);
+            }
+        };
+
+        loadData();
     }, [setNodes, setEdges]);
 
     if (initialLoading) return <div className="h-full flex items-center justify-center text-slate-400">Yükleniyor...</div>;

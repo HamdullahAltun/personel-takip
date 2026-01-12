@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
-import { addDays, startOfWeek, endOfWeek, format, nextMonday } from 'date-fns';
+import { addDays, format, nextMonday } from 'date-fns';
+import { groq } from '@/lib/ai';
 import { ShiftType, ShiftStatus } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Allow longer timeout for AI generation
 
 export async function POST(req: Request) {
     const session = await getAuth();
@@ -16,147 +18,132 @@ export async function POST(req: Request) {
         return NextResponse.json({ message: 'Otomatik planlama devre dışı. Ayarlardan aktifleştirin.', debug_config: config });
     }
 
+    if (!groq) {
+        return NextResponse.json({ error: "AI Service Unavailable (API Key Missing)" }, { status: 503 });
+    }
+
     try {
         await prisma.systemLog.create({
             data: {
                 level: 'AI_ACTION',
-                message: 'Otomatik vardiya planlayıcı başlatıldı.',
+                message: 'Otomatik vardiya planlayıcı başlatıldı (AI Modu).',
             }
         });
 
         // 1. Get next week range
-        const start = nextMonday(new Date()); // Start from next Monday
-        const end = addDays(start, 6); // Up to Sunday
+        const start = nextMonday(new Date());
+        const end = addDays(start, 6);
 
-        // 2. Fetch Staff
-        // Exclude those on leave for this period (simplified: just check leave requests overlapping)
+        // 2. Fetch Eligible Staff
         const staff = await prisma.user.findMany({
-            where: {
-                role: 'STAFF'
-            },
-            include: {
+            where: { role: 'STAFF' },
+            select: { id: true, name: true, weeklyGoal: true }
+        });
 
+        // 3. Fetch Leave Requests (Approved)
+        const leaves = await prisma.leaveRequest.findMany({
+            where: {
+                status: 'APPROVED',
+                OR: [
+                    { startDate: { lte: end }, endDate: { gte: start } }
+                ]
             }
         });
 
+        // Map unavailable staff
+        const unavailableStaff = leaves.map(l => ({
+            userId: l.userId,
+            start: format(l.startDate, 'yyyy-MM-dd'),
+            end: format(l.endDate, 'yyyy-MM-dd')
+        }));
+
+        // 4. Construct Prompt
+        const prompt = `
+            Act as an expert Workforce Scheduler. Create an optimal shift schedule for 1 week starting ${format(start, 'yyyy-MM-dd')}.
+            
+            Staff List (ID, Name, Weekly Hour Goal):
+            ${JSON.stringify(staff)}
+
+            Unavailable Staff (Leave Requests):
+            ${JSON.stringify(unavailableStaff)}
+
+            Constraints:
+            - Shifts: Morning (${config.operatingHoursStart}-16:00), Evening (16:00-${config.operatingHoursEnd}).
+            - Min Staff per Shift: ${config.minStaffPerShift}.
+            - Do NOT assign staff who are on leave.
+            - Staff cannot work 2 consecutive shifts.
+            - Distribute shifts fairly based on Weekly Hour Goal.
+            
+            output in JSON format:
+            {
+              "shifts": [
+                { "userId": "...", "date": "YYYY-MM-DD", "startTime": "HH:mm", "endTime": "HH:mm" }
+              ]
+            }
+        `;
+
+        // 5. AI Generation
+        const completion = await groq.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.2,
+            response_format: { type: "json_object" }
+        });
+
+        const content = completion.choices[0]?.message?.content || "{}";
+        let result;
+        try {
+            result = JSON.parse(content);
+        } catch (e) {
+            console.error("AI JSON Parse Error", e);
+            throw new Error("AI yanıtı okunamadı.");
+        }
+
+        const generatedShifts = result.shifts || [];
         let shiftsCreated = 0;
-        // 3. Fetch ALL existing shifts for the week at once
-        const existingShifts = await prisma.shift.findMany({
-            where: {
-                startTime: {
-                    gte: start,
-                    lt: end
-                }
-            }
-        });
 
+        // 6. DB Creation
+        if (generatedShifts.length > 0) {
+            const dataToCreate = generatedShifts.map((s: any) => {
+                const shiftStart = new Date(`${s.date}T${s.startTime}`);
+                const shiftEnd = new Date(`${s.date}T${s.endTime}`);
 
-        const requiredStaff = config.minStaffPerShift;
-        const newShifts: any[] = [];
+                // Basic validation
+                if (isNaN(shiftStart.getTime()) || isNaN(shiftEnd.getTime())) return null;
 
-        // Map to track weekly shift count per user for fairness
-        const staffLoad = new Map<string, number>();
-
-        // Initialize load from existing shifts (if any exist for next week, though unlikely if auto-scheduling)
-        existingShifts.forEach(s => {
-            staffLoad.set(s.userId, (staffLoad.get(s.userId) || 0) + 1);
-        });
-
-        // 4. Iterate Days
-        for (let i = 0; i < 7; i++) {
-            const currentDayDate = addDays(start, i);
-            const dayOfWeek = currentDayDate.getDay() === 0 ? 7 : currentDayDate.getDay();
-
-            // Identify available staff
-            const availableStaff = staff.filter(user => {
-                // Default to standard hours if no schedule preference (legacy)
-                const startHour = 9;
-                const endHour = 18;
-
-
-                // Check if already has a shift this day (either existing or newly created in this loop)
-                const hasExistingShift = existingShifts.some(s => {
-                    if (s.userId === user.id) {
-                        const shiftStart = new Date(s.startTime);
-                        // Check if already has a shift this day
-                        if (
-                            shiftStart.getDate() === currentDayDate.getDate() &&
-                            shiftStart.getMonth() === currentDayDate.getMonth() &&
-                            shiftStart.getFullYear() === currentDayDate.getFullYear()
-                        ) {
-                            return true; // Found an existing shift for this user on this day
-                        }
-                    }
-                    return false; // No existing shift found for this user on this day
-                });
-                const hasNewShift = newShifts.some(s =>
-                    s.userId === user.id &&
-                    s.start.toDateString() === currentDayDate.toDateString()
-                );
-
-                return !hasExistingShift && !hasNewShift;
-            });
-
-            // Sort by current load (Ascending) -> Pick those with fewest shifts first
-            // Add a random tie-breaker to avoid alphabetical bias
-            availableStaff.sort((a, b) => {
-                const loadA = staffLoad.get(a.id) || 0;
-                const loadB = staffLoad.get(b.id) || 0;
-                if (loadA !== loadB) return loadA - loadB;
-                return Math.random() - 0.5;
-            });
-
-            // Select staff
-            const selectedStaff = availableStaff.slice(0, requiredStaff);
-
-            if (selectedStaff.length < requiredStaff) {
-                console.warn(`[AI Scheduler] Not enough staff for ${format(currentDayDate, 'yyyy-MM-dd')}`);
-            }
-
-            // Create shift objects
-            const [startH, startM] = config.operatingHoursStart.split(':').map(Number);
-            const [endH, endM] = config.operatingHoursEnd.split(':').map(Number);
-
-            for (const user of selectedStaff) {
-                // Update Load
-                staffLoad.set(user.id, (staffLoad.get(user.id) || 0) + 1);
-
-                const shiftStart = new Date(currentDayDate);
-                shiftStart.setHours(startH, startM, 0, 0);
-
-                const shiftEnd = new Date(currentDayDate);
-                shiftEnd.setHours(endH, endM, 0, 0);
-
-                newShifts.push({
-                    userId: user.id,
+                return {
+                    userId: s.userId,
                     startTime: shiftStart,
                     endTime: shiftEnd,
                     type: ShiftType.REGULAR,
                     status: ShiftStatus.PUBLISHED,
-                    title: 'AI Planned',
-                });
-            }
-        }
+                    title: 'AI Scheduled',
+                };
+            }).filter((s: any) => s !== null);
 
-        // Bulk Create
-        if (newShifts.length > 0) {
-            await prisma.shift.createMany({
-                data: newShifts
-            });
-            shiftsCreated = newShifts.length;
+            if (dataToCreate.length > 0) {
+                await prisma.shift.createMany({ data: dataToCreate });
+                shiftsCreated = dataToCreate.length;
+            }
         }
 
         await prisma.systemLog.create({
             data: {
                 level: 'AI_ACTION',
-                message: `Otomatik planlama tamamlandı. ${shiftsCreated} yeni vardiya oluşturuldu.`,
+                message: `AI Planlama tamamlandı. ${shiftsCreated} yeni vardiya oluşturuldu.`,
             }
         });
 
-        return NextResponse.json({ message: `Planlama tamamlandı. ${shiftsCreated} vardiya oluşturuldu.`, debug_count: shiftsCreated });
+        return NextResponse.json({ message: `Planlama tamamlandı. ${shiftsCreated} vardiya oluşturuldu.` });
 
-    } catch (e) {
+    } catch (e: any) {
         console.error("Schedule Error:", e);
-        return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+        await prisma.systemLog.create({
+            data: {
+                level: 'ERROR',
+                message: `AI Planlama hatası: ${e.message}`,
+            }
+        });
+        return NextResponse.json({ error: e.message }, { status: 500 });
     }
 }

@@ -36,7 +36,8 @@ import {
     MapPin,
     GraduationCap,
     Activity,
-    ShoppingBag
+    ShoppingBag,
+    Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import VoiceCommand from "@/components/VoiceCommand";
@@ -100,6 +101,8 @@ export default function AdminLayout({
         { href: "/executive/dashboard", label: "Şirket Raporu", icon: BrainCircuit },
         { href: "/admin/ai-manager", label: "AI Yönetici", icon: BrainCircuit },
         { href: "/admin/analytics/predictive", label: "Analizler (AI)", icon: TrendingUp },
+        { href: "/admin/career", label: "Kariyer & Hedef", icon: GraduationCap },
+        { href: "/admin/settings", label: "Ayarlar", icon: Settings },
         { href: "/admin/emergency", label: "Acil Durum (SOS)", icon: Activity },
     ];
 

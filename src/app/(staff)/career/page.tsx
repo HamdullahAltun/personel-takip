@@ -1,27 +1,70 @@
 "use client";
 
-import { useState } from "react";
-import { TrendingUp, Award, BookOpen, Target, ArrowRight, Star } from "lucide-react";
+import { useState, useEffect } from "react";
+import { TrendingUp, Award, BookOpen, Target, ArrowRight, Star, CheckCircle } from "lucide-react";
+import { toast } from "sonner";
+
+interface CareerData {
+    nextSteps: any[];
+    skills: any[];
+    currentLevel: {
+        title: string;
+        level: number;
+        nextLevel: string;
+    };
+}
 
 export default function CareerPage() {
-    // Mock data based on schema structure
-    const currentLevel = {
-        title: "Kıdemli Satış Uzmanı",
-        level: 3,
-        nextLevel: "Satış Takım Lideri"
-    };
+    const [loading, setLoading] = useState(true);
+    const [data, setData] = useState<CareerData | null>(null);
 
-    const nextSteps = [
-        { id: 1, title: "Liderlik 101 Eğitimi", type: "LMS", status: "COMPLETED" },
-        { id: 2, title: "Ekip Yönetimi Sertifikası", type: "LMS", status: "IN_PROGRESS", progress: 65 },
-        { id: 3, title: "Mentörlük Programı", type: "TASK", status: "PENDING" },
-    ];
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const res = await fetch("/api/staff/career-path");
+                if (!res.ok) throw new Error("Failed to fetch");
+                const json = await res.json();
 
-    const skills = [
-        { name: "Müzakere", score: 85, target: 90 },
-        { name: "Takım Yönetimi", score: 60, target: 80 },
-        { name: "Stratejik Planlama", score: 45, target: 70 },
-    ];
+                // Transform API data to UI format
+                // Note: This logic assumes backend returns 'careerPaths' and 'skillGaps'
+                // We'll map it to the UI structure roughly
+                setData({
+                    currentLevel: {
+                        title: "Kıdemli Uzman (TBD)", // Ideally from backend active CareerPath
+                        level: json.currentLevel || 2,
+                        nextLevel: "Takım Lideri (TBD)"
+                    },
+                    nextSteps: [
+                        // Example dynamic mapping or fallback
+                        ...(json.skillGaps || []).map((gap: any, i: number) => ({
+                            id: gap.id,
+                            title: `Geliştir: ${gap.skill}`,
+                            type: 'TASK',
+                            status: gap.currentLevel >= gap.targetLevel ? 'COMPLETED' : 'PENDING',
+                            progress: (gap.currentLevel / gap.targetLevel) * 100
+                        }))
+                    ],
+                    skills: (json.skillGaps || []).map((gap: any) => ({
+                        name: gap.skill,
+                        score: gap.currentLevel * 20, // Assuming 1-5 scale -> 100
+                        target: gap.targetLevel * 20
+                    }))
+                });
+            } catch (error) {
+                console.error(error);
+                toast.error("Kariyer verileri alınamadı");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    if (loading) return <div className="p-8 text-center">Yükleniyor...</div>;
+    if (!data) return <div className="p-8 text-center text-red-500">Veri bulunamadı</div>;
+
+    const { currentLevel, nextSteps, skills } = data;
 
     return (
         <div className="max-w-xl mx-auto pb-24 space-y-6 animate-in fade-in">
@@ -65,7 +108,7 @@ export default function CareerPage() {
                         <div className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 w-[72%] rounded-full shadow-lg shadow-fuchsia-200" />
                     </div>
                     <p className="text-[10px] text-slate-400 mt-2 text-center">
-                        Bir sonraki seviyeye geçmek için 2 yetkinlik daha geliştirmen gerekiyor.
+                        Bir sonraki seviyeye geçmek için eksiklerini tamamlamalısın.
                     </p>
                 </div>
             </div>
@@ -78,6 +121,7 @@ export default function CareerPage() {
                 </h3>
 
                 <div className="bg-white rounded-2xl border border-slate-100 p-1">
+                    {skills.length === 0 && <p className="p-4 text-sm text-slate-400 text-center">Henüz atanmış bir hedef yok.</p>}
                     {skills.map((skill, i) => (
                         <div key={i} className="p-4 border-b border-slate-50 last:border-0">
                             <div className="flex justify-between mb-2">
@@ -109,6 +153,7 @@ export default function CareerPage() {
                 </h3>
 
                 <div className="space-y-3">
+                    {nextSteps.length === 0 && <p className="p-4 bg-white rounded-xl text-sm text-slate-400 text-center">Yapılacak görev yok.</p>}
                     {nextSteps.map(step => (
                         <div key={step.id} className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4">
                             <div className={`p-3 rounded-full ${step.status === 'COMPLETED' ? 'bg-green-100 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>
@@ -127,7 +172,7 @@ export default function CareerPage() {
                             )}
                             {step.status === 'PENDING' && (
                                 <button className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-bold">
-                                    Başla
+                                    Hedefle
                                 </button>
                             )}
                         </div>
@@ -136,13 +181,4 @@ export default function CareerPage() {
             </div>
         </div>
     );
-}
-
-function CheckCircle({ className }: { className?: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <path d="m9 11 3 3L22 4" />
-        </svg>
-    )
 }

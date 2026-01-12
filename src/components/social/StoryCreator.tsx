@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Camera, Image as ImageIcon, Type, X, Send, UploadCloud, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface StoryCreatorProps {
     isOpen: boolean;
@@ -22,6 +23,9 @@ export default function StoryCreator({ isOpen, onClose, onCreated }: StoryCreato
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // Reset input so same file can be selected again if needed
+        e.target.value = "";
+
         setUploading(true);
         const formData = new FormData();
         formData.append("file", file);
@@ -32,13 +36,16 @@ export default function StoryCreator({ isOpen, onClose, onCreated }: StoryCreato
                 body: formData
             });
 
-            if (!res.ok) throw new Error("Upload failed");
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || "Upload failed");
+            }
 
             const data = await res.json();
             setImageUrl(data.url);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Upload error:", error);
-            alert("Resim yüklenirken hata oluştu.");
+            toast.error(error.message || "Resim yüklenirken hata oluştu.");
         } finally {
             setUploading(false);
         }
@@ -63,11 +70,15 @@ export default function StoryCreator({ isOpen, onClose, onCreated }: StoryCreato
             if (res.ok) {
                 setContent("");
                 setImageUrl("");
+                toast.success("Hikaye paylaşıldı!");
                 onCreated();
                 onClose();
+            } else {
+                throw new Error("Hikaye paylaşılamadı");
             }
         } catch (error) {
             console.error("Story creation failed", error);
+            toast.error("Hikaye paylaşılırken bir hata oluştu.");
         } finally {
             setLoading(false);
         }
@@ -117,7 +128,7 @@ export default function StoryCreator({ isOpen, onClose, onCreated }: StoryCreato
                                         type="file"
                                         ref={fileInputRef}
                                         className="hidden"
-                                        accept="image/*"
+                                        accept="image/png, image/jpeg, image/jpg, image/webp"
                                         onChange={handleFileSelect}
                                     />
                                 </div>

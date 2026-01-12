@@ -46,27 +46,34 @@ export default function AIAssistantChat() {
         setInput("");
         setIsTyping(true);
 
-        // Simulate AI response delay
-        setTimeout(() => {
-            const responses = [
-                "Yıllık izninizden kalan 14 gününüz bulunmaktadır.",
-                "Bir sonraki vardiyanız Pazartesi 09:00 - 18:00 arasındadır.",
-                "Şirket içi eğitim kataloğuna 'Eğitim' sekmesinden ulaşabilirsiniz.",
-                "Bunu henüz tam olarak anlayamadım, ancak İK departmanına iletebilirim.",
-                "Maaş bordronuz her ayın 1'inde sistemde yayınlanır."
-            ];
-            const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+        try {
+            const res = await fetch("/api/ai/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: userMessage.content })
+            });
+
+            const data = await res.json();
 
             const aiMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: randomResponse,
+                content: data.error ? "Üzgünüm, bir hata oluştu." : data.response,
                 timestamp: new Date()
             };
 
             setMessages(prev => [...prev, aiMessage]);
+        } catch (e) {
+            const errorMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: "Bağlantı hatası. Lütfen daha sonra tekrar deneyin.",
+                timestamp: new Date()
+            };
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
             setIsTyping(false);
-        }, 1500);
+        }
     };
 
     const suggestions = [
@@ -106,8 +113,8 @@ export default function AIAssistantChat() {
                             {msg.role === 'user' ? <User className="w-4 h-4 text-indigo-600" /> : <Bot className="w-4 h-4 text-indigo-600" />}
                         </div>
                         <div className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user'
-                                ? 'bg-indigo-600 text-white rounded-tr-none'
-                                : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
+                            ? 'bg-indigo-600 text-white rounded-tr-none'
+                            : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
                             }`}>
                             {msg.content}
                             <div className={`text-[9px] mt-1 opacity-60 ${msg.role === 'user' ? 'text-indigo-100' : 'text-slate-400'}`}>

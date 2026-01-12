@@ -17,6 +17,15 @@ export async function POST(req: Request) {
 
     // Check if already assigned active? (Optional, skipping for simplicity)
 
+    const checklist = await prisma.checklist.findUnique({
+        where: { id: checklistId },
+        include: { items: true }
+    });
+
+    if (!checklist) {
+        return NextResponse.json({ error: "Checklist not found" }, { status: 404 });
+    }
+
     const assignment = await prisma.checklistAssignment.create({
         data: {
             userId,
@@ -26,10 +35,27 @@ export async function POST(req: Request) {
         }
     });
 
+    // Create Tasks for User
+    if (checklist.items && checklist.items.length > 0) {
+        const tasksToCreate = checklist.items.map(item => ({
+            title: item.task,
+            description: `Onboarding Görevi: ${item.category || 'Genel'}`,
+            status: 'PENDING' as const,
+            priority: 'HIGH' as const,
+            assignedToId: userId,
+            assignedById: session.id, // Assigned by Admin
+            tags: ['onboarding', checklist.type.toLowerCase()]
+        }));
+
+        await prisma.task.createMany({
+            data: tasksToCreate
+        });
+    }
+
     // Notify User
     try {
         const { sendPushNotification } = await import('@/lib/notifications');
-        await sendPushNotification(userId, "Yeni Görev Listesi 📋", "Onboarding/Offboarding süreci atandı.");
+        await sendPushNotification(userId, "Yeni Görev Listesi 📋", `${checklist.title} süreci atandı ve görevleriniz oluşturuldu.`);
     } catch (e) {
         // ignore
     }

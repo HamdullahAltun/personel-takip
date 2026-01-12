@@ -43,12 +43,14 @@ export async function PATCH(req: Request) {
         });
 
         if (updated.userId) {
-            const { sendPushNotification } = await import('@/lib/notifications');
-            const title = status === 'APPROVED' ? "İzin Onaylandı" : "İzin Reddedildi";
+            const { createNotification } = await import('@/lib/notifications');
+            const title = status === 'APPROVED' ? "İzin Onaylandı ✅" : "İzin Reddedildi ❌";
             const bodyText = status === 'APPROVED'
                 ? "İzin talebiniz onaylanmıştır."
                 : `İzin talebiniz reddedildi. Sebep: ${rejectionReason}`;
-            await sendPushNotification(updated.userId, title, bodyText);
+            const type = status === 'APPROVED' ? 'SUCCESS' : 'ERROR';
+
+            await createNotification(updated.userId, title, bodyText, type);
         }
 
         return NextResponse.json(updated);

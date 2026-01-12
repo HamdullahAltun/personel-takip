@@ -16,18 +16,21 @@ export async function POST(req: Request) {
         }
 
         // Validate Type
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/jpg'];
         if (!allowedTypes.includes(file.type)) {
-            return NextResponse.json({ error: "Sadece resim dosyaları (JPG, PNG, WEBP, GIF) yüklenebilir." }, { status: 400 });
+            console.log("Upload blocked - Invalid Type:", file.type);
+            return NextResponse.json({ error: `Geçersiz dosya formatı (${file.type}). Lütfen JPG, PNG veya GIF kullanın.` }, { status: 400 });
         }
 
-        // Validate Size (Max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            return NextResponse.json({ error: "Dosya boyutu 5MB'dan küçük olmalıdır." }, { status: 400 });
+        // Validate Size (Max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            return NextResponse.json({ error: "Dosya boyutu 10MB'dan küçük olmalıdır." }, { status: 400 });
         }
 
         const buffer = Buffer.from(await file.arrayBuffer());
-        const filename = Date.now() + "_" + file.name.replaceAll(" ", "_");
+        // Sanitize filename: ASCII only, remove special chars
+        const sanitizedParams = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
+        const filename = `${Date.now()}_${sanitizedParams}`;
 
         // Ensure directory exists
         const uploadDir = path.join(process.cwd(), "public/uploads");

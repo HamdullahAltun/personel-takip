@@ -57,9 +57,9 @@ export async function POST(req: Request) {
         });
 
         // Send Notification
-        // Send Notification
-        const { sendPushNotification } = await import('@/lib/notifications');
-        await sendPushNotification(assignedToId, "Yeni Görev Atandı 📋", `Görev: ${title}`);
+        // Send Global Notification (DB + Push)
+        const { createNotification } = await import('@/lib/notifications');
+        await createNotification(assignedToId, "Yeni Görev Atandı 📋", `Görev: ${title}`, 'INFO');
 
         return NextResponse.json(task);
     } catch {

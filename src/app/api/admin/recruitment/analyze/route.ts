@@ -21,17 +21,34 @@ export async function POST(req: Request) {
         if (!candidate) return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
         if (!groq) return NextResponse.json({ error: "AI not configured" }, { status: 500 });
 
+
+        let resumeText = candidate.resumeUrl || "Not provided";
+
+        // Fetch and Parse PDF if URL exists
+        if (candidate.resumeUrl && candidate.resumeUrl.startsWith('http')) {
+            try {
+                const res = await fetch(candidate.resumeUrl);
+                if (res.ok) {
+                    const buffer = Buffer.from(await res.arrayBuffer());
+                    const pdf = await import('pdf-parse');
+                    // @ts-ignore
+                    const data = await pdf.default(buffer);
+                    resumeText = data.text.slice(0, 3000); // Limit context
+                }
+            } catch (error) {
+                console.error("PDF Parse Error", error);
+            }
+        }
+
         // 2. Prepare Context
         const prompt = `
             Act as an expert HR Recruiter. Analyze this candidate for the position.
             
             Position: ${candidate.jobPosting.title}
             Description: ${candidate.jobPosting.description}
-            Requirements: ${candidate.jobPosting.requirements}
             
-            Candidate:
-            Name: ${candidate.name}
-            Resume URL/Text: ${candidate.resumeUrl || "Not provided (Base assessment on profile)"}
+            Candidate Resume Content:
+            ${resumeText}
             
             Task:
             1. Score the candidate from 0-100 based on fit.

@@ -138,7 +138,10 @@ model User {
   stockTransactions StockTransaction[] @relation("StockHandler")
   
   wellnessActivities WellnessActivity[]
+
   skillGaps        SkillGap[]
+  
+  inventoryRequests InventoryRequest[]
 }
 
 model Department {
@@ -324,6 +327,10 @@ model Expense {
   user        User          @relation(fields: [userId], references: [id])
   
   rejectionReason String?
+  
+  // Project Link
+  projectId   String?       @db.ObjectId
+  project     Project?      @relation(fields: [projectId], references: [id])
 
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -928,6 +935,7 @@ model Project {
   manager     User     @relation("ProjectManager", fields: [managerId], references: [id])
   members     String[] @db.ObjectId // Array of user IDs
   tasks       Task[]
+  expenses    Expense[]
   columns     ProjectColumn[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -967,6 +975,20 @@ model StockTransaction {
   quantity  Int
   reason    String?
   createdAt DateTime @default(now())
+}
+
+model InventoryRequest {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  itemId      String?  @db.ObjectId // Optional link to specific stock item
+  itemName    String   // Text description if item not in stock DB
+  quantity    Int      @default(1)
+  reason      String?
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED, FULFILLED
+  adminNote   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // 5. WELLNESS & GAMIFICATION EXTENSIONS
