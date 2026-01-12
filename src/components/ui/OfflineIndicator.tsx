@@ -1,31 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { WifiOff } from "lucide-react";
 
+function useOnlineStatus() {
+    const isOnline = useSyncExternalStore(
+        (callback) => {
+            window.addEventListener("online", callback);
+            window.addEventListener("offline", callback);
+            return () => {
+                window.removeEventListener("online", callback);
+                window.removeEventListener("offline", callback);
+            };
+        },
+        () => navigator.onLine,
+        () => true // Server snapshot (assume online)
+    );
+
+    return isOnline;
+}
+
 export default function OfflineIndicator() {
-    const [isOffline, setIsOffline] = useState(false);
-
-    useEffect(() => {
-        const handleOnline = () => setIsOffline(false);
-        const handleOffline = () => setIsOffline(true);
-
-        // Set initial state
-        setIsOffline(!navigator.onLine);
-
-        window.addEventListener("online", handleOnline);
-        window.addEventListener("offline", handleOffline);
-
-        return () => {
-            window.removeEventListener("online", handleOnline);
-            window.removeEventListener("offline", handleOffline);
-        };
-    }, []);
+    const isOnline = useOnlineStatus();
 
     return (
         <AnimatePresence>
-            {isOffline && (
+            {!isOnline && (
                 <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}

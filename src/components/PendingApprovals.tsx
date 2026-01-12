@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Check, X, FileText, CalendarClock, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { approveSwapRequest, rejectSwapRequest } from "@/actions/shifts/marketplace";
 
 interface PendingLeave {
     id: string;
@@ -138,10 +139,6 @@ export default function PendingApprovals() {
 
     const handleSwapAction = async (id: string, action: 'approve' | 'reject') => {
         try {
-            // We'll call an API route wrapping the server action or just use the server action directly if Next.js allows.
-            // In Client Components, we can call Server Actions.
-            const { approveSwapRequest, rejectSwapRequest } = await import("@/actions/shifts/marketplace");
-
             if (action === 'approve') {
                 await approveSwapRequest(id);
                 toast.success('Takas onaylandı');

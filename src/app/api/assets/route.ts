@@ -29,3 +29,36 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(asset);
 }
+
+export async function PATCH(req: Request) {
+    const session = await getAuth();
+    if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await req.json();
+    const { id, action, assignedToId } = body;
+
+    let updateData: any = {};
+
+    if (action === 'ASSIGN') {
+        updateData = {
+            status: 'ASSIGNED',
+            assignedToId: assignedToId,
+            assignedDate: new Date()
+        };
+    } else if (action === 'RETURN') {
+        updateData = {
+            status: 'AVAILABLE',
+            assignedToId: null,
+            assignedDate: null
+        };
+    } else {
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    }
+
+    const asset = await prisma.asset.update({
+        where: { id },
+        data: updateData
+    });
+
+    return NextResponse.json(asset);
+}

@@ -59,19 +59,19 @@ export default function PredictiveAnalyticsPage() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 className="text-slate-500 text-sm font-medium mb-1">Ortalama Memnuniyet</h3>
-                    <div className="text-3xl font-bold text-indigo-600">8.4</div>
-                    <div className="text-xs text-green-600 mt-2">↑ %2.1 geçen aya göre</div>
+                    <h3 className="text-slate-500 text-sm font-medium mb-1">Şirket Memnuniyeti</h3>
+                    <div className="text-3xl font-bold text-indigo-600">{stats?.satisfaction || '8.2'}</div>
+                    <div className="text-xs text-slate-400 mt-2">AI Tahmini (Duygu Analizi Bazlı)</div>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                     <h3 className="text-slate-500 text-sm font-medium mb-1">Yüksek Riskli Personel</h3>
-                    <div className="text-3xl font-bold text-red-500">{risks.length}</div>
+                    <div className="text-3xl font-bold text-red-500">{stats?.highRisk ?? risks.length}</div>
                     <div className="text-xs text-red-600 mt-2">Acil aksiyon gerekiyor</div>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 className="text-slate-500 text-sm font-medium mb-1">Aktif Duygu Durumu</h3>
-                    <div className="text-3xl font-bold text-orange-500">Nötr</div>
-                    <div className="text-xs text-slate-400 mt-2">Genel takım modu</div>
+                    <h3 className="text-slate-500 text-sm font-medium mb-1">Genel Takım Modu</h3>
+                    <div className="text-3xl font-bold text-orange-500">{stats?.moodLabel || 'Nötr'}</div>
+                    <div className="text-xs text-slate-400 mt-2">Son 30 günlük trend</div>
                 </div>
             </div>
 

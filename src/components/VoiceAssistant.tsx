@@ -1,184 +1,99 @@
 "use client";
 
-interface SpeechRecognitionEvent extends Event {
-    results: SpeechRecognitionResultList;
-    resultIndex: number;
-}
+import 'regenerator-runtime/runtime';
+import { Mic, MicOff, Volume2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { toast } from 'sonner';
 
-interface SpeechRecognitionResultList {
-    readonly length: number;
-    item(index: number): SpeechRecognitionResult;
-    [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionResult {
-    readonly length: number;
-    item(index: number): SpeechRecognitionAlternative;
-    [index: number]: SpeechRecognitionAlternative;
-    isFinal: boolean;
-}
-
-interface SpeechRecognitionAlternative {
-    transcript: string;
-    confidence: number;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-    error: string;
-    message: string;
-}
-
-interface WebkitSpeechRecognition extends EventTarget {
-    lang: string;
-    interimResults: boolean;
-    maxAlternatives: number;
-    continuous: boolean;
-    onstart: () => void;
-    onresult: (event: SpeechRecognitionEvent) => void;
-    onspeechend: () => void;
-    onerror: (event: SpeechRecognitionErrorEvent) => void;
-    start: () => void;
-    stop: () => void;
-}
-
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { Mic, Loader2, CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { VoiceVisualizer } from "./VoiceVisualizer";
-
-/**
- * Advanced Voice Assistant for PWA
- * Supports: Check-in, What is my next task?
- */
 export default function VoiceAssistant() {
-    const router = useRouter();
-    const [isListening, setIsListening] = useState(false);
-    const [transcript, setTranscript] = useState("");
-    const [response, setResponse] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [browserSupport, setBrowserSupport] = useState(true);
+    const [isClient, setIsClient] = useState(false);
+
+    const commands = [
+        {
+            command: ['giriş yap', 'başlat'],
+            callback: () => handleClockIn(),
+            matchInterim: true
+        },
+        {
+            command: ['çıkış yap', 'bitir'],
+            callback: () => handleClockOut(),
+            matchInterim: true
+        },
+        {
+            command: ['yardım'],
+            callback: () => toast.info("Komutlar: Giriş yap, Çıkış yap, Yardım"),
+            matchInterim: true
+        }
+    ];
+
+    const {
+        transcript,
+        listening,
+        resetTranscript,
+        browserSupportsSpeechRecognition
+    } = useSpeechRecognition({ commands });
 
     useEffect(() => {
-        if (typeof window !== 'undefined' && !('webkitSpeechRecognition' in window)) {
-            // Use requestAnimationFrame to avoid synchronous setState in effect
-            requestAnimationFrame(() => setBrowserSupport(false));
-        }
+        setIsClient(true);
     }, []);
 
-    const handleVoiceCommand = useCallback(async (command: string) => {
-        setLoading(true);
-        try {
-            const res = await fetch('/api/ai/voice-command', {
-                method: 'POST',
-                body: JSON.stringify({ command }),
-                headers: { 'Content-Type': 'application/json' }
-            });
-            const data = await res.json();
-            setResponse(data.message);
-
-            // Speak response back
-            const utterance = new SpeechSynthesisUtterance(data.message);
-            utterance.lang = 'tr-TR';
-            window.speechSynthesis.speak(utterance);
-
-            // Trigger action if needed
-            if (data.action === 'CHECK_IN_OUT') {
-                // You can emit an event or call a function to refresh UI
-                window.dispatchEvent(new CustomEvent('attendanceUpdate'));
-                router.push('/scan');
-            }
-        } catch {
-            const errorMsg = "Bağlantı hatası, lütfen tekrar deneyin.";
-            setResponse(errorMsg);
-            const utterance = new SpeechSynthesisUtterance(errorMsg);
-            utterance.lang = 'tr-TR';
-            window.speechSynthesis.speak(utterance);
-        }
-        setLoading(false);
-    }, []);
-
-    const toggleListening = () => {
-        if (isListening) {
-            setIsListening(false);
-            return;
-        }
-
-        const WebkitSpeechRecognition = (window as unknown as { webkitSpeechRecognition: new () => WebkitSpeechRecognition }).webkitSpeechRecognition;
-        if (!WebkitSpeechRecognition) return;
-
-        const recognition = new WebkitSpeechRecognition();
-        recognition.lang = 'tr-TR';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
-
-        recognition.onstart = () => setIsListening(true);
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
-            const last = event.results.length - 1;
-            const command = event.results[last][0].transcript;
-            setTranscript(command);
-            handleVoiceCommand(command);
-        };
-        recognition.onspeechend = () => {
-            recognition.stop();
-            setIsListening(false);
-        };
-        recognition.onerror = () => setIsListening(false);
-
-        recognition.start();
+    const handleClockIn = async () => {
+        toast.promise(fetch('/api/attendance', {
+            method: 'POST',
+            body: JSON.stringify({ type: 'CHECK_IN', method: 'VOICE' }),
+            headers: { 'Content-Type': 'application/json' }
+        }), {
+            loading: 'Giriş işlemi yapılıyor...',
+            success: 'Sesli giriş başarılı!',
+            error: 'Giriş yapılamadı.'
+        });
+        resetTranscript();
     };
 
-    if (!browserSupport) return null;
+    const handleClockOut = async () => {
+        toast.promise(fetch('/api/attendance', {
+            method: 'POST',
+            body: JSON.stringify({ type: 'CHECK_OUT', method: 'VOICE' }),
+            headers: { 'Content-Type': 'application/json' }
+        }), {
+            loading: 'Çıkış işlemi yapılıyor...',
+            success: 'Sesli çıkış başarılı!',
+            error: 'Çıkış yapılamadı.'
+        });
+        resetTranscript();
+    };
+
+    if (!isClient) return null;
+    if (!browserSupportsSpeechRecognition) {
+        return null;
+    }
 
     return (
-        <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-3 pointer-events-none">
-            {/* Transcript/Response Bubble */}
-            {(transcript || response || loading) && (
-                <div className="bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-indigo-100 max-w-[250px] animate-in slide-in-from-bottom-5 pointer-events-auto">
-                    <div className="flex flex-col gap-2">
-                        {transcript && (
-                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Duyulan:</div>
-                        )}
-                        <p className="text-sm font-medium text-slate-700 italic">&quot;{transcript || "Dinliyorum..."}&quot;</p>
-
-                        {(response || loading) && (
-                            <div className="pt-2 border-t border-slate-50 mt-1">
-                                {loading ? (
-                                    <div className="flex items-center gap-2 text-indigo-600 font-bold text-xs">
-                                        <Loader2 className="h-3 w-3 animate-spin" /> İşleniyor...
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-2 text-green-600 font-bold text-xs">
-                                        <CheckCircle2 className="h-4 w-4" /> {response}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Mic Button */}
+        <div className="fixed bottom-24 right-6 z-50">
             <button
-                onClick={toggleListening}
-                className={cn(
-                    "w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95 pointer-events-auto relative overflow-hidden",
-                    isListening
-                        ? "bg-gradient-to-r from-pink-500 to-rose-500 scale-110 shadow-rose-200"
-                        : "bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-indigo-200 hover:-translate-y-1"
-                )}
+                onClick={() => {
+                    if (listening) {
+                        SpeechRecognition.stopListening();
+                    } else {
+                        SpeechRecognition.startListening({ language: 'tr-TR', continuous: true });
+                    }
+                }}
+                className={`p-4 rounded-full shadow-2xl transition-all active:scale-90 ${listening
+                    ? 'bg-red-500 text-white animate-pulse shadow-red-200'
+                    : 'bg-white text-slate-600 hover:text-indigo-600 border border-slate-100'
+                    }`}
             >
-                {isListening ? (
-                    <>
-                        <VoiceVisualizer isListening={isListening} />
+                {listening ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
 
-                    </>
-                ) : (
-                    <Mic className="text-white h-7 w-7" />
-                )}
-
-                {isListening && (
-                    <div className="absolute inset-0 rounded-full border-4 border-white/20 animate-ping pointer-events-none" />
+                {listening && transcript && (
+                    <div className="absolute bottom-full mb-4 right-0 w-48 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-slate-100 shadow-xl text-xs font-medium text-slate-700 animate-in fade-in slide-in-from-bottom-2">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Volume2 className="h-3 w-3 text-indigo-500" />
+                            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Dinleniyor</span>
+                        </div>
+                        {transcript}
+                    </div>
                 )}
             </button>
         </div>

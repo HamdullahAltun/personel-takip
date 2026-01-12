@@ -35,7 +35,7 @@ export default function QRScanner({
         scannerRef.current = null;
     }, []);
 
-    const startScanner = useCallback(async () => {
+    const startScanner = useCallback(async (isMounted: () => boolean) => {
         setError("");
         setLoading(true);
 
@@ -43,10 +43,13 @@ export default function QRScanner({
             // Cleanup existing instance first
             await cleanupScanner();
 
+            if (!isMounted()) return;
+
             // Check if element exists
             const element = document.getElementById(scannerId);
             if (!element) {
-                throw new Error("Scanner container not found in DOM");
+                if (isMounted()) throw new Error("Scanner container not found in DOM");
+                return;
             }
 
             const html5QrCode = new Html5Qrcode(scannerId, {
@@ -63,6 +66,8 @@ export default function QRScanner({
                 disableFlip: false
             };
 
+            if (!isMounted()) return;
+
             await html5QrCode.start(
                 { facingMode: "environment" },
                 config,
@@ -74,10 +79,17 @@ export default function QRScanner({
                 }
             );
 
-            setPermissionGranted(true);
-            setLoading(false);
+            if (isMounted()) {
+                setPermissionGranted(true);
+                setLoading(false);
+            } else {
+                // If unmounted during start, stop it immediately
+                await cleanupScanner();
+            }
 
         } catch (err: any) {
+            if (!isMounted()) return;
+
             console.error("Scanner Start Error:", err);
             setLoading(false);
 
@@ -98,11 +110,12 @@ export default function QRScanner({
 
     useEffect(() => {
         let mounted = true;
+        const isMounted = () => mounted;
 
         // Small delay to ensure DOM is ready and animations are done
         const timer = setTimeout(() => {
             if (mounted) {
-                startScanner();
+                startScanner(isMounted);
             }
         }, 500);
 
@@ -114,7 +127,8 @@ export default function QRScanner({
     }, [startScanner, cleanupScanner]);
 
     const handleRetry = () => {
-        startScanner();
+        const isMounted = () => true; // If we clicked retry, we are almost certainly mounted
+        startScanner(isMounted);
     };
 
     return (

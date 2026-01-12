@@ -68,17 +68,29 @@ export default function OrganizationChart() {
                 id: u.id,
                 data: {
                     label: (
-                        <div className="flex items-center gap-2 p-2 bg-white rounded-lg shadow-sm border border-slate-200 w-[160px]">
-                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden shrink-0">
-                                {u.profilePicture ? (
-                                    <img src={u.profilePicture} className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="text-[10px] font-bold text-indigo-600">{u.name.substring(0, 2).toUpperCase()}</span>
+                        <div className="flex flex-col items-center p-3 bg-white rounded-xl shadow-lg border border-slate-100 w-[180px] hover:scale-105 transition-transform">
+                            <div className="relative mb-2">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[2px]">
+                                    <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                        {u.profilePicture ? (
+                                            <img src={u.profilePicture} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-xs font-black text-slate-700">{u.name.substring(0, 2).toUpperCase()}</span>
+                                        )}
+                                    </div>
+                                </div>
+                                {u.role === 'ADMIN' && (
+                                    <span className="absolute -bottom-1 -right-1 bg-amber-400 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white shadow-sm">LIDER</span>
                                 )}
                             </div>
-                            <div className="overflow-hidden">
-                                <p className="text-[10px] font-bold truncate">{u.name}</p>
-                                <p className="text-[8px] text-slate-500 truncate">{u.role}</p>
+                            <div className="text-center w-full">
+                                <p className="text-[11px] font-black text-slate-800 truncate leading-tight mb-0.5">{u.name}</p>
+                                <p className="text-[9px] font-medium text-slate-400 truncate uppercase tracking-wide">{u.role}</p>
+                                {u.department && (
+                                    <span className="mt-1.5 inline-block text-[8px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">
+                                        {u.department.name}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     )

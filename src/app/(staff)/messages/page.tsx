@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Search, User, MessageSquarePlus, Circle } from 'lucide-react';
 import Link from 'next/link';
+import NextImage from "next/image";
 
 type Conversation = {
     user: {
@@ -90,9 +91,9 @@ export default function MessageListPage() {
                             className="flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors relative"
                         >
                             <div className="relative">
-                                <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200 text-slate-600">
+                                <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200 text-slate-600 relative">
                                     {conv.user.profilePicture ? (
-                                        <img src={conv.user.profilePicture} alt={conv.user.name} className="w-full h-full object-cover" />
+                                        <NextImage src={conv.user.profilePicture} alt={conv.user.name} fill className="object-cover" />
                                     ) : (
                                         <User className="h-6 w-6" />
                                     )}
@@ -155,9 +156,9 @@ export default function MessageListPage() {
                                     href={`/messages/${user.id}`}
                                     className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-xl transition-colors"
                                 >
-                                    <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200 text-slate-600">
+                                    <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200 text-slate-600 relative">
                                         {user.profilePicture ? (
-                                            <img src={user.profilePicture} alt={user.name} className="w-full h-full object-cover" />
+                                            <NextImage src={user.profilePicture} alt={user.name} fill className="object-cover" />
                                         ) : (
                                             <User className="h-5 w-5" />
                                         )}

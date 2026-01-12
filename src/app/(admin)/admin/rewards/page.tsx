@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Gift, Coins, Plus, Check, X, Loader2, Search } from "lucide-react";
+import { Gift, Coins, Plus, Check, X, Loader2, Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
@@ -58,6 +60,24 @@ export default function AdminRewardsPage() {
         }
     };
 
+    const handleDeleteReward = async (id: string) => {
+        if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
+
+        try {
+            const res = await fetch(`/api/rewards?id=${id}`, {
+                method: "DELETE"
+            });
+            if (res.ok) {
+                toast.success("Ürün silindi");
+                fetchData();
+            } else {
+                toast.error("Silme işlemi başarısız");
+            }
+        } catch (e) {
+            toast.error("Bir hata oluştu");
+        }
+    };
+
     if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div>;
 
     return (
@@ -111,8 +131,8 @@ export default function AdminRewardsPage() {
                                     <td className="p-4 text-sm text-slate-500">{format(new Date(req.createdAt), 'd MMM HH:mm', { locale: tr })}</td>
                                     <td className="p-4">
                                         <span className={`text-xs font-bold px-2 py-1 rounded-full ${req.status === 'PENDING' ? 'bg-amber-100 text-amber-600' :
-                                                req.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-600' :
-                                                    'bg-red-100 text-red-600'
+                                            req.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-600' :
+                                                'bg-red-100 text-red-600'
                                             }`}>
                                             {req.status === 'PENDING' ? 'Bekliyor' : req.status === 'APPROVED' ? 'Onaylandı' : 'Reddedildi'}
                                         </span>
@@ -190,7 +210,7 @@ export default function AdminRewardsPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {rewards.map(reward => (
-                            <div key={reward.id} className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center">
+                            <div key={reward.id} className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center group">
                                 <div>
                                     <h3 className="font-bold text-slate-900">{reward.title}</h3>
                                     <p className="text-sm text-slate-500">{reward.description}</p>
@@ -199,7 +219,16 @@ export default function AdminRewardsPage() {
                                         <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">Stok: {reward.stock === -1 ? 'Sınırsız' : reward.stock}</span>
                                     </div>
                                 </div>
-                                {/* <button className="p-2 text-slate-400 hover:text-indigo-600"><Edit className="w-4 h-4" /></button> */}
+                                <div className="flex items-center gap-2">
+                                    {/* <button className="p-2 text-slate-400 hover:text-indigo-600"><Edit className="w-4 h-4" /></button> */}
+                                    <button
+                                        onClick={() => handleDeleteReward(reward.id)}
+                                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Sil"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>

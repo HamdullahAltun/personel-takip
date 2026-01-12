@@ -10,6 +10,7 @@ import {
     Share2, CalendarRange, Crown, Network, Bot, Gift, Banknote, MapPin, Database, Search, Bell,
     Activity, TrendingUp, Shield
 } from "lucide-react";
+import NextImage from "next/image";
 import { cn } from "@/lib/utils";
 import VoiceAssistant from "@/components/VoiceAssistant";
 import StatusPoller from "@/components/StatusPoller";
@@ -158,10 +159,15 @@ export default function StaffLayout({
                     <div className="relative">
                         <button
                             onClick={() => setShowProfileMenu(!showProfileMenu)}
-                            className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold ring-2 ring-white shadow-sm active:scale-95 transition-all overflow-hidden"
+                            className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold ring-2 ring-white shadow-sm active:scale-95 transition-all overflow-hidden relative"
                         >
                             {profilePicture ? (
-                                <img src={profilePicture} alt={userName} className="w-full h-full object-cover" />
+                                <NextImage
+                                    src={profilePicture}
+                                    alt={userName || "Profile"}
+                                    fill
+                                    className="object-cover"
+                                />
                             ) : (
                                 userName ? userName.charAt(0).toUpperCase() : <User className="h-5 w-5" />
                             )}

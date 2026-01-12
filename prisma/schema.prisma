@@ -899,8 +899,10 @@ model SentimentLog {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
-  type      String   // MESSAGE, FEEDBACK, MOOD, SURVEY
+  type      String   // MESSAGE, FEEDBACK, MOOD, SURVEY, POST
   score     Float    // -1.0 to 1.0
+  label     String?  // POSITIVE, NEUTRAL, NEGATIVE
+  metadata  Json?
   sourceId  String?  // ID of the message or item
   createdAt DateTime @default(now())
 }

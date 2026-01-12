@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
+import { analyzeSentiment } from '@/lib/ai';
 
 export async function GET(req: Request) {
     const session = await getAuth();
@@ -22,6 +23,12 @@ export async function GET(req: Request) {
                 },
                 pollOptions: {
                     include: { votes: true }
+                },
+                _count: {
+                    select: {
+                        likes: true,
+                        comments: true
+                    }
                 }
             },
             orderBy: { createdAt: 'desc' },
@@ -61,13 +68,41 @@ export async function POST(req: Request) {
                 kudosTarget: { select: { name: true } },
                 likes: true,
                 comments: true,
-                pollOptions: { include: { votes: true } }
+                pollOptions: { include: { votes: true } },
+                _count: {
+                    select: {
+                        likes: true,
+                        comments: true
+                    }
+                }
             }
         });
 
+        // Sentiment Analysis
+        try {
+            const sentiment = await analyzeSentiment(content);
+            await prisma.sentimentLog.create({
+                data: {
+                    userId: session.id as string,
+                    type: 'POST',
+                    score: sentiment.score,
+                    // @ts-ignore
+                    label: sentiment.label,
+                    sourceId: post.id,
+                    // @ts-ignore
+                    metadata: { kudosCategory }
+                }
+            });
+        } catch (e) {
+            console.error("Sentiment analysis failed", e);
+        }
+
         // Award points if Kudo
         if (type === 'KUDOS' && kudosTargetId) {
-            // Future: Add points via gamification service
+            await prisma.user.update({
+                where: { id: kudosTargetId },
+                data: { points: { increment: 10 } }
+            });
         }
 
         return NextResponse.json(post);

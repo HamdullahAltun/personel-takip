@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Search, User, Briefcase } from 'lucide-react';
 import Link from 'next/link';
+import NextImage from "next/image";
 
 type UserData = {
     id: string;
@@ -49,9 +50,9 @@ export default function UserDirectory() {
                             href={`/users/${user.id}`}
                             className="flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors"
                         >
-                            <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200 text-slate-600">
+                            <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200 text-slate-600 relative">
                                 {user.profilePicture ? (
-                                    <img src={user.profilePicture} alt={user.name} className="w-full h-full object-cover" />
+                                    <NextImage src={user.profilePicture} alt={user.name} fill className="object-cover" />
                                 ) : (
                                     <User className="h-6 w-6" />
                                 )}

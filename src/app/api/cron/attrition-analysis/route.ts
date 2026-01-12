@@ -57,7 +57,9 @@ export async function GET(req: Request) {
                         data: {
                             userId: user.id,
                             type: 'MESSAGE',
-                            score: sentiment.score || -0.5,
+                            score: sentiment.score,
+                            // @ts-ignore
+                            label: sentiment.label,
                             sourceId: user.sentMessages[0].id
                         }
                     });

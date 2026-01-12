@@ -175,6 +175,36 @@ export default function AdminShiftsPage() {
                         </select>
                     </div>
                     <button
+                        onClick={async () => {
+                            if (!confirm("Gelecek 7 gün için otomatik vardiya planlamak istediğinize emin misiniz?")) return;
+                            setLoading(true);
+                            try {
+                                const res = await fetch('/api/shifts/auto-schedule', {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        startDate: startOfDay(addDays(new Date(), 1)),
+                                        endDate: startOfDay(addDays(new Date(), 7)),
+                                        minStaff: 3
+                                    }),
+                                    headers: { 'Content-Type': 'application/json' }
+                                });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    alert(`${data.count} yeni vardiya oluşturuldu.`);
+                                    fetchShifts();
+                                }
+                            } catch (e) {
+                                alert("Bir hata oluştu.");
+                            } finally {
+                                setLoading(false);
+                            }
+                        }}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold shadow-lg shadow-amber-200 transition-all active:scale-95"
+                    >
+                        <Clock className="h-5 w-5" />
+                        <span className="hidden md:inline">Otomatik Planla</span>
+                    </button>
+                    <button
                         onClick={() => handleAddShift()}
                         className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all active:scale-95"
                     >

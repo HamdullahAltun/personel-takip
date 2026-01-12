@@ -59,8 +59,18 @@ export async function sendPushNotification(userId: string, title: string, body: 
                 }
             }
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("FCM Send Error:", error);
+
+        // Handle invalid token errors
+        if (error.code === 'messaging/registration-token-not-registered' ||
+            error.code === 'messaging/invalid-argument') {
+            console.log(`Removing invalid FCM token for user ${userId}`);
+            await prisma.user.update({
+                where: { id: userId },
+                data: { fcmToken: null }
+            }).catch(e => console.error("Failed to remove invalid token:", e));
+        }
     }
 }
 

@@ -12,13 +12,19 @@ export default function StaffSocialPage() {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState("");
+    const [userRole, setUserRole] = useState("");
 
     // Pagination
     const [hasMore, setHasMore] = useState(true);
 
     useEffect(() => {
         fetchUsers();
-        fetch('/api/auth/me').then(res => res.json()).then(d => d.user && setCurrentUserId(d.user.id));
+        fetch('/api/auth/me').then(res => res.json()).then(d => {
+            if (d.user) {
+                setCurrentUserId(d.user.id);
+                setUserRole(d.user.role);
+            }
+        });
         loadMorePosts(true);
     }, []);
 
@@ -69,7 +75,7 @@ export default function StaffSocialPage() {
                 </button>
             </div>
 
-            <CreatePost onPostCreated={refreshPosts} users={users} />
+            <CreatePost onPostCreated={refreshPosts} users={users} userRole={userRole} />
 
             <div className="space-y-4">
                 {posts.map(post => (

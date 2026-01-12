@@ -11,14 +11,27 @@ export async function GET() {
     }
 
     try {
-        const risks = await prisma.attritionRisk.findMany({
-            orderBy: { riskScore: 'desc' },
-            include: { user: { select: { name: true, role: true, profilePicture: true } } }
-        });
+        const [risks, sentimentLogs] = await Promise.all([
+            prisma.attritionRisk.findMany({
+                orderBy: { riskScore: 'desc' },
+                include: { user: { select: { id: true, name: true, role: true, profilePicture: true } } }
+            }),
+            prisma.sentimentLog.findMany({
+                where: { createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
+                select: { score: true }
+            })
+        ]);
+
+        const avgSentiment = sentimentLogs.length > 0
+            ? sentimentLogs.reduce((acc, l) => acc + l.score, 0) / sentimentLogs.length
+            : 0;
 
         const stats = {
             total: risks.length,
-            highRisk: risks.filter(r => r.riskScore > 70).length
+            highRisk: risks.filter(r => r.riskScore > 70).length,
+            avgSentiment: avgSentiment.toFixed(1),
+            moodLabel: avgSentiment > 0.3 ? 'Pozitif' : avgSentiment < -0.3 ? 'Negatif' : 'Nötr',
+            satisfaction: (8.0 + (avgSentiment * 2)).toFixed(1) // Derivative stat
         };
 
         return NextResponse.json({ risks, stats });

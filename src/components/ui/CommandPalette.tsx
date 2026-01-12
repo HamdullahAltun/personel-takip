@@ -77,10 +77,10 @@ export default function CommandPalette() {
         cmd.label.toLowerCase().includes(query.toLowerCase())
     );
 
-    // Reset selection when query changes
-    useEffect(() => {
-        setSelectedIndex(0);
-    }, [query]);
+    // Reset selection when query changes - Handled in onChange now
+    // useEffect(() => {
+    //     setSelectedIndex(0);
+    // }, [query]);
 
     // Keyboard navigation
     useEffect(() => {
@@ -135,7 +135,10 @@ export default function CommandPalette() {
                         <input
                             autoFocus
                             value={query}
-                            onChange={e => setQuery(e.target.value)}
+                            onChange={e => {
+                                setQuery(e.target.value);
+                                setSelectedIndex(0);
+                            }}
                             placeholder="Ne yapmak istiyorsunuz?"
                             className="flex-1 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none"
                         />

@@ -16,13 +16,34 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setTheme] = useState<Theme>("LIGHT");
     const [accentColor, setAccentColor] = useState("#4f46e5");
 
+    const updateTheme = (newTheme: Theme) => {
+        setTheme(newTheme);
+        // Persist to backend
+        fetch('/api/settings/theme', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ theme: newTheme })
+        }).catch(err => console.error("Failed to save theme", err));
+    };
+
+    const updateAccentColor = (newColor: string) => {
+        setAccentColor(newColor);
+        // Persist to backend
+        fetch('/api/settings/theme', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accentColor: newColor })
+        }).catch(err => console.error("Failed to save accent color", err));
+    };
+
     useEffect(() => {
         // Fetch user settings
         fetch("/api/auth/me")
             .then(res => res.json())
             .then(data => {
                 if (data.user) {
-                    if (data.user.theme) setTheme(data.user.theme);
+                    // Check if DB has values, otherwise keep defaults (LIGHT / #4f46e5)
+                    if (data.user.theme) setTheme(data.user.theme as Theme);
                     if (data.user.accentColor) setAccentColor(data.user.accentColor);
                 }
             })
@@ -46,7 +67,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }, [theme, accentColor]);
 
     return (
-        <ThemeContext.Provider value={{ theme, accentColor, setTheme, setAccentColor }}>
+        <ThemeContext.Provider value={{ theme, accentColor, setTheme: updateTheme, setAccentColor: updateAccentColor }}>
             {children}
         </ThemeContext.Provider>
     );

@@ -10,6 +10,11 @@ const withPWA = require("next-pwa")({
 const nextConfig: NextConfig = withPWA({
   /* config options here */
   reactStrictMode: false,
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "**" }, // Allow all for prototype simplicity, restrict in prod
+    ],
+  },
   turbopack: {},
   experimental: {
     // PWA uses webpack, so we might need to be careful or disable turbopack check if possible 

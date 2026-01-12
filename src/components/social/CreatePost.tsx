@@ -9,9 +9,10 @@ import { cn } from "@/lib/utils";
 interface CreatePostProps {
     onPostCreated: () => void;
     users?: { id: string; name: string }[]; // For kudos
+    userRole?: string;
 }
 
-export default function CreatePost({ onPostCreated, users = [] }: CreatePostProps) {
+export default function CreatePost({ onPostCreated, users = [], userRole }: CreatePostProps) {
     const [content, setContent] = useState("");
     const [mode, setMode] = useState<'STANDARD' | 'KUDOS' | 'POLL'>('STANDARD');
     const [loading, setLoading] = useState(false);
@@ -127,6 +128,8 @@ export default function CreatePost({ onPostCreated, users = [] }: CreatePostProp
         }
     };
 
+    const allowPoll = userRole === 'ADMIN' || userRole === 'EXECUTIVE';
+
     return (
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6 relative overflow-hidden transition-all duration-300">
             {/* Mode Switcher */}
@@ -150,16 +153,18 @@ export default function CreatePost({ onPostCreated, users = [] }: CreatePostProp
                     <Award className="h-4 w-4" />
                     Takdir Et
                 </button>
-                <button
-                    onClick={() => setMode('POLL')}
-                    className={cn(
-                        "px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap",
-                        mode === 'POLL' ? "bg-white text-purple-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                    )}
-                >
-                    <MoreHorizontal className="h-4 w-4" />
-                    Anket
-                </button>
+                {allowPoll && (
+                    <button
+                        onClick={() => setMode('POLL')}
+                        className={cn(
+                            "px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap",
+                            mode === 'POLL' ? "bg-white text-purple-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                        )}
+                    >
+                        <MoreHorizontal className="h-4 w-4" />
+                        Anket
+                    </button>
+                )}
             </div>
 
             <AnimatePresence mode="wait">

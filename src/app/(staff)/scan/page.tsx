@@ -20,6 +20,11 @@ export default function ScanPage() {
     const [qrValue, setQrValue] = useState("");
     const [timeLeft, setTimeLeft] = useState(30);
 
+    // Reset state on tab change
+    useEffect(() => {
+        resetScan();
+    }, [activeTab]);
+
     // Badge Logic
     useEffect(() => {
         if (activeTab !== 'BADGE') return;
@@ -59,7 +64,18 @@ export default function ScanPage() {
             setMessage("Demirbaş aranıyor...");
 
             try {
-                const res = await fetch(`/api/assets/${data}`);
+                let parsedId = data;
+                try {
+                    // Try to parse if it's a JSON string
+                    if (data.startsWith('{')) {
+                        const parsed = JSON.parse(data);
+                        if (parsed.id) parsedId = parsed.id;
+                    }
+                } catch (e) {
+                    console.warn("QR content is not JSON, using raw string");
+                }
+
+                const res = await fetch(`/api/assets/${parsedId}`);
                 if (!res.ok) {
                     if (res.status === 404) throw new Error("Demirbaş bulunamadı.");
                     throw new Error("Sorgulama hatası.");

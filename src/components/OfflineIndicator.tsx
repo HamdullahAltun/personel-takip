@@ -4,8 +4,11 @@ import { useState, useEffect } from "react";
 import { WifiOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { useSync } from "@/hooks/useSync";
+
 export default function OfflineIndicator() {
     const [isOffline, setIsOffline] = useState(false);
+    useSync(); // Initialize sync manager
 
     useEffect(() => {
         const handleOnline = () => setIsOffline(false);

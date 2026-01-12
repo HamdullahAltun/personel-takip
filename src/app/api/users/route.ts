@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(req: Request) {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -12,17 +12,38 @@ export async function GET() {
 
         const isManager = session.role === 'ADMIN' || session.role === 'EXECUTIVE';
 
+        const { searchParams } = new URL(req.url);
+        const sort = searchParams.get('sort');
+        const limit = searchParams.get('limit');
+
+        const orderBy: any = sort === 'points' ? { points: 'desc' } : { createdAt: 'desc' };
+
         const users = await prisma.user.findMany({
-            orderBy: { createdAt: 'desc' },
-            select: isManager ? undefined : {
+            orderBy,
+            take: limit ? parseInt(limit) : undefined,
+            select: isManager || sort === 'points' ? undefined : {
                 id: true,
                 name: true,
-                phone: true, // Maybe needed for contact?
+                phone: true,
                 role: true,
                 profilePicture: true,
-                department: { select: { name: true } }
-            }
-        });
+                department: { select: { name: true } },
+                points: true
+            },
+            include: (isManager || sort === 'points') ? { department: { select: { name: true } } } : undefined
+        } as any);
+
+        // If sorting by points, we might want to restrict fields if not manager, but for leaderboard we need basics
+        if (sort === 'points' && !isManager) {
+            // Re-map to safe fields just in case 'undefined' select above exposed everything
+            return NextResponse.json(users.map(u => ({
+                id: u.id,
+                name: u.name,
+                points: u.points,
+                profilePicture: u.profilePicture,
+                department: (u as any).department
+            })));
+        }
 
         return NextResponse.json(users);
     } catch (error) {

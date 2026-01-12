@@ -7,8 +7,14 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const id = params.id;
+    // Basic MongoDB ObjectID check (24 hex characters)
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+    }
+
     const asset = await prisma.asset.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: { assignedTo: { select: { id: true, name: true, profilePicture: true } } }
     });
 

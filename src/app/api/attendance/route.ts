@@ -68,32 +68,34 @@ export async function POST(req: Request) {
             // If the QR is confirmed as OFFICE_QR, we fetch the golden source of truth from DB
             const companySettings = await prisma.companySettings.findFirst();
 
-            // If settings exist, enforce them. If not, fallback or skip (depending on strictness preference).
-            // Here we assume if settings exist, we MUST enforce.
+            // If settings exist, enforce them.
             if (companySettings) {
-                if (!userLocation || !userLocation.lat || !userLocation.lng) {
-                    return NextResponse.json({ error: 'Konum verisi alınamadı. Lütfen GPS izni verin.' }, { status: 400 });
-                }
+                // If geofence is enabled (radius > 0), enforce location
+                if (companySettings.geofenceRadius > 0) {
+                    if (!userLocation || !userLocation.lat || !userLocation.lng) {
+                        return NextResponse.json({ error: 'Konum verisi alınamadı. Lütfen GPS izni verin.' }, { status: 400 });
+                    }
 
-                const distance = getDistanceInMeters(
-                    companySettings.officeLat,
-                    companySettings.officeLng,
-                    userLocation.lat,
-                    userLocation.lng
-                );
+                    const distance = getDistanceInMeters(
+                        companySettings.officeLat,
+                        companySettings.officeLng,
+                        userLocation.lat,
+                        userLocation.lng
+                    );
 
-                if (distance > companySettings.geofenceRadius) {
-                    return NextResponse.json({
-                        error: `Ofis konumundan uzaktasınız! (${Math.round(distance)}m > ${companySettings.geofenceRadius}m)`
-                    }, { status: 400 });
+                    if (distance > companySettings.geofenceRadius) {
+                        return NextResponse.json({
+                            error: `Ofis konumundan uzaktasınız! (${Math.round(distance)}m > ${companySettings.geofenceRadius}m)`
+                        }, { status: 400 });
+                    }
                 }
             } else {
                 // Legacy Fallback if CompanySettings table is empty: 
-                // Rely on QR Payload if it has location, otherwise skip.
-                if (qrPayload.location) {
-                    const fakeDistance = getDistanceInMeters(qrPayload.location.lat, qrPayload.location.lng, userLocation?.lat || 0, userLocation?.lng || 0);
+                // Rely on QR Payload if it exists and has location.
+                if (qrPayload?.location && userLocation?.lat) {
+                    const fakeDistance = getDistanceInMeters(qrPayload.location.lat, qrPayload.location.lng, userLocation.lat, userLocation.lng);
                     if (fakeDistance > 200) {
-                        return NextResponse.json({ error: 'Konum doğrulanamadı (Legacy).' }, { status: 400 });
+                        return NextResponse.json({ error: 'Konum doğrulanamadı (Ofis QR konumundan uzak).' }, { status: 400 });
                     }
                 }
             }

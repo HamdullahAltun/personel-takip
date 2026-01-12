@@ -1,16 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Folder, FileText, Upload, Trash, Download, Search, File, Image as ImageIcon, AlertCircle } from "lucide-react";
+import { Folder, FileText, Upload, Trash, Download, Search, File, Image as ImageIcon, AlertCircle, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+
+import SignatureModal from "@/components/admin/SignatureModal";
 
 export default function AdminDocumentsPage() {
     const [docs, setDocs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({ title: "", type: "CONTRACT", fileUrl: "" });
+
+    const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+    const [signingDoc, setSigningDoc] = useState<any>(null);
 
     useEffect(() => {
         fetchDocs();
@@ -20,6 +25,18 @@ export default function AdminDocumentsPage() {
         const res = await fetch('/api/documents');
         if (res.ok) setDocs(await res.json());
         setLoading(false);
+    }
+
+    const handleSign = async (signatureDataUrl: string) => {
+        if (!signingDoc) return;
+
+        await fetch('/api/documents', {
+            method: 'PUT',
+            body: JSON.stringify({ id: signingDoc.id, isSigned: true, signature: signatureDataUrl }),
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        fetchDocs();
     }
 
     const handleUpload = async (e: React.FormEvent) => {
@@ -65,13 +82,37 @@ export default function AdminDocumentsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {docs.map(doc => (
                     <div key={doc.id} className="bg-white p-4 rounded-xl border border-slate-200 hover:shadow-md transition group relative">
-                        <div className="h-32 bg-slate-50 rounded-lg flex items-center justify-center mb-3 text-slate-300">
+                        <div className="h-32 bg-slate-50 rounded-lg flex items-center justify-center mb-3 text-slate-300 relative overflow-hidden">
                             {/* Mock Preview */}
                             <div className="scale-150">{getIcon(doc.type)}</div>
+                            {doc.title.toLowerCase().includes('sözleşme') && !doc.isSigned && (
+                                <div className="absolute inset-x-0 bottom-0 bg-amber-100 py-1 text-center text-[9px] font-bold text-amber-700">
+                                    İMZA BEKLİYOR
+                                </div>
+                            )}
+                            {doc.isSigned && (
+                                <div className="absolute inset-x-0 bottom-0 bg-emerald-100 py-1 text-center text-[9px] font-bold text-emerald-700 flex items-center justify-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" /> İMZALANDI
+                                </div>
+                            )}
                         </div>
                         <h3 className="font-bold text-slate-900 truncate">{doc.title}</h3>
                         <p className="text-xs text-slate-500">{format(new Date(doc.uploadedAt), 'd MMM yyyy', { locale: tr })}</p>
-                        <span className="text-[10px] uppercase bg-slate-100 px-1.5 py-0.5 rounded mt-2 inline-block text-slate-600 font-bold">{doc.type}</span>
+
+                        <div className="flex justify-between items-center mt-2">
+                            <span className="text-[10px] uppercase bg-slate-100 px-1.5 py-0.5 rounded inline-block text-slate-600 font-bold">{doc.type}</span>
+                            {doc.title.toLowerCase().includes('sözleşme') && !doc.isSigned && (
+                                <button
+                                    onClick={() => {
+                                        setSigningDoc(doc);
+                                        setIsSignatureModalOpen(true);
+                                    }}
+                                    className="text-[10px] bg-indigo-600 text-white px-2 py-1 rounded font-bold hover:bg-indigo-700"
+                                >
+                                    İmzala
+                                </button>
+                            )}
+                        </div>
 
                         {doc.expiryDate && (
                             <div className={cn(
@@ -92,6 +133,16 @@ export default function AdminDocumentsPage() {
                     </div>
                 ))}
             </div>
+
+            <SignatureModal
+                isOpen={isSignatureModalOpen}
+                title={signingDoc?.title}
+                onClose={() => {
+                    setIsSignatureModalOpen(false);
+                    setSigningDoc(null);
+                }}
+                onSave={handleSign}
+            />
 
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">

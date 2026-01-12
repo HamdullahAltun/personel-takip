@@ -17,7 +17,7 @@ type UserWithRelations = User & {
     shifts: Shift[];
 };
 
-export default function EmployeeDetailClient({ user }: { user: UserWithRelations }) {
+export default function EmployeeDetailClient({ user, riskProfile, allUsers }: { user: UserWithRelations, riskProfile: any, allUsers: any[] }) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
 
@@ -156,6 +156,19 @@ export default function EmployeeDetailClient({ user }: { user: UserWithRelations
                                     <option value="EXECUTIVE">Üst Yönetici (Executive)</option>
                                 </select>
                             </div>
+                            <div>
+                                <label className="text-sm font-medium text-slate-700">Yönetici (Rapor Verilen)</label>
+                                <select name="managerId" defaultValue={user.managerId || ''} className="w-full mt-1 border rounded-lg p-2 bg-white">
+                                    <option value="">Bağımsız</option>
+                                    {allUsers.filter(u => u.id !== user.id).map(u => (
+                                        <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-slate-700">Yetkinlikler (Virgülle ayırın)</label>
+                                <input name="skills" defaultValue={user.skills.join(', ')} className="w-full mt-1 border rounded-lg p-2" placeholder="Java, Python, Leadership..." />
+                            </div>
 
                             <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
                                 <Save className="h-4 w-4" />
@@ -199,6 +212,48 @@ export default function EmployeeDetailClient({ user }: { user: UserWithRelations
                                 <span className="text-sm font-medium">Tahmini Hakediş</span>
                             </div>
                             <p className="text-2xl font-bold text-slate-900">₺{calculatedPay.toFixed(2)}</p>
+                        </div>
+                    </div>
+
+                    {/* AI Risk Analysis & Skills */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Risk Card */}
+                        <div className="bg-rose-50 rounded-xl p-5 border border-rose-100 flex flex-col justify-between relative overflow-hidden">
+                            <div className="absolute right-0 top-0 w-24 h-24 bg-rose-100 rounded-bl-full opacity-50 -mr-4 -mt-4"></div>
+                            <div>
+                                <h3 className="text-rose-800 font-bold flex items-center gap-2">
+                                    <span className="p-1 bg-white rounded-md shadow-sm"><UserIcon className="w-4 h-4 text-rose-600" /></span>
+                                    Ayrılma Riski
+                                </h3>
+                                <p className="text-xs text-rose-600 mt-1 opacity-80">AI tahmini analizine göre</p>
+                            </div>
+                            <div className="mt-4">
+                                <div className="flex items-end gap-2">
+                                    <span className="text-4xl font-black text-rose-700">
+                                        {riskProfile?.flightRiskScore || 0}%
+                                    </span>
+                                    <span className="text-xs font-bold text-rose-600 mb-2 bg-white px-2 py-0.5 rounded-full shadow-sm">
+                                        {riskProfile?.flightRiskScore > 50 ? 'YÜKSEK' : 'DÜŞÜK'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Skills Card */}
+                        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-slate-800 mb-3 flex items-center justify-between">
+                                Yetkinlikler
+                                <button className="text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded font-bold hover:bg-blue-100 transition">+ Ekle</button>
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                                {(user.skills && user.skills.length > 0) ? user.skills.map((skill, i) => (
+                                    <span key={i} className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg border border-slate-200">
+                                        {skill}
+                                    </span>
+                                )) : (
+                                    <span className="text-xs text-slate-400 italic">Henüz yetkinlik girilmemiş.</span>
+                                )}
+                            </div>
                         </div>
                     </div>
 

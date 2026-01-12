@@ -126,6 +126,9 @@ export async function updateEmployee(id: string, prevState: any, formData: FormD
         const annualLeaveDays = parseInt(formData.get("annualLeaveDays") as string) || 0;
         const role = formData.get("role") as "STAFF" | "ADMIN" | "EXECUTIVE" || "STAFF";
         const profilePicture = formData.get("profilePicture") as string;
+        const managerId = formData.get("managerId") as string || null;
+        const skillsString = formData.get("skills") as string || "";
+        const skills = skillsString.split(',').map(s => s.trim()).filter(s => s !== "");
 
         await prisma.user.update({
             where: { id },
@@ -137,6 +140,8 @@ export async function updateEmployee(id: string, prevState: any, formData: FormD
                 weeklyGoal,
                 annualLeaveDays,
                 role,
+                managerId: managerId === "" ? null : managerId,
+                skills,
                 ...(profilePicture && { profilePicture })
             }
         });

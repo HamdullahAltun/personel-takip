@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import useSWR from 'swr';
 import { Send, User, Check, CheckCheck, ArrowLeft, Phone, MoreVertical, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
+import { socket } from "@/lib/socket";
 
 type Message = {
     id: string;
@@ -29,8 +30,26 @@ export default function ChatClient({ id }: { id: string }) {
     const { data: messages = [], mutate } = useSWR<Message[]>(
         id ? `/api/messages/${id}` : null,
         fetcher,
-        { refreshInterval: 2000 }
+        { refreshInterval: 5000 } // Increase interval since we have sockets
     );
+
+    // Real-time listener
+    useEffect(() => {
+        function onReceiveMessage(data: any) {
+            // If message is from current chat partner, update view
+            if (data.senderId === id || (data.receiverId === id && data.senderId === 'ME')) {
+                // We can either fetch or optimistically update. 
+                // Simple approach: mutate() to re-fetch
+                mutate();
+            }
+        }
+
+        socket.on("receive_message", onReceiveMessage);
+
+        return () => {
+            socket.off("receive_message", onReceiveMessage);
+        };
+    }, [id, mutate]);
 
     // Profile Fetching
     useEffect(() => {
@@ -47,13 +66,11 @@ export default function ChatClient({ id }: { id: string }) {
 
     useEffect(() => {
         if (bottomRef.current) {
+            // Only scroll if we are near bottom or it's initial load
             bottomRef.current.scrollIntoView({ behavior: 'smooth' });
             if (messages.length > 0) {
                 const lastMsg = messages[messages.length - 1];
                 if (lastMsg.senderId === id && !lastMsg.read) {
-                    // Only mark read if not already read (check client side to save calls? 
-                    // API should handle it, but good to check senderId == remoteUser)
-                    // Wait, senderId === id (remote user id passed in props)
                     fetch(`/api/messages/${id}/read`, { method: 'POST' });
                 }
             }
@@ -71,6 +88,17 @@ export default function ChatClient({ id }: { id: string }) {
         });
 
         if (res.ok) {
+            const data = await res.json();
+            // Emit socket event for real-time delivery
+            // We emit to the receiver.
+            // data.message contains the created message
+            if (data && data.message) {
+                socket.emit("send_message", {
+                    ...data.message,
+                    receiverId: id,
+                });
+            }
+
             setContent("");
             mutate();
         }
