@@ -70,8 +70,15 @@ export function createFirebaseAdminApp() {
 export async function getFirebaseAuth() {
     const app = createFirebaseAdminApp();
     if (!app) {
-        // Return a mock or throw? Throwing effectively disables auth routes.
         throw new Error("Firebase Admin not initialized. Check environment variables.");
     }
     return app.auth();
+}
+
+export async function getFirebaseStorage() {
+    const app = createFirebaseAdminApp();
+    if (!app) {
+        throw new Error("Firebase Admin not initialized. Check environment variables.");
+    }
+    return app.storage();
 }

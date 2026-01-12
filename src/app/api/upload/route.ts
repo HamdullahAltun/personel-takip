@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { getAuth } from "@/lib/auth";
+import { getFirebaseStorage } from "@/lib/firebase-admin";
+import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: Request) {
     const session = await getAuth();
@@ -18,8 +18,7 @@ export async function POST(req: Request) {
         // Validate Type
         const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/jpg'];
         if (!allowedTypes.includes(file.type)) {
-            console.log("Upload blocked - Invalid Type:", file.type);
-            return NextResponse.json({ error: `Geçersiz dosya formatı (${file.type}). Lütfen JPG, PNG veya GIF kullanın.` }, { status: 400 });
+            return NextResponse.json({ error: `Geçersiz dosya formatı. Lütfen JPG, PNG veya GIF kullanın.` }, { status: 400 });
         }
 
         // Validate Size (Max 10MB)
@@ -28,21 +27,43 @@ export async function POST(req: Request) {
         }
 
         const buffer = Buffer.from(await file.arrayBuffer());
-        // Sanitize filename: ASCII only, remove special chars
-        const sanitizedParams = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
-        const filename = `${Date.now()}_${sanitizedParams}`;
+        const filename = `${Date.now()}_${uuidv4()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
 
-        // Ensure directory exists
-        const uploadDir = path.join(process.cwd(), "public/uploads");
-        await mkdir(uploadDir, { recursive: true });
+        try {
+            // Try Firebase Storage (Cloud)
+            const storage = await getFirebaseStorage();
+            const bucket = storage.bucket(process.env.FIREBASE_STORAGE_BUCKET);
+            const blob = bucket.file(`uploads/${filename}`);
 
-        const filepath = path.join(uploadDir, filename);
-        await writeFile(filepath, buffer);
+            await blob.save(buffer, {
+                metadata: { contentType: file.type },
+            });
 
-        return NextResponse.json({ url: `/uploads/${filename}` });
+            // Make public (requires storage permissions)
+            await blob.makePublic();
+            const publicUrl = `https://storage.googleapis.com/${bucket.name}/uploads/${filename}`;
 
-    } catch (error) {
+            return NextResponse.json({ url: publicUrl });
+
+        } catch (storageError: any) {
+            console.warn("Cloud Storage preferred but failed or not configured. Falling back to local (only works in non-serverless):", storageError.message);
+
+            // Fallback to local only for local development
+            if (process.env.NODE_ENV === 'development') {
+                const { writeFile, mkdir } = await import("fs/promises");
+                const path = await import("path");
+                const uploadDir = path.join(process.cwd(), "public/uploads");
+                await mkdir(uploadDir, { recursive: true });
+                const filepath = path.join(uploadDir, filename);
+                await writeFile(filepath, buffer);
+                return NextResponse.json({ url: `/uploads/${filename}` });
+            }
+
+            throw storageError; // Rethrow in production so we know it's a real issue
+        }
+
+    } catch (error: any) {
         console.error("Upload Error:", error);
-        return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+        return NextResponse.json({ error: "Upload failed: " + error.message }, { status: 500 });
     }
 }
