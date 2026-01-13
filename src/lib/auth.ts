@@ -28,7 +28,9 @@ export async function verifyJWT(token: string): Promise<AppJWTPayload | null> {
     }
 }
 
-export async function getAuth(): Promise<AppJWTPayload | null> {
+import { cache } from 'react';
+
+export const getAuth = cache(async (): Promise<AppJWTPayload | null> => {
     const cookieStore = await cookies();
     const token = cookieStore.get('personel_token')?.value;
     if (!token) return null;
@@ -55,4 +57,4 @@ export async function getAuth(): Promise<AppJWTPayload | null> {
     }
 
     return payload;
-}
+});

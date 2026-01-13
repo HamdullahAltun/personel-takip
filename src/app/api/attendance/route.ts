@@ -1,20 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyJWT, getAuth } from '@/lib/auth';
-import { cookies } from 'next/headers';
+import { logInfo, logError } from '@/lib/log-utils';
 
 export async function POST(req: Request) {
     try {
-        const token = (await cookies()).get('personel_token')?.value;
-        const userPayload = token ? await verifyJWT(token) : null;
-
+        const session = await getAuth();
+        
         const body = await req.json();
-        let targetUserId = body.userId;
-        const scannedContent = body.scannedContent; // "USER:..." or signed JWT
-        const userLocation = body.location; // { lat, lng }
+        let targetUserId: string = body.userId;
+        const scannedContent: string = body.scannedContent; // "USER:..." or signed JWT
+        const userLocation: { lat: number, lng: number } | undefined = body.location; // { lat, lng }
 
         // 1. Check for USER scan (Admin scanning Staff)
-        // Can be "USER:ID" (Legacy) or Signed JWT
         let isUserScan = false;
 
         if (scannedContent && scannedContent.startsWith("USER:")) {
@@ -22,55 +20,46 @@ export async function POST(req: Request) {
             targetUserId = scannedContent.split(":")[1];
         } else {
             // Try to decode as JWT to see if it's a USER_QR
-            const payload = await verifyJWT(scannedContent) as any;
+            const typeCastToken = scannedContent as string;
+            const payload = await verifyJWT(typeCastToken);
             if (payload && payload.type === 'USER_QR') {
                 isUserScan = true;
-                targetUserId = payload.userId;
+                targetUserId = payload.userId as string;
             }
         }
 
         if (isUserScan) {
-            // Check if the scanned QR belongs to an ADMIN
-            // We need to fetch the role of the targetUserId (the user in the QR)
             const scannedUser = await prisma.user.findUnique({
                 where: { id: targetUserId },
                 select: { role: true }
             });
 
-            if (scannedUser?.role === 'ADMIN' || scannedUser?.role === 'admin') {
-                // If scanning an Admin, we treat this as the Scanner checking themselves in
-                // So targetUserId becomes the UserPayload.id (the one holding the phone)
-                if (!userPayload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-                targetUserId = userPayload.id;
-
-                // We implicitly allow this as a valid location/check-in
+            if (scannedUser?.role === 'ADMIN') {
+                if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+                targetUserId = session.id;
             } else {
-                // Determine if the *Scanner* is allowed to scan *someone else*
-                if (userPayload?.role !== 'ADMIN') {
+                if (!session || session.role !== 'ADMIN') {
                     return NextResponse.json({ error: 'Only admins can scan employee badges' }, { status: 403 });
                 }
-                // If Scanner is Admin, they are checking in the Target (Staff) -> continue
             }
         }
 
         // 2. Check for OFFICE scan (Staff scanning Office)
         else {
-            if (!userPayload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-            targetUserId = userPayload.id;
+            if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            targetUserId = session.id;
 
             // Verify the signed QR content
-            const qrPayload = await verifyJWT(scannedContent) as any;
+            const qrPayload = await verifyJWT(scannedContent);
             if (!qrPayload || qrPayload.type !== 'OFFICE_QR') {
                 return NextResponse.json({ error: 'Geçersiz veya süresi dolmuş QR Kod!' }, { status: 400 });
             }
 
-            // Verify Co-location (Geofence)
-            // If the QR is confirmed as OFFICE_QR, we fetch the golden source of truth from DB
+            const qrLocation = qrPayload.location as { lat: number, lng: number } | undefined;
+
             const companySettings = await prisma.companySettings.findFirst();
 
-            // If settings exist, enforce them.
             if (companySettings) {
-                // If geofence is enabled (radius > 0), enforce location
                 if (companySettings.geofenceRadius > 0) {
                     if (!userLocation || !userLocation.lat || !userLocation.lng) {
                         return NextResponse.json({ error: 'Konum verisi alınamadı. Lütfen GPS izni verin.' }, { status: 400 });
@@ -89,14 +78,10 @@ export async function POST(req: Request) {
                         }, { status: 400 });
                     }
                 }
-            } else {
-                // Legacy Fallback if CompanySettings table is empty: 
-                // Rely on QR Payload if it exists and has location.
-                if (qrPayload?.location && userLocation?.lat) {
-                    const fakeDistance = getDistanceInMeters(qrPayload.location.lat, qrPayload.location.lng, userLocation.lat, userLocation.lng);
-                    if (fakeDistance > 200) {
-                        return NextResponse.json({ error: 'Konum doğrulanamadı (Ofis QR konumundan uzak).' }, { status: 400 });
-                    }
+            } else if (qrLocation && userLocation?.lat) {
+                const fakeDistance = getDistanceInMeters(qrLocation.lat, qrLocation.lng, userLocation.lat, userLocation.lng);
+                if (fakeDistance > 200) {
+                    return NextResponse.json({ error: 'Konum doğrulanamadı (Ofis QR konumundan uzak).' }, { status: 400 });
                 }
             }
         }
@@ -109,7 +94,6 @@ export async function POST(req: Request) {
         const isCheckedIn = lastRecord?.type === 'CHECK_IN';
         const newType = isCheckedIn ? 'CHECK_OUT' : 'CHECK_IN';
 
-        // Fetch user details for the message
         const user = await prisma.user.findUnique({
             where: { id: targetUserId },
             select: { name: true }
@@ -153,9 +137,11 @@ export async function POST(req: Request) {
             }
         });
 
+        logInfo(`Attendance ${newType} recorded for ${userName}`, { targetUserId, isLate });
+
         // Update User's last known location
         if (userLocation && userLocation.lat && userLocation.lng) {
-            await (prisma.user as any).update({
+            await prisma.user.update({
                 where: { id: targetUserId },
                 data: {
                     lastLat: userLocation.lat,
@@ -170,8 +156,7 @@ export async function POST(req: Request) {
         // Gamification Trigger
         if (newType === 'CHECK_IN') {
             const { checkAndAwardBadges } = await import('@/lib/gamification');
-            // Fire and forget to not block response
-            checkAndAwardBadges(targetUserId, 'ATTENDANCE_CHECKIN').catch(console.error);
+            checkAndAwardBadges(targetUserId, 'ATTENDANCE_CHECKIN').catch(e => logError("Gamification error", e));
         }
 
         return NextResponse.json({
@@ -183,7 +168,7 @@ export async function POST(req: Request) {
         });
 
     } catch (error) {
-        console.error('Attendance API Error:', error);
+        logError('Attendance API Error', error);
         return NextResponse.json({ error: 'İşlem başarısız.' }, { status: 500 });
     }
 }
@@ -256,7 +241,7 @@ export async function GET(req: Request) {
         return NextResponse.json(records);
 
     } catch (error) {
-        console.error("Attendance GET Error:", error);
+        logError("Attendance GET Error", error);
         return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 });
     }
 }

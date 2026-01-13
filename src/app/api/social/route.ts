@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
 import { analyzeSentiment } from '@/lib/ai';
+import { logInfo, logError } from '@/lib/log-utils';
 
 export async function GET(req: Request) {
     const session = await getAuth();
@@ -40,6 +41,7 @@ export async function GET(req: Request) {
         });
         return NextResponse.json(posts);
     } catch (e) {
+        logError("Failed to fetch posts", e);
         return NextResponse.json({ error: "Failed to fetch posts" }, { status: 500 });
     }
 }
@@ -55,7 +57,7 @@ export async function POST(req: Request) {
             data: {
                 content,
                 imageUrl,
-                userId: session.id as string,
+                userId: session.id,
                 type: type || 'STANDARD',
                 kudosTargetId,
                 kudosCategory,
@@ -81,20 +83,20 @@ export async function POST(req: Request) {
         // Sentiment Analysis
         try {
             const sentiment = await analyzeSentiment(content);
-            await prisma.sentimentLog.create({
-                data: {
-                    userId: session.id as string,
-                    type: 'POST',
-                    score: sentiment.score,
-                    // @ts-ignore
-                    label: sentiment.label,
-                    sourceId: post.id,
-                    // @ts-ignore
-                    metadata: { kudosCategory }
-                }
-            });
+            if (sentiment) {
+                await prisma.sentimentLog.create({
+                    data: {
+                        userId: session.id,
+                        type: 'POST',
+                        score: sentiment.score,
+                        label: (sentiment as any).label || 'neutral',
+                        sourceId: post.id,
+                        metadata: { kudosCategory }
+                    }
+                });
+            }
         } catch (e) {
-            console.error("Sentiment analysis failed", e);
+            logError("Sentiment analysis failed in social post", e);
         }
 
         // Award points if Kudo
@@ -103,11 +105,13 @@ export async function POST(req: Request) {
                 where: { id: kudosTargetId },
                 data: { points: { increment: 10 } }
             });
+            logInfo(`Awarded 10 points to ${kudosTargetId} for kudos from ${session.id}`, { postId: post.id });
         }
 
+        logInfo(`New social post created by ${session.id}`, { postId: post.id, type });
         return NextResponse.json(post);
     } catch (e) {
-        console.error(e);
+        logError("Failed to create social post", e);
         return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
     }
 }

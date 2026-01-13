@@ -23,12 +23,8 @@ export async function POST(req: Request) {
     }
 
     try {
-        await prisma.systemLog.create({
-            data: {
-                level: 'AI_ACTION',
-                message: 'Otomatik vardiya planlayıcı başlatıldı (AI Modu).',
-            }
-        });
+        const { logInfo } = await import('@/lib/log-utils');
+        await logInfo('Otomatik vardiya planlayıcı başlatıldı (AI Modu).', null, 'AI_ACTION');
 
         // 1. Get next week range
         const start = nextMonday(new Date());
@@ -127,23 +123,14 @@ export async function POST(req: Request) {
             }
         }
 
-        await prisma.systemLog.create({
-            data: {
-                level: 'AI_ACTION',
-                message: `AI Planlama tamamlandı. ${shiftsCreated} yeni vardiya oluşturuldu.`,
-            }
-        });
+        await logInfo(`AI Planlama tamamlandı. ${shiftsCreated} yeni vardiya oluşturuldu.`, { shiftsCreated }, 'AI_ACTION');
 
         return NextResponse.json({ message: `Planlama tamamlandı. ${shiftsCreated} vardiya oluşturuldu.` });
 
     } catch (e: any) {
         console.error("Schedule Error:", e);
-        await prisma.systemLog.create({
-            data: {
-                level: 'ERROR',
-                message: `AI Planlama hatası: ${e.message}`,
-            }
-        });
+        const { logError } = await import('@/lib/log-utils');
+        await logError(`AI Planlama hatası: ${e.message}`, e);
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
 }

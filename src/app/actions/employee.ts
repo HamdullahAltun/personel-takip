@@ -3,8 +3,10 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getAuth } from "@/lib/auth";
+import { saveBase64ToFile } from "@/lib/upload-utils";
+import { logInfo, logError } from "@/lib/log-utils";
 
-export async function createEmployee(prevState: any, formData: FormData) {
+export async function createEmployee(prevState: unknown, formData: FormData) {
     const session = await getAuth();
     if (!session || session.role !== 'ADMIN') return { error: "Unauthorized" };
 
@@ -58,9 +60,10 @@ export async function createEmployee(prevState: any, formData: FormData) {
         }
 
         revalidatePath("/admin/employees");
+        await logInfo(`New employee created: ${name} (${newUser.id}) by admin ${session.id}`);
         return { success: true };
     } catch (error) {
-        console.error("Create Employee Error:", error);
+        await logError("Create Employee Error", error);
         return { error: "Failed to create employee" };
     }
 }
@@ -71,12 +74,12 @@ export async function deleteEmployee(id: string) {
 
     try {
         await prisma.$transaction(async (tx) => {
-            // 1. Operational Data
+            // Core Records
             await tx.attendanceRecord.deleteMany({ where: { userId: id } });
             await tx.shift.deleteMany({ where: { userId: id } });
             await tx.leaveRequest.deleteMany({ where: { userId: id } });
 
-            // 2. Performance & Financials
+            // Financial & Performance
             await tx.payroll.deleteMany({ where: { userId: id } });
             await tx.advanceRequest.deleteMany({ where: { userId: id } });
             await tx.performanceReview.deleteMany({ where: { OR: [{ revieweeId: id }, { reviewerId: id }] } });
@@ -84,36 +87,61 @@ export async function deleteEmployee(id: string) {
             await tx.employeeOfTheMonth.deleteMany({ where: { userId: id } });
             await tx.goal.deleteMany({ where: { userId: id } });
 
-            // 3. Tasks & Workflow
+            // Tasks & Checklists
             await tx.checklistAssignment.deleteMany({ where: { userId: id } });
-            await tx.task.deleteMany({ where: { assignedToId: id } }); // Delete tasks assigned TO them
-            // Tasks assigned BY them: Keep, but maybe set assignedBy to null? Prisma might complain. 
-            // For now, let's leave assignedBy tasks as they are historical records of work definitions. 
-            // But if assignedBy relation is strict, it might error. MongoDB relations are usually optional references unless enforced.
+            await tx.task.deleteMany({ where: { OR: [{ assignedToId: id }, { assignedById: id }] } });
 
-            // 4. Social & Messages
+            // Social & Communication
             await tx.post.deleteMany({ where: { userId: id } });
             await tx.comment.deleteMany({ where: { userId: id } });
             await tx.like.deleteMany({ where: { userId: id } });
             await tx.message.deleteMany({ where: { OR: [{ senderId: id }, { receiverId: id }] } });
+            await tx.pollVote.deleteMany({ where: { userId: id } });
+            await tx.story.deleteMany({ where: { userId: id } });
+            await tx.teamMood.deleteMany({ where: { userId: id } });
+            await tx.notification.deleteMany({ where: { userId: id } });
 
-            // 5. Assets & Docs
+            // LMS & Training
+            await tx.trainingCompletion.deleteMany({ where: { userId: id } });
+            await tx.lmsCompletion.deleteMany({ where: { userId: id } });
+            await tx.skillGap.deleteMany({ where: { userId: id } });
+
+            // AI & Logs
+            await tx.aiQueryLog.deleteMany({ where: { userId: id } });
+            await tx.sentimentLog.deleteMany({ where: { userId: id } });
+            await tx.attritionRisk.deleteMany({ where: { userId: id } });
+
+            // Assets & Documents
             await tx.asset.updateMany({ where: { assignedToId: id }, data: { assignedToId: null, status: 'AVAILABLE' } });
             await tx.document.deleteMany({ where: { userId: id } });
+            await tx.docSignature.deleteMany({ where: { userId: id } });
 
-            // Finally delete user
+            // Inventory & Stock
+            await tx.inventoryRequest.deleteMany({ where: { userId: id } });
+            await tx.stockTransaction.deleteMany({ where: { userId: id } });
+
+            // Other
+            await tx.wellnessActivity.deleteMany({ where: { userId: id } });
+            await tx.surveyResponse.deleteMany({ where: { userId: id } });
+            await tx.visitor.deleteMany({ where: { invitedById: id } });
+
+            // Finally, the user
             await tx.user.delete({ where: { id } });
         });
+
+        const { logInfo } = await import("@/lib/log-utils");
+        logInfo(`Employee deleted by admin: ${session.id}`, { targetUserId: id });
 
         revalidatePath("/admin/employees");
         return { success: true };
     } catch (error) {
-        console.error("Delete Employee Error:", error);
+        const { logError } = await import("@/lib/log-utils");
+        logError("Delete Employee Error", error);
         return { error: "Failed to delete employee. Check logs." };
     }
 }
 
-export async function updateEmployee(id: string, prevState: any, formData: FormData) {
+export async function updateEmployee(id: string, prevState: unknown, formData: FormData) {
     const session = await getAuth();
     if (!session || session.role !== 'ADMIN') return { error: "Unauthorized" };
 
@@ -142,16 +170,20 @@ export async function updateEmployee(id: string, prevState: any, formData: FormD
                 role,
                 managerId: managerId === "" ? null : managerId,
                 skills,
-                ...(profilePicture && { profilePicture })
+                ...(profilePicture && {
+                    profilePicture: await saveBase64ToFile(profilePicture, `profile_${id}.jpg`)
+                })
             }
         });
 
         revalidatePath("/admin/employees");
         revalidatePath(`/admin/employees/${id}`);
+        await logInfo(`Employee ${id} updated by admin ${session.id}`, { name });
         return { success: true };
-    } catch (error: any) {
-        console.error("Update Employee Error Details:", error);
-        return { error: `Güncelleme başarısız: ${error.message}` };
+    } catch (error: unknown) {
+        await logError("Update Employee Error", error);
+        const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+        return { error: `Update failed: ${errorMessage}` };
     }
 }
 
@@ -163,14 +195,19 @@ export async function updateProfilePicture(formData: FormData) {
         const profilePicture = formData.get("profilePicture") as string;
         if (!profilePicture) return { error: "Image required" };
 
+        const fileUrl = await saveBase64ToFile(profilePicture, `profile_${session.id}.jpg`);
+
         await prisma.user.update({
             where: { id: session.id as string },
-            data: { profilePicture }
+            data: { profilePicture: fileUrl }
         });
 
         revalidatePath("/profile");
+        await logInfo(`User ${session.id} updated their profile picture`);
         return { success: true };
-    } catch (e) {
+
+    } catch (error) {
+        await logError("Profile Picture Update Error", error);
         return { error: "Failed to update" };
     }
 }

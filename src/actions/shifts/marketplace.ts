@@ -1,23 +1,12 @@
-"use server";
-
-// Re-generating types...
-
-
 import { prisma } from "@/lib/prisma";
-import { verifyJWT } from "@/lib/auth";
-import { cookies } from "next/headers";
+import { getAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { validateShiftConstraints } from "@/lib/scheduler-utils";
-import { createNotification, sendPushNotification } from "@/lib/notifications";
-
-async function getSession() {
-    const token = (await cookies()).get("personel_token")?.value;
-    if (!token) return null;
-    return await verifyJWT(token);
-}
+import { createNotification } from "@/lib/notifications";
+import { logInfo, logError } from "@/lib/log-utils";
 
 export async function createSwapRequest(shiftId: string, reason: string) {
-    const session = await getSession();
+    const session = await getAuth();
     if (!session) return { error: "Unauthorized" };
 
     try {
@@ -32,22 +21,23 @@ export async function createSwapRequest(shiftId: string, reason: string) {
         await prisma.shiftSwapRequest.create({
             data: {
                 shiftId,
-                requesterId: session.id as string,
+                requesterId: session.id,
                 reason,
                 status: "OPEN",
             },
         });
 
+        logInfo(`Shift swap request created by ${session.id}`, { shiftId });
         revalidatePath("/shifts");
         return { success: true };
     } catch (error) {
-        console.error("Create swap error:", error);
+        logError("Create swap error", error);
         return { error: "Failed to create request" };
     }
 }
 
 export async function claimSwapRequest(requestId: string) {
-    const session = await getSession();
+    const session = await getAuth();
     if (!session) return { error: "Unauthorized" };
 
     try {
@@ -66,7 +56,7 @@ export async function claimSwapRequest(requestId: string) {
 
         // --- AUTO-APPROVAL LOGIC ---
         const validation = await validateShiftConstraints(
-            session.id as string,
+            session.id,
             request.shift.startTime,
             request.shift.endTime
         );
@@ -77,18 +67,20 @@ export async function claimSwapRequest(requestId: string) {
                 prisma.shiftSwapRequest.update({
                     where: { id: requestId },
                     data: {
-                        claimantId: session.id as string,
+                        claimantId: session.id,
                         status: "APPROVED"
                     }
                 }),
                 prisma.shift.update({
                     where: { id: request.shiftId },
                     data: {
-                        userId: session.id as string,
+                        userId: session.id,
                         notes: (request.shift.notes || "") + ` \n[OTOMATİK TAKAS: ${request.requesterId} -> ${session.id}]`
                     }
                 })
             ]);
+
+            logInfo(`Shift swap auto-approved for user ${session.id}`, { requestId });
 
             // Notify
             await createNotification(request.requesterId, "Vardiya Takası Onaylandı", "Vardiyanız kurallar dahilinde otomatik olarak devredildi.", "SUCCESS");
@@ -100,27 +92,28 @@ export async function claimSwapRequest(requestId: string) {
             await prisma.shiftSwapRequest.update({
                 where: { id: requestId },
                 data: {
-                    claimantId: session.id as string,
+                    claimantId: session.id,
                     status: "PENDING_APPROVAL",
                 },
             });
+
+            logInfo(`Shift swap pending approval for user ${session.id}`, { requestId, reason: validation.reason });
 
             revalidatePath("/shifts");
             return { success: true, message: "Takas talebiniz alındı. Bazı kurallar (çalışma saati vb.) nedeniyle yönetici onayı bekleniyor." };
         }
 
     } catch (error) {
-        console.error("Claim swap error:", error);
+        logError("Claim swap error", error);
         return { error: "İşlem başarısız." };
     }
 }
 
 export async function approveSwapRequest(requestId: string) {
-    const session = await getSession();
-    if (!session) return { error: "Unauthorized" };
-
-    const admin = await prisma.user.findUnique({ where: { id: session.id as string } });
-    if (!admin || admin.role !== 'ADMIN') return { error: "Forbidden" };
+    const session = await getAuth();
+    if (!session || (session.role !== 'ADMIN' && session.role !== 'EXECUTIVE')) {
+        return { error: "Forbidden" };
+    }
 
     try {
         const request = await prisma.shiftSwapRequest.findUnique({
@@ -146,6 +139,8 @@ export async function approveSwapRequest(requestId: string) {
             })
         ]);
 
+        logInfo(`Shift swap request approved by admin ${session.id}`, { requestId });
+
         await prisma.notification.createMany({
             data: [
                 {
@@ -168,14 +163,16 @@ export async function approveSwapRequest(requestId: string) {
         return { success: true };
 
     } catch (error) {
-        console.error("Approve swap error:", error);
+        logError("Approve swap error", error);
         return { error: "Failed to approve swap" };
     }
 }
 
 export async function rejectSwapRequest(requestId: string) {
-    const session = await getSession();
-    if (!session) return { error: "Unauthorized" };
+    const session = await getAuth();
+    if (!session || (session.role !== 'ADMIN' && session.role !== 'EXECUTIVE')) {
+        return { error: "Forbidden" };
+    }
 
     try {
         await prisma.shiftSwapRequest.update({
@@ -183,10 +180,12 @@ export async function rejectSwapRequest(requestId: string) {
             data: { status: "REJECTED" },
         });
 
+        logInfo(`Shift swap request rejected by admin ${session.id}`, { requestId });
+
         revalidatePath("/admin/shifts");
         return { success: true };
     } catch (error) {
-        console.error("Reject swap error:", error);
+        logError("Reject swap error", error);
         return { error: "Failed to reject swap" };
     }
 }
@@ -206,7 +205,7 @@ export async function getOpenMarketplaceShifts() {
 }
 
 export async function getBiddingShifts() {
-    return await (prisma.shift as any).findMany({
+    return await prisma.shift.findMany({
         where: { isBiddingOpen: true },
         include: {
             user: {
@@ -234,14 +233,14 @@ export async function getPendingSwapRequests() {
 }
 
 export async function getUserSwapRequests() {
-    const session = await getSession();
+    const session = await getAuth();
     if (!session) return [];
 
     return await prisma.shiftSwapRequest.findMany({
         where: {
             OR: [
-                { requesterId: session.id as string },
-                { claimantId: session.id as string }
+                { requesterId: session.id },
+                { claimantId: session.id }
             ]
         },
         include: {
@@ -253,3 +252,4 @@ export async function getUserSwapRequests() {
         take: 5
     });
 }
+

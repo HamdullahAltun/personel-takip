@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import * as admin from "firebase-admin";
 import { createFirebaseAdminApp } from "./firebase-admin";
+import { logInfo, logError } from "./log-utils";
 
 // Ensure App is initialized
 createFirebaseAdminApp();
@@ -59,17 +60,18 @@ export async function sendPushNotification(userId: string, title: string, body: 
                 }
             }
         });
-    } catch (error: any) {
-        console.error("FCM Send Error:", error);
+    } catch (error: unknown) {
+        const firebaseError = error as { code?: string };
+        logError(`FCM Send Error for user ${userId}`, error);
 
         // Handle invalid token errors
-        if (error.code === 'messaging/registration-token-not-registered' ||
-            error.code === 'messaging/invalid-argument') {
-            console.log(`Removing invalid FCM token for user ${userId}`);
+        if (firebaseError.code === 'messaging/registration-token-not-registered' ||
+            firebaseError.code === 'messaging/invalid-argument') {
+            logInfo(`Removing invalid FCM token for user ${userId}`);
             await prisma.user.update({
                 where: { id: userId },
                 data: { fcmToken: null }
-            }).catch(e => console.error("Failed to remove invalid token:", e));
+            }).catch(e => logError("Failed to remove invalid token", e));
         }
     }
 }
@@ -92,11 +94,11 @@ export async function sendBroadcastNotification(title: string, body: string) {
                 message: body,
                 type: 'INFO'
             }
-        }).catch(console.error);
+        }).catch(e => logError("Broadcast DB Notification Error", e));
 
         // Send Push
         if (u.fcmToken) {
-            await sendPushNotification(u.id, title, body).catch(console.error);
+            await sendPushNotification(u.id, title, body).catch(e => logError("Broadcast Push Notification Error", e));
         }
     }
 }

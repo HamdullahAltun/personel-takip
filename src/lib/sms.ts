@@ -1,3 +1,3 @@
-export async function sendSMS(phone: string, message: string) {
+export async function sendSMS(_phone: string, _message: string) {
     return true;
 }

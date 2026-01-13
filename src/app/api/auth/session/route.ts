@@ -73,10 +73,14 @@ export async function POST(req: Request) {
             path: '/',
         });
 
+        const { logInfo } = await import('@/lib/log-utils');
+        logInfo(`User logged in: ${user.name} (${user.role})`, { userId: user.id });
+
         return NextResponse.json({ success: true, user });
 
     } catch (error) {
-        console.error('Session Error:', error);
+        const { logError } = await import('@/lib/log-utils');
+        logError('Session Error', error);
         return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
     }
 }

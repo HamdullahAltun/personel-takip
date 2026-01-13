@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
+import { logInfo, logError } from '@/lib/log-utils';
 
 export async function POST(req: Request) {
     const session = await getAuth();
@@ -12,6 +13,7 @@ export async function POST(req: Request) {
     }
 
     try {
+        await logInfo('Otomatik görev dağıtım robotu başlatıldı.', null, 'AI_ACTION');
         // Find unassigned pending tasks
         const pendingTasks = await prisma.task.findMany({
             where: {
@@ -62,12 +64,7 @@ export async function POST(req: Request) {
                     data: { assignedToId: bestCandidate.user.id }
                 });
 
-                await prisma.systemLog.create({
-                    data: {
-                        level: 'AI_ACTION',
-                        message: `Görev Dağıtımı: "${task.title}" -> ${bestCandidate.user.name} (Skor: ${bestCandidate.score}, Etiketler: ${task.tags.join(',')})`,
-                    }
-                });
+                await logInfo(`Görev Dağıtımı: "${task.title}" -> ${bestCandidate.user.name} (Skor: ${bestCandidate.score}, Etiketler: ${task.tags.join(',')})`, null, 'AI_ACTION');
 
                 // Update local counting
                 bestCandidate.user.tasksReceived.push({} as any);
@@ -78,13 +75,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ message: `${assignedCount} görev otomatik dağıtıldı.` });
 
     } catch (e) {
-        console.error(e);
-        await prisma.systemLog.create({
-            data: {
-                level: 'ERROR',
-                message: 'Görev dağıtıcı hatası: ' + (e as Error).message,
-            }
-        });
+        logError('Görev dağıtıcı hatası', e);
         return NextResponse.json({ error: 'Failed' }, { status: 500 });
     }
 }

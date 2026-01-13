@@ -1,6 +1,5 @@
-import { PrismaClient, ShiftType, ShiftStatus } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { ShiftType, ShiftStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 interface SchedulerConfig {
     startDate: Date;
@@ -16,7 +15,7 @@ export async function generateSchedule(config: SchedulerConfig) {
     });
 
     const days = [];
-    let currentDate = new Date(config.startDate);
+    const currentDate = new Date(config.startDate);
     while (currentDate <= config.endDate) {
         days.push(new Date(currentDate));
         currentDate.setDate(currentDate.getDate() + 1);

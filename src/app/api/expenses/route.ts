@@ -2,17 +2,18 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
 import { sendPushNotification } from '@/lib/notifications';
+import { logInfo, logError } from '@/lib/log-utils';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
+export async function GET() {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     try {
         let where: any = {};
-        if (session.role !== 'ADMIN') {
-            where = { userId: session.id as string };
+        if (session.role !== 'ADMIN' && session.role !== 'EXECUTIVE') {
+            where = { userId: session.id };
         }
 
         const expenses = await prisma.expense.findMany({
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
 
         return NextResponse.json(expenses);
     } catch (e) {
-        console.error("Expense fetch error:", e);
+        logError("Expense fetch error", e);
         return NextResponse.json({ error: "Fetch failed" }, { status: 500 });
     }
 }
@@ -44,21 +45,24 @@ export async function POST(req: Request) {
                 amount: parseFloat(amount),
                 date: new Date(date),
                 category,
-                receiptImage, // Optional base64
-                userId: session.id as string
+                receiptImage,
+                userId: session.id
             }
         });
 
+        logInfo(`New expense submitted by user ${session.id}`, { amount, category });
         return NextResponse.json(expense);
     } catch (e) {
-        console.error(e);
+        logError("Expense creation failed", e);
         return NextResponse.json({ error: "Create failed" }, { status: 500 });
     }
 }
 
 export async function PATCH(req: Request) {
     const session = await getAuth();
-    if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session || (session.role !== 'ADMIN' && session.role !== 'EXECUTIVE')) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     try {
         const body = await req.json();
@@ -72,18 +76,21 @@ export async function PATCH(req: Request) {
             }
         });
 
+        logInfo(`Expense ${id} status updated to ${status} by ${session.id}`);
+
         // Send Notification
         if (updated.userId) {
             const title = status === 'APPROVED' ? 'Harcama Onaylandı' : 'Harcama Reddedildi';
-            const body = status === 'APPROVED'
+            const bodyTxt = status === 'APPROVED'
                 ? `Harcama talebiniz onaylandı: ${updated.description}`
                 : `Harcama talebiniz reddedildi. Sebep: ${rejectionReason}`;
 
-            await sendPushNotification(updated.userId, title, body);
+            await sendPushNotification(updated.userId, title, bodyTxt).catch(e => logError("Push failed", e));
         }
 
         return NextResponse.json(updated);
     } catch (e) {
+        logError("Expense update failed", e);
         return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
 }

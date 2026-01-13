@@ -1,52 +1,73 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
+import { logInfo } from '@/lib/log-utils';
 
+// src/app/api/users/route.ts
 export async function GET(req: Request) {
     const session = await getAuth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     try {
-        // If Admin, return everything (or maybe still exclude some internals?)
-        // For now, let's keep it consistent: Admin sees all, Staff sees directory info.
-
         const isManager = session.role === 'ADMIN' || session.role === 'EXECUTIVE';
 
         const { searchParams } = new URL(req.url);
         const sort = searchParams.get('sort');
-        const limit = searchParams.get('limit');
+        
+        // Pagination logic
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20'); // Default to 20 for safety
+        const skip = (page - 1) * limit;
 
-        const orderBy: any = sort === 'points' ? { points: 'desc' } : { createdAt: 'desc' };
+        const take = limit; 
 
-        const users = await prisma.user.findMany({
-            orderBy,
-            take: limit ? parseInt(limit) : undefined,
-            select: isManager || sort === 'points' ? undefined : {
-                id: true,
-                name: true,
-                phone: true,
-                role: true,
-                profilePicture: true,
-                department: { select: { name: true } },
-                points: true
-            },
-            include: (isManager || sort === 'points') ? { department: { select: { name: true } } } : undefined
-        } as any);
+        // Base query - can be extended for filtering later
+        const where: any = {}; 
 
-        // If sorting by points, we might want to restrict fields if not manager, but for leaderboard we need basics
-        if (sort === 'points' && !isManager) {
-            // Re-map to safe fields just in case 'undefined' select above exposed everything
-            return NextResponse.json(users.map(u => ({
-                id: u.id,
-                name: u.name,
-                points: u.points,
-                profilePicture: u.profilePicture,
-                department: (u as any).department
-            })));
-        }
+        // Execute query
+        const [users, total] = await Promise.all([
+            prisma.user.findMany({
+                where,
+                orderBy: sort === 'points' ? { points: 'desc' } : { createdAt: 'desc' },
+                take,
+                skip,
+                select: isManager || sort === 'points' ? {
+                     id: true,
+                     name: true,
+                     phone: true,
+                     email: true,
+                     role: true,
+                     points: true,
+                     department: { select: { name: true } },
+                     profilePicture: true,
+                     createdAt: true, // Needed for sorting
+                     hourlyRate: isManager, // Only managers see this
+                     weeklyGoal: isManager,
+                } : {
+                    id: true,
+                    name: true,
+                    phone: true,
+                    role: true,
+                    profilePicture: true,
+                    department: { select: { name: true } },
+                    points: true
+                }
+            }),
+            prisma.user.count({ where })
+        ]);
 
-        return NextResponse.json(users);
+        return NextResponse.json({
+            data: users,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
     } catch (error) {
+        const { logError } = await import('@/lib/log-utils');
+        await logError("Fetch Users Error", error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
@@ -57,33 +78,41 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json();
-        const { name, phone, role, hourlyRate, weeklyGoal } = body;
+        const { name, phone, email, role, hourlyRate, weeklyGoal } = body;
 
         if (!name || !phone) {
             return NextResponse.json({ error: 'Name and phone are required' }, { status: 400 });
         }
 
-        const existingUser = await prisma.user.findUnique({
-            where: { phone },
+        const existingUser = await prisma.user.findFirst({
+            where: { 
+                OR: [
+                    { phone },
+                    ...(email ? [{ email }] : [])
+                ]
+            },
         });
 
         if (existingUser) {
-            return NextResponse.json({ error: 'User with this phone already exists' }, { status: 400 });
+            return NextResponse.json({ error: 'User with this phone or email already exists' }, { status: 400 });
         }
 
         const user = await prisma.user.create({
             data: {
                 name,
                 phone,
+                email: email || null,
                 role: role || 'STAFF',
                 hourlyRate: parseFloat(hourlyRate) || 0,
                 weeklyGoal: parseInt(weeklyGoal) || 40,
             },
         });
 
+        logInfo(`User ${user.id} created by admin ${session.id}`, { name: user.name, role: user.role });
         return NextResponse.json(user);
     } catch (error) {
-        console.error('Create User Error:', error);
+        const { logError } = await import('@/lib/log-utils');
+        await logError('Create User Error', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

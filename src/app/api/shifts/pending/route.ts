@@ -6,7 +6,7 @@ import { getAuth } from '@/lib/auth';
 export async function GET() {
     try {
         const session = await getAuth();
-        if (!session || session.role !== 'ADMIN') {
+        if (!session || (session.role !== 'ADMIN' && session.role !== 'EXECUTIVE')) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -36,7 +36,8 @@ export async function GET() {
 
         return NextResponse.json(pendingSwaps);
     } catch (error) {
-        console.error("Error fetching pending swaps:", error);
+        const { logError } = await import('@/lib/log-utils');
+        await logError("Error fetching pending swaps", error);
         return NextResponse.json({ error: 'Failed to fetch pending swaps' }, { status: 500 });
     }
 }

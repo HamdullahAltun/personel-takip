@@ -1,17 +1,17 @@
 import { PrismaClient } from '@prisma/client'
 
-// Prisma client initialization with types refreshed
-
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
+const prismaClientSingleton = () => {
+  return new PrismaClient()
 }
 
-// Force overwrite to clear cache after schema change
-export const db = new PrismaClient()
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = db
+declare global {
+  var prismaGlobal: undefined | ReturnType<typeof prismaClientSingleton>
 }
 
-export const prisma = db;
+export const prisma = globalThis.prismaGlobal ?? prismaClientSingleton()
+
+export default prisma
+
+if (process.env.NODE_ENV !== 'production') globalThis.prismaGlobal = prisma
+
+
