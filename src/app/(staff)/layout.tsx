@@ -8,7 +8,7 @@ import {
     LogOut, ChevronDown, Menu as MenuIcon, ClipboardList, Receipt, BrainCircuit,
     Calendar, MessageSquare, BookOpen, CalendarClock, LayoutGrid, X, UserCog,
     Share2, CalendarRange, Crown, Network, Bot, Gift, Banknote, MapPin, Database, Search, Bell,
-    Activity, TrendingUp, Shield
+    Activity, TrendingUp, Shield, FileText
 } from "lucide-react";
 import NextImage from "next/image";
 import { cn } from "@/lib/utils";
@@ -93,6 +93,7 @@ export default function StaffLayout({
         { href: "/ai-assistant", label: "AI Asistan", icon: Bot, priority: 8 },
         { href: "/payroll", label: "Maaşım", icon: Banknote, priority: 8 },
         { href: "/rewards", label: "Ödül Mağazası", icon: Gift, priority: 8 },
+        { href: "/documents", label: "Belgelerim", icon: FileText, priority: 6 },
 
         // Secondary
         { href: "/expenses", label: "Harcamalar", icon: Receipt, priority: 10 },

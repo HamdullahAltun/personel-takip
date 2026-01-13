@@ -12,8 +12,9 @@ export default function AdminDocumentsPage() {
     const [docs, setDocs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [formData, setFormData] = useState({ title: "", type: "CONTRACT", fileUrl: "" });
+    const [formData, setFormData] = useState({ title: "", type: "CONTRACT", fileUrl: "", userId: "", requiresSigning: false });
 
+    const [users, setUsers] = useState<any[]>([]);
     const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
     const [signingDoc, setSigningDoc] = useState<any>(null);
 
@@ -24,6 +25,10 @@ export default function AdminDocumentsPage() {
     const fetchDocs = async () => {
         const res = await fetch('/api/documents');
         if (res.ok) setDocs(await res.json());
+        
+        const usersRes = await fetch('/api/users');
+        if (usersRes.ok) setUsers(await usersRes.json());
+        
         setLoading(false);
     }
 
@@ -47,7 +52,7 @@ export default function AdminDocumentsPage() {
             headers: { 'Content-Type': 'application/json' }
         });
         setShowModal(false);
-        setFormData({ title: "", type: "CONTRACT", fileUrl: "" });
+        setFormData({ title: "", type: "CONTRACT", fileUrl: "", userId: "", requiresSigning: false });
         fetchDocs();
     }
 
@@ -101,17 +106,20 @@ export default function AdminDocumentsPage() {
 
                         <div className="flex justify-between items-center mt-2">
                             <span className="text-[10px] uppercase bg-slate-100 px-1.5 py-0.5 rounded inline-block text-slate-600 font-bold">{doc.type}</span>
-                            {doc.title.toLowerCase().includes('sözleşme') && !doc.isSigned && (
-                                <button
-                                    onClick={() => {
-                                        setSigningDoc(doc);
-                                        setIsSignatureModalOpen(true);
-                                    }}
-                                    className="text-[10px] bg-indigo-600 text-white px-2 py-1 rounded font-bold hover:bg-indigo-700"
-                                >
-                                    İmzala
-                                </button>
-                            )}
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-slate-400 font-medium">@{doc.user?.name.split(' ')[0]}</span>
+                                {doc.requiresSigning && !doc.isSigned && (
+                                    <button
+                                        onClick={() => {
+                                            setSigningDoc(doc);
+                                            setIsSignatureModalOpen(true);
+                                        }}
+                                        className="text-[10px] bg-indigo-600 text-white px-2 py-1 rounded font-bold hover:bg-indigo-700"
+                                    >
+                                        İmzala
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {doc.expiryDate && (
@@ -174,8 +182,27 @@ export default function AdminDocumentsPage() {
                                 </div>
                             </div>
                             <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Personel Seç</label>
+                                <select required className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none transition" value={formData.userId} onChange={e => setFormData({ ...formData, userId: e.target.value })}>
+                                    <option value="">Seçiniz...</option>
+                                    {users.map(u => (
+                                        <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Dosya Linki (S3/Cloud)</label>
                                 <input required className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none transition" value={formData.fileUrl} onChange={e => setFormData({ ...formData, fileUrl: e.target.value })} placeholder="https://..." />
+                            </div>
+                            <div className="flex items-center gap-2 py-2">
+                                <input 
+                                    type="checkbox" 
+                                    id="requiresSigning" 
+                                    className="w-4 h-4 rounded text-indigo-600" 
+                                    checked={formData.requiresSigning} 
+                                    onChange={e => setFormData({ ...formData, requiresSigning: e.target.checked })} 
+                                />
+                                <label htmlFor="requiresSigning" className="text-sm font-bold text-slate-700 cursor-pointer">Dijital İmza Gerektirsin</label>
                             </div>
                             <div className="flex gap-3 pt-4">
                                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition">İptal</button>

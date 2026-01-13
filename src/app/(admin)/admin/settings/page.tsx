@@ -1,10 +1,10 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, MapPin, Navigation, Loader2 } from "lucide-react";
+import { Save, MapPin, Navigation, Loader2, Palette } from "lucide-react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
+import ThemeEditor from "@/components/ThemeEditor";
 
 // Define types for Map Props
 interface SettingsMapProps {
@@ -68,45 +68,51 @@ export default function SettingsPage() {
     if (loading) return <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-indigo-600" /></div>;
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-8">
             <div>
-                <h1 className="text-2xl font-bold text-slate-900">Şirket Ayarları</h1>
-                <p className="text-slate-500">Konum, vardiya ve genel sistem yapılandırması.</p>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Ayarlar</h1>
+                <p className="text-slate-500 dark:text-slate-400">Şirket yapılandırması ve kişisel tercihler.</p>
             </div>
 
-            <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: Form */}
-                <div className="space-y-6 lg:col-span-1">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-                        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                            <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
-                                <MapPin className="h-5 w-5" />
-                            </div>
-                            <h3 className="font-bold text-slate-900">Ofis Konumu</h3>
-                        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Personal Settings */}
+                <div className="space-y-6">
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <Palette className="h-5 w-5 text-indigo-500" />
+                        Kişisel Görünüm
+                    </h2>
+                    <ThemeEditor />
+                </div>
 
+                {/* Company Settings Form */}
+                <div className="space-y-6">
+                     <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <MapPin className="h-5 w-5 text-indigo-500" />
+                        Şirket Lokasyonu
+                    </h2>
+                    <form onSubmit={handleSave} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
                         <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">Enlem (Latitude)</label>
+                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Enlem (Latitude)</label>
                             <input
                                 type="number"
                                 step="any"
                                 value={settings.officeLat}
                                 onChange={e => setSettings({ ...settings, officeLat: parseFloat(e.target.value) })}
-                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                                className="w-full px-4 py-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-colors"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">Boylam (Longitude)</label>
+                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Boylam (Longitude)</label>
                             <input
                                 type="number"
                                 step="any"
                                 value={settings.officeLng}
                                 onChange={e => setSettings({ ...settings, officeLng: parseFloat(e.target.value) })}
-                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                                className="w-full px-4 py-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-colors"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">Geofence Yarıçapı (Metre)</label>
+                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Geofence Yarıçapı (Metre)</label>
                             <div className="flex items-center gap-2">
                                 <input
                                     type="number"
@@ -115,11 +121,10 @@ export default function SettingsPage() {
                                     step="50"
                                     value={settings.geofenceRadius}
                                     onChange={e => setSettings({ ...settings, geofenceRadius: parseInt(e.target.value) })}
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full px-4 py-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-colors"
                                 />
                                 <span className="text-slate-500 text-sm font-medium">m</span>
                             </div>
-                            <p className="text-xs text-slate-400 mt-2">Personelin check-in yapabileceği maksimum mesafe.</p>
                         </div>
 
                         <button
@@ -130,32 +135,30 @@ export default function SettingsPage() {
                             {saving ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4" />}
                             Ayarları Kaydet
                         </button>
-                    </div>
+                    </form>
                 </div>
+            </div>
 
-                {/* Right Column: Map */}
-                <div className="lg:col-span-2">
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm h-full min-h-[500px] flex flex-col">
-                        <div className="mb-4 flex justify-between items-center">
-                            <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                                <Navigation className="h-4 w-4 text-indigo-500" />
-                                Konum Önizleme
-                            </h3>
-                            <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500">
-                                Haritadan konum seçebilirsiniz
-                            </span>
-                        </div>
-                        <div className="flex-1 rounded-xl overflow-hidden border border-slate-100 z-0">
-                            <MapComponent
-                                lat={settings.officeLat}
-                                lng={settings.officeLng}
-                                radius={settings.geofenceRadius}
-                                onLocationSelect={handleLocationSelect}
-                            />
-                        </div>
-                    </div>
+            {/* Map Full Width */}
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm min-h-[400px] flex flex-col">
+                <div className="mb-4 flex justify-between items-center">
+                    <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <Navigation className="h-4 w-4 text-indigo-500" />
+                        Konum Önizleme
+                    </h3>
+                    <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-500">
+                        Haritadan konum seçebilirsiniz
+                    </span>
                 </div>
-            </form>
+                <div className="flex-1 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 z-0">
+                    <MapComponent
+                        lat={settings.officeLat}
+                        lng={settings.officeLng}
+                        radius={settings.geofenceRadius}
+                        onLocationSelect={handleLocationSelect}
+                    />
+                </div>
+            </div>
         </div>
     );
 }
