@@ -17,14 +17,22 @@ export async function POST(req: Request) {
     const session = await getAuth();
     if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { title, content, type, tags } = await req.json();
+    const { title, content, type, tags, requiresSigning } = await req.json();
+
+    // Ensure tags is a String[]
+    const tagList = Array.isArray(tags)
+        ? tags
+        : (typeof tags === 'string' && tags.trim() !== '')
+            ? tags.split(',').map(t => t.trim())
+            : [];
 
     const doc = await prisma.knowledgeBaseDoc.create({
         data: {
             title,
             content,
-            type,
-            tags
+            type: type || 'GUIDELINE',
+            tags: tagList,
+            requiresSigning: !!requiresSigning
         }
     });
 
