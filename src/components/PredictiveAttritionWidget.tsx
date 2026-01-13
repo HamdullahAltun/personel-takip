@@ -69,7 +69,7 @@ export default function PredictiveAttritionWidget() {
                     </div>
                 ) : data ? (
                     <div className="space-y-3">
-                        {data.results.map((item, i) => (
+                        {(data.results || []).map((item, i) => (
                             <div key={i} className={`p-3 rounded-xl border flex gap-3 group transition-colors ${mode === 'ATTRITION' ? 'border-rose-100 bg-rose-50/30 hover:bg-rose-50' : 'border-emerald-100 bg-emerald-50/30 hover:bg-emerald-50'}`}>
                                 <div className={`flex flex-col items-center justify-center w-12 h-12 rounded-lg shrink-0 ${mode === 'ATTRITION' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
                                     <span className="text-[9px] font-bold uppercase">{mode === 'ATTRITION' ? 'RİSK' : 'SKOR'}</span>

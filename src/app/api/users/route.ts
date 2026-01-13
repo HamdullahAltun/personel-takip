@@ -14,57 +14,81 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url);
         const sort = searchParams.get('sort');
         
-        // Pagination logic
-        const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '20'); // Default to 20 for safety
-        const skip = (page - 1) * limit;
-
-        const take = limit; 
+        const pageParam = searchParams.get('page');
+        const limitParam = searchParams.get('limit');
 
         // Base query - can be extended for filtering later
         const where: any = {}; 
 
-        // Execute query
-        const [users, total] = await Promise.all([
-            prisma.user.findMany({
-                where,
-                orderBy: sort === 'points' ? { points: 'desc' } : { createdAt: 'desc' },
-                take,
-                skip,
-                select: isManager || sort === 'points' ? {
-                     id: true,
-                     name: true,
-                     phone: true,
-                     email: true,
-                     role: true,
-                     points: true,
-                     department: { select: { name: true } },
-                     profilePicture: true,
-                     createdAt: true, // Needed for sorting
-                     hourlyRate: isManager, // Only managers see this
-                     weeklyGoal: isManager,
-                } : {
-                    id: true,
-                    name: true,
-                    phone: true,
-                    role: true,
-                    profilePicture: true,
-                    department: { select: { name: true } },
-                    points: true
-                }
-            }),
-            prisma.user.count({ where })
-        ]);
+        const selectOptions = isManager || sort === 'points' ? {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+            role: true,
+            points: true,
+            department: { select: { name: true } },
+            profilePicture: true,
+            createdAt: true, 
+            hourlyRate: isManager, 
+            weeklyGoal: isManager,
+        } : {
+            id: true,
+            name: true,
+            phone: true,
+            role: true,
+            profilePicture: true,
+            department: { select: { name: true } },
+            points: true
+        };
 
-        return NextResponse.json({
-            data: users,
-            meta: {
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit)
-            }
-        });
+        const paginatedParam = searchParams.get('paginated');
+
+        // Check for specific pagination requirement
+        const isPaginatedRequested = paginatedParam === 'true';
+
+        // Base query options
+        const queryOptions: any = {
+            where,
+            orderBy: sort === 'points' ? { points: 'desc' } : { createdAt: 'desc' },
+            select: selectOptions as any
+        };
+
+        if (isPaginatedRequested) {
+            const page = parseInt(pageParam || '1');
+            const limit = parseInt(limitParam || '20');
+            const skip = (page - 1) * limit;
+
+            const [users, total] = await Promise.all([
+                prisma.user.findMany({
+                    ...queryOptions,
+                    skip,
+                    take: limit,
+                }),
+                prisma.user.count({ where })
+            ]);
+
+            return NextResponse.json({
+                data: users,
+                meta: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit)
+                }
+            });
+        }
+
+        // Default behavior: return array (respecting limit if provided, but still an array)
+        if (limitParam) {
+            queryOptions.take = parseInt(limitParam);
+        }
+        if (pageParam && limitParam) {
+            queryOptions.skip = (parseInt(pageParam) - 1) * parseInt(limitParam);
+        }
+
+        const users = await prisma.user.findMany(queryOptions);
+        return NextResponse.json(users);
     } catch (error) {
         const { logError } = await import('@/lib/log-utils');
         await logError("Fetch Users Error", error);

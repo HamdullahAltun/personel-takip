@@ -209,7 +209,7 @@ export default function DetailedExecutiveReport() {
                         <h3 className="font-bold text-lg text-slate-900">Stratejik Tavsiyeler</h3>
                     </div>
                     <ul className="space-y-4">
-                        {analysis.recommendations.map((rec, i) => (
+                        {(analysis.recommendations || []).map((rec, i) => (
                             <li key={i} className="flex gap-4 items-start p-3 rounded-lg hover:bg-slate-50 transition-colors">
                                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold mt-0.5">{i + 1}</span>
                                 <p className="text-slate-700 leading-relaxed">{rec}</p>
@@ -227,7 +227,7 @@ export default function DetailedExecutiveReport() {
                         <h3 className="font-bold text-lg text-slate-900">Tespit Edilen Riskler</h3>
                     </div>
                     <ul className="space-y-4">
-                        {analysis.risks.map((risk, i) => (
+                        {(analysis.risks || []).map((risk, i) => (
                             <li key={i} className="flex gap-4 items-start p-3 rounded-lg bg-red-50/50 hover:bg-red-50 transition-colors border border-red-100/50">
                                 <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
                                 <p className="text-slate-700 leading-relaxed">{risk}</p>
