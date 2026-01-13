@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { requestLeave } from "@/app/actions/leave";
+import { requestLeave } from "@/app/actions/leaves";
 import { Loader2, CalendarPlus } from "lucide-react";
 
 export default function LeaveForm() {
